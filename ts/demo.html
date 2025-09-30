@@ -11,11 +11,25 @@
         <canvas id="frame-canvas" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
     </section>
     <section>
-        <h2>Gaussian</h2>
+        <h2>Gaussian (CPU)</h2>
+        <canvas id="gaussian-cpu-canvas" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
+    </section>
+    <section>
+        <h2>Gaussian (TF.js)</h2>
         <canvas id="gaussian-canvas" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
     </section>
     <section>
-        <h2>Conditional probability path</h2>
+        <h2>Conditional probability path (CPU)</h2>
+        <canvas id="conditional-probability-canvas-cpu" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
+        <div>
+            <button id="playBtnCpu">Play</button>
+            <button id="resetBtnCpu">Reset</button>
+            <input type="range" id="timeSliderCpu" min="0" max="1" step="0.01" value="0">
+            <span id="timeValueCpu">0.00</span>
+        </div>
+    </section>
+    <section>
+        <h2>Conditional probability path (CPU with precomputation)</h2>
         <canvas id="conditional-probability-canvas" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
         <div>
             <button id="playBtn">Play</button>
@@ -35,13 +49,33 @@
         </div>
     </section>
     <section>
-        <h2>Conditional probability path (TF.js on-the-fly)</h2>
-        <canvas id="conditional-probability-canvas-tfjs-otf" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
+        <h2>Conditional probability path (TF.js with precomputation)</h2>
+        <canvas id="conditional-probability-canvas-tfjs-precompute" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
         <div>
-            <button id="playBtnTfjsOtf">Play</button>
-            <button id="resetBtnTfjsOtf">Reset</button>
-            <input type="range" id="timeSliderTfjsOtf" min="0" max="1" step="0.01" value="0">
-            <span id="timeValueTfjsOtf">0.00</span>
+            <button id="playBtnTfjsPrecompute">Play</button>
+            <button id="resetBtnTfjsPrecompute">Reset</button>
+            <input type="range" id="timeSliderTfjsPrecompute" min="0" max="1" step="0.01" value="0">
+            <span id="timeValueTfjsPrecompute">0.00</span>
+        </div>
+    </section>
+    <section>
+        <h2>Conditional probability path (TF.js no contours)</h2>
+        <canvas id="conditional-probability-canvas-tfjs-no-contours" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
+        <div>
+            <button id="playBtnTfjsNoContours">Play</button>
+            <button id="resetBtnTfjsNoContours">Reset</button>
+            <input type="range" id="timeSliderTfjsNoContours" min="0" max="1" step="0.01" value="0">
+            <span id="timeValueTfjsNoContours">0.00</span>
+        </div>
+    </section>
+    <section>
+        <h2>Conditional probability path (TF.js with precomputation, no contours)</h2>
+        <canvas id="conditional-probability-canvas-tfjs-precompute-no-contours" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
+        <div>
+            <button id="playBtnTfjsPrecomputeNoContours">Play</button>
+            <button id="resetBtnTfjsPrecomputeNoContours">Reset</button>
+            <input type="range" id="timeSliderTfjsPrecomputeNoContours" min="0" max="1" step="0.01" value="0">
+            <span id="timeValueTfjsPrecomputeNoContours">0.00</span>
         </div>
     </section>
     <script type="module" src="dist/demo.js"></script>
