@@ -1,9 +1,12 @@
 import type { AnimationState } from './animation-state';
 import { drawGaussianContours } from './gaussian';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
+import type { NoiseScheduler } from './noise-schedulers';
 import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
 import { el } from './web-ui-common/dom';
 import { makeScale } from './web-ui-common/util';
+
+const MIN_VARIANCE = 0.0001;
 
 // TF.js is loaded from CDN in the HTML
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -18,7 +21,8 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   wallTimeDisplayId: string,
   usePrecomputation: boolean,
   withContours: boolean,
-  logPrefix: string
+  logPrefix: string,
+  noiseScheduler: NoiseScheduler
 ): void {
   const canvas = el(document, canvasId) as HTMLCanvasElement;
   const ctx = getContext(canvas);
@@ -47,23 +51,26 @@ export function setUpConditionalProbabilityPathTfjsImpl(
     .fill(undefined) as (ImageData | undefined)[];
   let computationId = 0;
 
-  function computeFrameOnTheFlyTfjs(t: number): ImageData {
-    const startVariance = 1;
-    const endVariance = 0.0001;
-
-    const interpolatedMean: [number, number] = [
-      t * dataPoint[0],
-      t * dataPoint[1]
+  const computeGaussianParams = (t: number): { mean: [number, number]; variance: number } => {
+    const { alpha, beta } = noiseScheduler(t);
+    const mean: [number, number] = [
+      alpha * dataPoint[0],
+      alpha * dataPoint[1]
     ];
-    const variance = startVariance + (endVariance - startVariance) * t;
+    const variance = Math.max(beta * beta, MIN_VARIANCE);
+    return { mean, variance };
+  };
+
+  function computeFrameOnTheFlyTfjs(t: number): ImageData {
+    const { mean, variance } = computeGaussianParams(t);
 
     const result = computeGaussianPdfTfjs(
       canvas,
       ctx,
       xScale,
       yScale,
-      interpolatedMean[0],
-      interpolatedMean[1],
+      mean[0],
+      mean[1],
       variance,
       withContours
     );
@@ -84,8 +91,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   }
 
   function computeAllFramesTfjs(): ImageData[] {
-    const startVariance = 1;
-    const endVariance = 0.0001;
     const frames: ImageData[] = [];
 
     let tempCanvas: HTMLCanvasElement | undefined;
@@ -112,11 +117,7 @@ export function setUpConditionalProbabilityPathTfjsImpl(
 
     for (let i = 0; i <= NUM_FRAMES; i++) {
       const t = i / NUM_FRAMES;
-      const interpolatedMean: [number, number] = [
-        t * dataPoint[0],
-        t * dataPoint[1]
-      ];
-      const variance = startVariance + (endVariance - startVariance) * t;
+      const { mean: interpolatedMean, variance } = computeGaussianParams(t);
 
       const dx = dataXTensor.sub(interpolatedMean[0]);
       const dy = dataYTensor.sub(interpolatedMean[1]);
@@ -353,7 +354,9 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   animate();
 }
 
-export function setUpConditionalProbabilityPathTfjs(): void {
+export function setUpConditionalProbabilityPathTfjs(
+  noiseScheduler: NoiseScheduler
+): void {
   setUpConditionalProbabilityPathTfjsImpl(
     '#conditional-probability-canvas-tfjs',
     '#playBtnTfjs',
@@ -363,11 +366,14 @@ export function setUpConditionalProbabilityPathTfjs(): void {
     '#wallTimeTfjs',
     false,
     true,
-    'TF.js on-the-fly'
+    'TF.js on-the-fly',
+    noiseScheduler
   );
 }
 
-export function setUpConditionalProbabilityPathTfjsPrecompute(): void {
+export function setUpConditionalProbabilityPathTfjsPrecompute(
+  noiseScheduler: NoiseScheduler
+): void {
   setUpConditionalProbabilityPathTfjsImpl(
     '#conditional-probability-canvas-tfjs-precompute',
     '#playBtnTfjsPrecompute',
@@ -377,11 +383,14 @@ export function setUpConditionalProbabilityPathTfjsPrecompute(): void {
     '#wallTimeTfjsPrecompute',
     true,
     true,
-    'TF.js with precomputation'
+    'TF.js with precomputation',
+    noiseScheduler
   );
 }
 
-export function setUpConditionalProbabilityPathTfjsNoContours(): void {
+export function setUpConditionalProbabilityPathTfjsNoContours(
+  noiseScheduler: NoiseScheduler
+): void {
   setUpConditionalProbabilityPathTfjsImpl(
     '#conditional-probability-canvas-tfjs-no-contours',
     '#playBtnTfjsNoContours',
@@ -391,11 +400,14 @@ export function setUpConditionalProbabilityPathTfjsNoContours(): void {
     '#wallTimeTfjsNoContours',
     false,
     false,
-    'TF.js on-the-fly (no contours)'
+    'TF.js on-the-fly (no contours)',
+    noiseScheduler
   );
 }
 
-export function setUpConditionalProbabilityPathTfjsPrecomputeNoContours(): void {
+export function setUpConditionalProbabilityPathTfjsPrecomputeNoContours(
+  noiseScheduler: NoiseScheduler
+): void {
   setUpConditionalProbabilityPathTfjsImpl(
     '#conditional-probability-canvas-tfjs-precompute-no-contours',
     '#playBtnTfjsPrecomputeNoContours',
@@ -405,6 +417,7 @@ export function setUpConditionalProbabilityPathTfjsPrecomputeNoContours(): void 
     '#wallTimeTfjsPrecomputeNoContours',
     true,
     false,
-    'TF.js with precomputation (no contours)'
+    'TF.js with precomputation (no contours)',
+    noiseScheduler
   );
 }

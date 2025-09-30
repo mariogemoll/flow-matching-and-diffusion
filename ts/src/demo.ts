@@ -11,17 +11,18 @@ import {
 import { setUpFrameExample } from './frame-example';
 import { setUpGaussianCpu } from './gaussian-cpu';
 import { setUpGaussian } from './gaussian-tf';
+import { linearNoiseScheduler } from './noise-schedulers';
 
 function run(): void {
   setUpFrameExample();
   setUpGaussianCpu();
   setUpGaussian();
-  setUpConditionalProbabilityPathCpuOnTheFly();
-  setUpConditionalProbabilityPath();
-  setUpConditionalProbabilityPathTfjs();
-  setUpConditionalProbabilityPathTfjsPrecompute();
-  setUpConditionalProbabilityPathTfjsNoContours();
-  setUpConditionalProbabilityPathTfjsPrecomputeNoContours();
+  setUpConditionalProbabilityPathCpuOnTheFly(linearNoiseScheduler);
+  setUpConditionalProbabilityPath(linearNoiseScheduler);
+  setUpConditionalProbabilityPathTfjs(linearNoiseScheduler);
+  setUpConditionalProbabilityPathTfjsPrecompute(linearNoiseScheduler);
+  setUpConditionalProbabilityPathTfjsNoContours(linearNoiseScheduler);
+  setUpConditionalProbabilityPathTfjsPrecomputeNoContours(linearNoiseScheduler);
 }
 
 run();

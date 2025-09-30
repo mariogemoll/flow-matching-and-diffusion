@@ -5,11 +5,16 @@ import {
   drawGaussianMixturePDF,
   type GaussianComponent
 } from './gaussian';
+import type { NoiseScheduler } from './noise-schedulers';
 import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
 import { el } from './web-ui-common/dom';
 import { makeScale } from './web-ui-common/util';
 
-export function setUpConditionalProbabilityPathCpuOnTheFly(): void {
+const MIN_VARIANCE = 0.0001;
+
+export function setUpConditionalProbabilityPathCpuOnTheFly(
+  noiseScheduler: NoiseScheduler
+): void {
   const canvas = el(document, '#conditional-probability-canvas-cpu') as HTMLCanvasElement;
   const ctx = getContext(canvas);
   const playBtn = el(document, '#playBtnCpu') as HTMLButtonElement;
@@ -32,18 +37,21 @@ export function setUpConditionalProbabilityPathCpuOnTheFly(): void {
   };
   let animationStartTime: number | null = null;
 
-  function computeFrameOnTheFly(t: number): ImageData {
-    const startVariance = 1;
-    const endVariance = 0.0001;
-
-    const interpolatedMean: [number, number] = [
-      t * dataPoint[0],
-      t * dataPoint[1]
+  const computeGaussianParams = (t: number): { mean: [number, number]; variance: number } => {
+    const { alpha, beta } = noiseScheduler(t);
+    const mean: [number, number] = [
+      alpha * dataPoint[0],
+      alpha * dataPoint[1]
     ];
-    const variance = startVariance + (endVariance - startVariance) * t;
+    const variance = Math.max(beta * beta, MIN_VARIANCE);
+    return { mean, variance };
+  };
+
+  function computeFrameOnTheFly(t: number): ImageData {
+    const { mean, variance } = computeGaussianParams(t);
 
     const gaussian: GaussianComponent = {
-      mean: interpolatedMean,
+      mean,
       weight: 1,
       covariance: [[variance, 0], [0, variance]]
     };
@@ -188,7 +196,9 @@ export function setUpConditionalProbabilityPathCpuOnTheFly(): void {
   animate();
 }
 
-export function setUpConditionalProbabilityPath(): void {
+export function setUpConditionalProbabilityPath(
+  noiseScheduler: NoiseScheduler
+): void {
   const canvas = el(document, '#conditional-probability-canvas') as HTMLCanvasElement;
   const ctx = getContext(canvas);
   const playBtn = el(document, '#playBtn') as HTMLButtonElement;
@@ -216,18 +226,21 @@ export function setUpConditionalProbabilityPath(): void {
     .fill(undefined) as (ImageData | undefined)[];
   let computationId = 0;
 
-  function computeFrameOnTheFly(t: number): ImageData {
-    const startVariance = 1;
-    const endVariance = 0.0001;
-
-    const interpolatedMean: [number, number] = [
-      t * dataPoint[0],
-      t * dataPoint[1]
+  const computeGaussianParams = (t: number): { mean: [number, number]; variance: number } => {
+    const { alpha, beta } = noiseScheduler(t);
+    const mean: [number, number] = [
+      alpha * dataPoint[0],
+      alpha * dataPoint[1]
     ];
-    const variance = startVariance + (endVariance - startVariance) * t;
+    const variance = Math.max(beta * beta, MIN_VARIANCE);
+    return { mean, variance };
+  };
+
+  function computeFrameOnTheFly(t: number): ImageData {
+    const { mean, variance } = computeGaussianParams(t);
 
     const gaussian: GaussianComponent = {
-      mean: interpolatedMean,
+      mean,
       weight: 1,
       covariance: [[variance, 0], [0, variance]]
     };
