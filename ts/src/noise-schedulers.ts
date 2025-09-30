@@ -13,11 +13,24 @@ export interface NoiseSchedulePoint {
   beta: number;
 }
 
+export interface NoiseScheduleDerivatives {
+  alphaDot: number;
+  betaDot: number;
+}
+
 export type NoiseScheduler = (t: number) => NoiseSchedulePoint;
+export type NoiseSchedulerDerivative = (t: number) => NoiseScheduleDerivatives;
 
 export const linearNoiseScheduler: NoiseScheduler = (t) => {
   const clamped = clamp01(t);
   return { alpha: clamped, beta: 1 - clamped };
+};
+
+export const linearNoiseSchedulerDerivative: NoiseSchedulerDerivative = (t) => {
+  if (t <= 0 || t >= 1) {
+    return { alphaDot: 0, betaDot: 0 };
+  }
+  return { alphaDot: 1, betaDot: -1 };
 };
 
 export const smoothstepNoiseScheduler: NoiseScheduler = (t) => {
@@ -26,9 +39,12 @@ export const smoothstepNoiseScheduler: NoiseScheduler = (t) => {
   return { alpha, beta: 1 - alpha };
 };
 
-export const sqrtNoiseScheduler: NoiseScheduler = (t) => {
+export const smoothstepNoiseSchedulerDerivative: NoiseSchedulerDerivative = (t) => {
+  if (t <= 0 || t >= 1) {
+    return { alphaDot: 0, betaDot: 0 };
+  }
   const clamped = clamp01(t);
-  const alpha = Math.sqrt(clamped);
-  const beta = Math.sqrt(1 - clamped);
-  return { alpha, beta };
+  // d/dt [t²(3 - 2t)] = 6t - 6t²
+  const alphaDot = 6 * clamped * (1 - clamped);
+  return { alphaDot, betaDot: -alphaDot };
 };
