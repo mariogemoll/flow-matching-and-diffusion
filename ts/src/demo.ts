@@ -748,10 +748,15 @@ function setUpConditionalProbabilityPathTfjsImpl(
     const endVariance = 0.0001;
     const frames: ImageData[] = [];
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = getContext(tempCanvas);
+    // Create temp canvas once for contour rendering (reused across frames)
+    let tempCanvas: HTMLCanvasElement | undefined;
+    let tempCtx: CanvasRenderingContext2D | undefined;
+    if (withContours) {
+      tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      tempCtx = getContext(tempCanvas);
+    }
 
     // Create grid of pixel coordinates once for all frames
     const width = canvas.width;
@@ -795,48 +800,45 @@ function setUpConditionalProbabilityPathTfjsImpl(
       const imageData = ctx.createImageData(width, height);
       const intensityData = intensity.dataSync();
 
-      if (withContours) {
+      // Fill image data with color
+      for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+          const idx = x * height + y;
+          const pixelIdx = (y * width + x) * 4;
+          const intensityVal = intensityData[idx];
+
+          imageData.data[pixelIdx] = 30;
+          imageData.data[pixelIdx + 1] = 150;
+          imageData.data[pixelIdx + 2] = 255;
+          imageData.data[pixelIdx + 3] = intensityVal;
+        }
+      }
+
+      if (withContours && tempCtx) {
+        // Build probability grid for contours (synchronous GPU->CPU transfer)
         const pdfData = pdf.dataSync();
-        const probabilityGrid: number[][] = [];
+
+        // Build probability grid
+        const probabilityGrid: number[][] = new Array(width) as number[][];
         for (let x = 0; x < width; x++) {
-          probabilityGrid[x] = [];
+          probabilityGrid[x] = new Array(height) as number[];
           for (let y = 0; y < height; y++) {
-            const idx = x * height + y;
-            probabilityGrid[x][y] = pdfData[idx];
+            probabilityGrid[x][y] = pdfData[x * height + y];
           }
         }
 
-        for (let x = 0; x < width; x++) {
-          for (let y = 0; y < height; y++) {
-            const idx = x * height + y;
-            const pixelIdx = (y * width + x) * 4;
-            const intensityVal = intensityData[idx];
-
-            imageData.data[pixelIdx] = 30;
-            imageData.data[pixelIdx + 1] = 150;
-            imageData.data[pixelIdx + 2] = 255;
-            imageData.data[pixelIdx + 3] = intensityVal;
-          }
-        }
-
+        // Draw base image to temp canvas
         tempCtx.putImageData(imageData, 0, 0);
+
+        // Draw contours on top (vector graphics)
         drawGaussianContours(
           tempCtx, probabilityGrid, maxValue, canvas.width, canvas.height
         );
+
+        // Capture final composite (expensive but necessary for rasterized output)
         frames.push(tempCtx.getImageData(0, 0, canvas.width, canvas.height));
       } else {
-        for (let x = 0; x < width; x++) {
-          for (let y = 0; y < height; y++) {
-            const idx = x * height + y;
-            const pixelIdx = (y * width + x) * 4;
-            const intensityVal = intensityData[idx];
-
-            imageData.data[pixelIdx] = 30;
-            imageData.data[pixelIdx + 1] = 150;
-            imageData.data[pixelIdx + 2] = 255;
-            imageData.data[pixelIdx + 3] = intensityVal;
-          }
-        }
+        // No contours - just use the raw ImageData directly
         frames.push(imageData);
       }
 
