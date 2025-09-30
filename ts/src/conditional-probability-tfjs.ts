@@ -1,4 +1,5 @@
 import type { AnimationState } from './animation-state';
+import { DATA_POINT_RADIUS } from './constants';
 import { drawGaussianContours } from './gaussian';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
 import type { NoiseScheduler } from './noise-schedulers';
@@ -233,7 +234,7 @@ export function setUpConditionalProbabilityPathTfjsImpl(
 
     const dataPointPixelX = xScale(dataPoint[0]);
     const dataPointPixelY = yScale(dataPoint[1]);
-    addDot(ctx, dataPointPixelX, dataPointPixelY, 6, '#2196F3');
+    addDot(ctx, dataPointPixelX, dataPointPixelY, DATA_POINT_RADIUS, '#2196F3');
   }
 
   function animate(): void {

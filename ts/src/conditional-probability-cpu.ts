@@ -1,4 +1,5 @@
 import type { AnimationState } from './animation-state';
+import { DATA_POINT_RADIUS } from './constants';
 import {
   computeGaussianMixture,
   drawGaussianContours,
@@ -85,7 +86,7 @@ export function setUpConditionalProbabilityPathCpuOnTheFly(
 
     const dataPointPixelX = xScale(dataPoint[0]);
     const dataPointPixelY = yScale(dataPoint[1]);
-    addDot(ctx, dataPointPixelX, dataPointPixelY, 6, '#2196F3');
+    addDot(ctx, dataPointPixelX, dataPointPixelY, DATA_POINT_RADIUS, '#2196F3');
   }
 
   function animate(): void {
@@ -308,7 +309,7 @@ export function setUpConditionalProbabilityPath(
 
     const dataPointPixelX = xScale(dataPoint[0]);
     const dataPointPixelY = yScale(dataPoint[1]);
-    addDot(ctx, dataPointPixelX, dataPointPixelY, 6, '#2196F3');
+    addDot(ctx, dataPointPixelX, dataPointPixelY, DATA_POINT_RADIUS, '#2196F3');
   }
 
   function animate(): void {
