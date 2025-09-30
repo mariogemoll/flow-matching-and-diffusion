@@ -1,11 +1,23 @@
-import { setUpConditionalProbabilityPathTfjsNoContours } from './conditional-probability-tfjs';
+import { setUpConditionalProbabilityPathTfjsImpl } from './conditional-tfjs';
 import { linearNoiseScheduler, linearNoiseSchedulerDerivative } from './noise-schedulers';
 
 function run(): void {
-  setUpConditionalProbabilityPathTfjsNoContours(
+  setUpConditionalProbabilityPathTfjsImpl(
+    '#conditional-probability-canvas-tfjs-no-contours',
+    '#playBtnTfjsNoContours',
+    '#timeSliderTfjsNoContours',
+    '#timeValueTfjsNoContours',
+    '#wallTimeTfjsNoContours',
+    '#sampleBtnTfjsNoContours',
+    false,
+    false,
+    'TF.js on-the-fly (no contours)',
     linearNoiseScheduler,
     linearNoiseSchedulerDerivative,
-    '#conditional-vector-field-canvas'
+    '#conditional-vector-field-canvas',
+    '#sampleBtnVectorField',
+    '#clearBtnVectorField',
+    '#sampleContinuouslyTfjsNoContours'
   );
 }
 

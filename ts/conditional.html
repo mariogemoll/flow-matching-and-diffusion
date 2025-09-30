@@ -3,6 +3,16 @@
 <head>
   <title>TF Conditional Probability Path</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+  <style>
+    .bottom-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .bottom-controls input[type="range"] { width: 320px; }
+  </style>
 </head>
 <body>
   <div style="display: flex; gap: 20px;">
@@ -10,19 +20,28 @@
       <h1>TF Conditional Probability Path (No Contours)</h1>
       <canvas id="conditional-probability-canvas-tfjs-no-contours" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
       <div>
-        <button id="playBtnTfjsNoContours">Play</button>
-        <button id="resetBtnTfjsNoContours">Reset</button>
-        <input type="range" id="timeSliderTfjsNoContours" min="0" max="1" step="0.01" value="0">
-        <span id="timeValueTfjsNoContours">0.00</span>
-        <span id="wallTimeTfjsNoContours" style="margin-left: 20px; color: #666;"></span>
-        <button id="sampleBtnTfjsNoContours" style="margin-left: 20px;">Sample</button>
+        <button id="sampleBtnTfjsNoContours" style="margin-left: 0;">Sample</button>
+        <label style="margin-left: 12px;">
+          <input type="checkbox" id="sampleContinuouslyTfjsNoContours">
+          Sample continuously
+        </label>
       </div>
     </div>
 
     <div>
       <h1>Conditional Vector Field</h1>
       <canvas id="conditional-vector-field-canvas" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
+      <div>
+        <button id="sampleBtnVectorField" style="margin-left: 20px;">Sample</button>
+        <button id="clearBtnVectorField">Clear</button>
+      </div>
     </div>
+  </div>
+  <div class="bottom-controls">
+    <button id="playBtnTfjsNoContours" style="width: 60px;">Play</button>
+    <input type="range" id="timeSliderTfjsNoContours" min="0" max="1" step="0.01" value="0">
+    <span id="timeValueTfjsNoContours">0.00</span>
+    <span id="wallTimeTfjsNoContours" style="margin-left: 8px; color: #666;"></span>
   </div>
   <script type="module" src="dist/conditional.js"></script>
 </body>
