@@ -1,5 +1,10 @@
 import type { AnimationState } from './animation-state';
-import { DATA_POINT_RADIUS } from './constants';
+import {
+  DATA_POINT_RADIUS,
+  NUM_SAMPLES,
+  SAMPLED_POINT_COLOR,
+  SAMPLED_POINT_RADIUS
+} from './constants';
 import { drawGaussianContours } from './gaussian';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
 import type { NoiseScheduler } from './noise-schedulers';
@@ -20,6 +25,7 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   timeSliderId: string,
   timeValueId: string,
   wallTimeDisplayId: string,
+  sampleBtnId: string | null,
   usePrecomputation: boolean,
   withContours: boolean,
   logPrefix: string,
@@ -32,6 +38,9 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   const timeSlider = el(document, timeSliderId) as HTMLInputElement;
   const timeValue = el(document, timeValueId) as HTMLSpanElement;
   const wallTimeDisplay = el(document, wallTimeDisplayId) as HTMLSpanElement;
+  const sampleBtn = sampleBtnId === null
+    ? null
+    : el(document, sampleBtnId) as HTMLButtonElement;
 
   const xRange = [-4, 4] as [number, number];
   const yRange = [-3, 3] as [number, number];
@@ -51,6 +60,7 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   let precomputedFrames: (ImageData | undefined)[] = new Array(NUM_FRAMES + 1)
     .fill(undefined) as (ImageData | undefined)[];
   let computationId = 0;
+  let sampledPoints: { x: number; y: number }[] = [];
 
   const computeGaussianParams = (t: number): { mean: [number, number]; variance: number } => {
     const { alpha, beta } = noiseScheduler(t);
@@ -235,6 +245,10 @@ export function setUpConditionalProbabilityPathTfjsImpl(
     const dataPointPixelX = xScale(dataPoint[0]);
     const dataPointPixelY = yScale(dataPoint[1]);
     addDot(ctx, dataPointPixelX, dataPointPixelY, DATA_POINT_RADIUS, '#2196F3');
+
+    sampledPoints.forEach(({ x, y }) => {
+      addDot(ctx, x, y, SAMPLED_POINT_RADIUS, SAMPLED_POINT_COLOR);
+    });
   }
 
   function animate(): void {
@@ -278,6 +292,8 @@ export function setUpConditionalProbabilityPathTfjsImpl(
       isDragging = true;
       clearPrecomputedFrames();
       canvas.style.cursor = 'grabbing';
+      sampledPoints = [];
+      render();
     }
   });
 
@@ -320,6 +336,7 @@ export function setUpConditionalProbabilityPathTfjsImpl(
       animationStartTime = performance.now();
       animationState.isAnimating = true;
       playBtn.textContent = 'Pause';
+      sampledPoints = [];
     } else {
       animationState.isAnimating = false;
       playBtn.textContent = 'Play';
@@ -336,6 +353,7 @@ export function setUpConditionalProbabilityPathTfjsImpl(
     animationStartTime = null;
     wallTimeDisplay.textContent = '';
     precomputeFrames();
+    sampledPoints = [];
     render();
   });
 
@@ -347,12 +365,45 @@ export function setUpConditionalProbabilityPathTfjsImpl(
       playBtn.textContent = 'Play';
     }
     animationStartTime = null;
+    sampledPoints = [];
     render();
   });
+
+  if (sampleBtn) {
+    sampleBtn.addEventListener('click', () => {
+      if (animationState.isAnimating) {
+        return;
+      }
+
+      const { mean, variance } = computeGaussianParams(animationState.time);
+      const sd = Math.sqrt(variance);
+      sampledPoints = [];
+
+      for (let i = 0; i < NUM_SAMPLES; i++) {
+        const [sampleX, sampleY] = sample2DGaussian(mean, sd);
+        sampledPoints.push({
+          x: xScale(sampleX),
+          y: yScale(sampleY)
+        });
+      }
+
+      render();
+    });
+  }
 
   precomputeFrames();
   render();
   animate();
+}
+
+function sample2DGaussian(mean: [number, number], standardDeviation: number): [number, number] {
+  const u1 = Math.random();
+  const u2 = Math.random();
+  const radius = Math.sqrt(-2 * Math.log(u1)) * standardDeviation;
+  const theta = 2 * Math.PI * u2;
+  const offsetX = radius * Math.cos(theta);
+  const offsetY = radius * Math.sin(theta);
+  return [mean[0] + offsetX, mean[1] + offsetY];
 }
 
 export function setUpConditionalProbabilityPathTfjs(
@@ -365,6 +416,7 @@ export function setUpConditionalProbabilityPathTfjs(
     '#timeSliderTfjs',
     '#timeValueTfjs',
     '#wallTimeTfjs',
+    null,
     false,
     true,
     'TF.js on-the-fly',
@@ -382,6 +434,7 @@ export function setUpConditionalProbabilityPathTfjsPrecompute(
     '#timeSliderTfjsPrecompute',
     '#timeValueTfjsPrecompute',
     '#wallTimeTfjsPrecompute',
+    null,
     true,
     true,
     'TF.js with precomputation',
@@ -399,6 +452,7 @@ export function setUpConditionalProbabilityPathTfjsNoContours(
     '#timeSliderTfjsNoContours',
     '#timeValueTfjsNoContours',
     '#wallTimeTfjsNoContours',
+    '#sampleBtnTfjsNoContours',
     false,
     false,
     'TF.js on-the-fly (no contours)',
@@ -416,6 +470,7 @@ export function setUpConditionalProbabilityPathTfjsPrecomputeNoContours(
     '#timeSliderTfjsPrecomputeNoContours',
     '#timeValueTfjsPrecomputeNoContours',
     '#wallTimeTfjsPrecomputeNoContours',
+    null,
     true,
     false,
     'TF.js with precomputation (no contours)',
