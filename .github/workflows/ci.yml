@@ -19,6 +19,9 @@ jobs:
       - name: "ESLint"
         working-directory: ts
         run: npx eslint src
-      - name: "Compile TypeScript"
+      - name: "Run TypeScript type checks"
+        working-directory: ts
+        run: npx tsc --noEmit
+      - name: "Compile bundle"
         working-directory: ts
         run: npm run build
