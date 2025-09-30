@@ -132,18 +132,19 @@ function setUpConditionalProbabilityPath(): void {
     time: 0
   };
 
-  function render(): void {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const NUM_FRAMES = 60;
+  let precomputedFrames: (ImageData | undefined)[] = new Array(NUM_FRAMES + 1)
+    .fill(undefined) as (ImageData | undefined)[];
+  let computationId = 0;
 
-    const t = animationState.time;
+  function computeFrameOnTheFly(t: number): ImageData {
+    const startVariance = 1;
+    const endVariance = 0.0001;
+
     const interpolatedMean: [number, number] = [
       t * dataPoint[0],
       t * dataPoint[1]
     ];
-
-    // Variance goes from 1 (standard Gaussian) at t=0 to ~0 (Dirac delta) at t=1
-    const startVariance = 1;
-    const endVariance = 0.0001;
     const variance = startVariance + (endVariance - startVariance) * t;
 
     const gaussian: GaussianComponent = {
@@ -159,8 +160,58 @@ function setUpConditionalProbabilityPath(): void {
       canvas.width,
       canvas.height
     );
-    drawGaussianMixturePDF(ctx, probabilityGrid, maxValue, canvas.width, canvas.height);
-    drawGaussianContours(ctx, probabilityGrid, maxValue, canvas.width, canvas.height);
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = getContext(tempCanvas);
+
+    drawGaussianMixturePDF(tempCtx, probabilityGrid, maxValue, canvas.width, canvas.height);
+    drawGaussianContours(tempCtx, probabilityGrid, maxValue, canvas.width, canvas.height);
+
+    return tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+  }
+
+  function clearPrecomputedFrames(): void {
+    precomputedFrames = new Array(NUM_FRAMES + 1).fill(undefined) as (ImageData | undefined)[];
+  }
+
+  async function precomputeFrames(): Promise<void> {
+    const currentComputationId = ++computationId;
+    console.log(`[Precompute #${String(currentComputationId)}] Starting frame precomputation...`);
+    const startTime = performance.now();
+
+    for (let i = 0; i <= NUM_FRAMES; i++) {
+      if (currentComputationId !== computationId) {
+        const msg = `[Precompute #${String(currentComputationId)}] Aborted at frame ` +
+                    `${String(i)}/${String(NUM_FRAMES)}`;
+        console.log(msg);
+        return;
+      }
+
+      const t = i / NUM_FRAMES;
+      precomputedFrames[i] = computeFrameOnTheFly(t);
+
+      if (i % 10 === 0) {
+        await new Promise((resolve) => { setTimeout(resolve, 0); });
+      }
+    }
+
+    const endTime = performance.now();
+    const duration = (endTime - startTime).toFixed(2);
+    const finishMsg = `[Precompute #${String(currentComputationId)}] Finished ` +
+                      `${String(NUM_FRAMES + 1)} frames in ${duration}ms`;
+    console.log(finishMsg);
+  }
+
+  function render(): void {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const frameIndex = Math.round(animationState.time * NUM_FRAMES);
+    const frame = precomputedFrames[frameIndex];
+    const imageData = frame ?? computeFrameOnTheFly(animationState.time);
+    ctx.putImageData(imageData, 0, 0);
+
     addFrameUsingScales(ctx, xScale, yScale, 11);
 
     const dataPointPixelX = xScale(dataPoint[0]);
@@ -170,7 +221,7 @@ function setUpConditionalProbabilityPath(): void {
 
   function animate(): void {
     if (animationState.isAnimating) {
-      animationState.time += 0.005;
+      animationState.time += 1 / 60;
       if (animationState.time >= 1) {
         animationState.time = 1;
         animationState.isAnimating = false;
@@ -201,6 +252,7 @@ function setUpConditionalProbabilityPath(): void {
 
     if (isPointNear(pixelX, pixelY, dataPointPixelX, dataPointPixelY)) {
       isDragging = true;
+      clearPrecomputedFrames();
       canvas.style.cursor = 'grabbing';
     }
   });
@@ -221,11 +273,17 @@ function setUpConditionalProbabilityPath(): void {
   });
 
   canvas.addEventListener('mouseup', () => {
+    if (isDragging) {
+      void precomputeFrames();
+    }
     isDragging = false;
     canvas.style.cursor = 'default';
   });
 
   canvas.addEventListener('mouseleave', () => {
+    if (isDragging) {
+      void precomputeFrames();
+    }
     isDragging = false;
     canvas.style.cursor = 'default';
   });
@@ -250,6 +308,7 @@ function setUpConditionalProbabilityPath(): void {
     timeSlider.value = '0';
     timeValue.textContent = '0.00';
     dataPoint = [1, 0.5];
+    void precomputeFrames();
     render();
   });
 
@@ -263,6 +322,7 @@ function setUpConditionalProbabilityPath(): void {
     render();
   });
 
+  void precomputeFrames();
   render();
   animate();
 }
