@@ -1,8 +1,12 @@
 import { setUpConditionalProbabilityPathTfjsNoContours } from './conditional-probability-tfjs';
-import { linearNoiseScheduler } from './noise-schedulers';
+import { linearNoiseScheduler, linearNoiseSchedulerDerivative } from './noise-schedulers';
 
 function run(): void {
-  setUpConditionalProbabilityPathTfjsNoContours(linearNoiseScheduler);
+  setUpConditionalProbabilityPathTfjsNoContours(
+    linearNoiseScheduler,
+    linearNoiseSchedulerDerivative,
+    '#conditional-vector-field-canvas'
+  );
 }
 
 run();
