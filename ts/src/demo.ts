@@ -295,6 +295,7 @@ function setUpConditionalProbabilityPathCpuOnTheFly(): void {
   const resetBtn = el(document, '#resetBtnCpu') as HTMLButtonElement;
   const timeSlider = el(document, '#timeSliderCpu') as HTMLInputElement;
   const timeValue = el(document, '#timeValueCpu') as HTMLSpanElement;
+  const wallTimeDisplay = el(document, '#wallTimeCpu') as HTMLSpanElement;
 
   const xRange = [-4, 4] as [number, number];
   const yRange = [-3, 3] as [number, number];
@@ -308,6 +309,7 @@ function setUpConditionalProbabilityPathCpuOnTheFly(): void {
     isAnimating: false,
     time: 0
   };
+  let animationStartTime: number | null = null;
 
   function computeFrameOnTheFly(t: number): ImageData {
     const startVariance = 1;
@@ -360,6 +362,13 @@ function setUpConditionalProbabilityPathCpuOnTheFly(): void {
   function animate(): void {
     if (animationState.isAnimating) {
       animationState.time += 1 / 60;
+
+      // Update wall time display
+      if (animationStartTime !== null) {
+        const wallTime = performance.now() - animationStartTime;
+        wallTimeDisplay.textContent = `${wallTime.toFixed(0)}ms`;
+      }
+
       if (animationState.time >= 1) {
         animationState.time = 1;
         animationState.isAnimating = false;
@@ -424,6 +433,7 @@ function setUpConditionalProbabilityPathCpuOnTheFly(): void {
       if (animationState.time >= 1) {
         animationState.time = 0;
       }
+      animationStartTime = performance.now();
       animationState.isAnimating = true;
       playBtn.textContent = 'Pause';
     } else {
@@ -439,6 +449,8 @@ function setUpConditionalProbabilityPathCpuOnTheFly(): void {
     timeSlider.value = '0';
     timeValue.textContent = '0.00';
     dataPoint = [1, 0.5];
+    animationStartTime = null;
+    wallTimeDisplay.textContent = '';
     render();
   });
 
@@ -456,13 +468,14 @@ function setUpConditionalProbabilityPathCpuOnTheFly(): void {
   animate();
 }
 
-function setUpConditionalProbabilityPath(): void {
+function setUpConditionalProbabilityPath(): void{
   const canvas = el(document, '#conditional-probability-canvas') as HTMLCanvasElement;
   const ctx = getContext(canvas);
   const playBtn = el(document, '#playBtn') as HTMLButtonElement;
   const resetBtn = el(document, '#resetBtn') as HTMLButtonElement;
   const timeSlider = el(document, '#timeSlider') as HTMLInputElement;
   const timeValue = el(document, '#timeValue') as HTMLSpanElement;
+  const wallTimeDisplay = el(document, '#wallTime') as HTMLSpanElement;
 
   const xRange = [-4, 4] as [number, number];
   const yRange = [-3, 3] as [number, number];
@@ -476,6 +489,7 @@ function setUpConditionalProbabilityPath(): void {
     isAnimating: false,
     time: 0
   };
+  let animationStartTime: number | null = null;
 
   const NUM_FRAMES = 60;
   let precomputedFrames: (ImageData | undefined)[] = new Array(NUM_FRAMES + 1)
@@ -567,6 +581,13 @@ function setUpConditionalProbabilityPath(): void {
   function animate(): void {
     if (animationState.isAnimating) {
       animationState.time += 1 / 60;
+
+      // Update wall time display
+      if (animationStartTime !== null) {
+        const wallTime = performance.now() - animationStartTime;
+        wallTimeDisplay.textContent = `${wallTime.toFixed(0)}ms`;
+      }
+
       if (animationState.time >= 1) {
         animationState.time = 1;
         animationState.isAnimating = false;
@@ -638,6 +659,7 @@ function setUpConditionalProbabilityPath(): void {
       if (animationState.time >= 1) {
         animationState.time = 0;
       }
+      animationStartTime = performance.now(); // Always start timer
       animationState.isAnimating = true;
       playBtn.textContent = 'Pause';
     } else {
@@ -653,6 +675,8 @@ function setUpConditionalProbabilityPath(): void {
     timeSlider.value = '0';
     timeValue.textContent = '0.00';
     dataPoint = [1, 0.5];
+    animationStartTime = null;
+    wallTimeDisplay.textContent = ''; // Clear display
     void precomputeFrames();
     render();
   });
@@ -664,6 +688,7 @@ function setUpConditionalProbabilityPath(): void {
       animationState.isAnimating = false;
       playBtn.textContent = 'Play';
     }
+    animationStartTime = null;
     render();
   });
 
@@ -678,6 +703,7 @@ function setUpConditionalProbabilityPathTfjsImpl(
   resetBtnId: string,
   timeSliderId: string,
   timeValueId: string,
+  wallTimeDisplayId: string,
   usePrecomputation: boolean,
   withContours: boolean,
   logPrefix: string
@@ -688,6 +714,7 @@ function setUpConditionalProbabilityPathTfjsImpl(
   const resetBtn = el(document, resetBtnId) as HTMLButtonElement;
   const timeSlider = el(document, timeSliderId) as HTMLInputElement;
   const timeValue = el(document, timeValueId) as HTMLSpanElement;
+  const wallTimeDisplay = el(document, wallTimeDisplayId) as HTMLSpanElement;
 
   const xRange = [-4, 4] as [number, number];
   const yRange = [-3, 3] as [number, number];
@@ -701,6 +728,7 @@ function setUpConditionalProbabilityPathTfjsImpl(
     isAnimating: false,
     time: 0
   };
+  let animationStartTime: number | null = null;
 
   const NUM_FRAMES = 60;
   let precomputedFrames: (ImageData | undefined)[] = new Array(NUM_FRAMES + 1)
@@ -913,6 +941,13 @@ function setUpConditionalProbabilityPathTfjsImpl(
   function animate(): void {
     if (animationState.isAnimating) {
       animationState.time += 1 / 60;
+
+      // Update wall time display
+      if (animationStartTime !== null) {
+        const wallTime = performance.now() - animationStartTime;
+        wallTimeDisplay.textContent = `${wallTime.toFixed(0)}ms`;
+      }
+
       if (animationState.time >= 1) {
         animationState.time = 1;
         animationState.isAnimating = false;
@@ -984,6 +1019,7 @@ function setUpConditionalProbabilityPathTfjsImpl(
       if (animationState.time >= 1) {
         animationState.time = 0;
       }
+      animationStartTime = performance.now(); // Always start timer
       animationState.isAnimating = true;
       playBtn.textContent = 'Pause';
     } else {
@@ -999,6 +1035,8 @@ function setUpConditionalProbabilityPathTfjsImpl(
     timeSlider.value = '0';
     timeValue.textContent = '0.00';
     dataPoint = [1, 0.5];
+    animationStartTime = null;
+    wallTimeDisplay.textContent = ''; // Clear display
     precomputeFrames();
     render();
   });
@@ -1010,6 +1048,7 @@ function setUpConditionalProbabilityPathTfjsImpl(
       animationState.isAnimating = false;
       playBtn.textContent = 'Play';
     }
+    animationStartTime = null;
     render();
   });
 
@@ -1025,6 +1064,7 @@ function setUpConditionalProbabilityPathTfjs(): void {
     '#resetBtnTfjs',
     '#timeSliderTfjs',
     '#timeValueTfjs',
+    '#wallTimeTfjs',
     false,
     true,
     'TF.js on-the-fly'
@@ -1038,6 +1078,7 @@ function setUpConditionalProbabilityPathTfjsPrecompute(): void {
     '#resetBtnTfjsPrecompute',
     '#timeSliderTfjsPrecompute',
     '#timeValueTfjsPrecompute',
+    '#wallTimeTfjsPrecompute',
     true,
     true,
     'TF.js with precomputation'
@@ -1051,6 +1092,7 @@ function setUpConditionalProbabilityPathTfjsNoContours(): void {
     '#resetBtnTfjsNoContours',
     '#timeSliderTfjsNoContours',
     '#timeValueTfjsNoContours',
+    '#wallTimeTfjsNoContours',
     false,
     false,
     'TF.js on-the-fly (no contours)'
@@ -1064,6 +1106,7 @@ function setUpConditionalProbabilityPathTfjsPrecomputeNoContours(): void {
     '#resetBtnTfjsPrecomputeNoContours',
     '#timeSliderTfjsPrecomputeNoContours',
     '#timeValueTfjsPrecomputeNoContours',
+    '#wallTimeTfjsPrecomputeNoContours',
     true,
     false,
     'TF.js with precomputation (no contours)'
