@@ -1,11 +1,15 @@
 {
   "name": "flow-matching-and-diffusion",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "build": "npx esbuild src/demo.ts --bundle --outfile=dist/demo.js"
   },
   "devDependencies": {
     "esbuild": "^0.25.10",
-    "typescript": "^5.9.2"
+    "eslint": "^9.36.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.45.0"
   }
 }
