@@ -1,7 +1,11 @@
 {
   "name": "flow-matching-and-diffusion",
   "version": "0.0.0",
+  "scripts": {
+    "build": "npx esbuild src/demo.ts --bundle --outfile=dist/demo.js"
+  },
   "devDependencies": {
+    "esbuild": "^0.25.10",
     "typescript": "^5.9.2"
   }
 }
