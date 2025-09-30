@@ -19,6 +19,12 @@ interface AnimationState {
 }
 
 
+interface GaussianPdfResult {
+  imageData: ImageData;
+  probabilityGrid: number[][];
+  maxValue: number;
+}
+
 function computeGaussianPdfTfjs(
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
@@ -26,8 +32,9 @@ function computeGaussianPdfTfjs(
   yScale: Scale,
   meanX: number,
   meanY: number,
-  variance: number
-): ImageData {
+  variance: number,
+  withContours = false
+): GaussianPdfResult {
   const width = canvas.width;
   const height = canvas.height;
 
@@ -58,6 +65,19 @@ function computeGaussianPdfTfjs(
 
   const imageData = ctx.createImageData(width, height);
   const intensityData = intensity.dataSync();
+  const pdfData = pdf.dataSync();
+
+  // Build probability grid if needed for contours
+  const probabilityGrid: number[][] = [];
+  if (withContours) {
+    for (let x = 0; x < width; x++) {
+      probabilityGrid[x] = [];
+      for (let y = 0; y < height; y++) {
+        const idx = x * height + y;
+        probabilityGrid[x][y] = pdfData[idx];
+      }
+    }
+  }
 
   for (let x = 0; x < width; x++) {
     for (let y = 0; y < height; y++) {
@@ -88,7 +108,7 @@ function computeGaussianPdfTfjs(
   normalized.dispose();
   intensity.dispose();
 
-  return imageData;
+  return { imageData, probabilityGrid, maxValue };
 }
 
 function setUpFrameExample(): void {
@@ -117,8 +137,9 @@ function setUpGaussian(): void {
   function render(): void {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const imageData = computeGaussianPdfTfjs(canvas, ctx, xScale, yScale, mean[0], mean[1], 1);
-    ctx.putImageData(imageData, 0, 0);
+    const result = computeGaussianPdfTfjs(canvas, ctx, xScale, yScale, mean[0], mean[1], 1, true);
+    ctx.putImageData(result.imageData, 0, 0);
+    drawGaussianContours(ctx, result.probabilityGrid, result.maxValue, canvas.width, canvas.height);
 
     addFrameUsingScales(ctx, xScale, yScale, 10);
 
@@ -437,15 +458,24 @@ function setUpConditionalProbabilityPathTfjsImpl(
     ];
     const variance = startVariance + (endVariance - startVariance) * t;
 
-    return computeGaussianPdfTfjs(
+    const result = computeGaussianPdfTfjs(
       canvas,
       ctx,
       xScale,
       yScale,
       interpolatedMean[0],
       interpolatedMean[1],
-      variance
+      variance,
+      true
     );
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = getContext(tempCanvas);
+    tempCtx.putImageData(result.imageData, 0, 0);
+    drawGaussianContours(tempCtx, result.probabilityGrid, result.maxValue, canvas.width, canvas.height);
+    return tempCtx.getImageData(0, 0, canvas.width, canvas.height);
   }
 
   function computeAllFramesTfjs(): ImageData[] {
@@ -453,23 +483,11 @@ function setUpConditionalProbabilityPathTfjsImpl(
     const endVariance = 0.0001;
     const frames: ImageData[] = [];
 
-    // Create grid of pixel coordinates
-    const width = canvas.width;
-    const height = canvas.height;
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tempCtx = getContext(tempCanvas);
 
-    const pixelXs = tf.range(0, width, 1);
-    const pixelYs = tf.range(0, height, 1);
-
-    // Create meshgrid
-    const [meshY, meshX] = tf.meshgrid(pixelYs, pixelXs);
-
-    // Convert to data coordinates using scale inverse
-    const dataXs = meshX.dataSync().map((px: number) => xScale.inverse(px));
-    const dataYs = meshY.dataSync().map((py: number) => yScale.inverse(py));
-    const dataXTensor = tf.tensor2d(dataXs, [width, height]);
-    const dataYTensor = tf.tensor2d(dataYs, [width, height]);
-
-    // Compute all frames at once
     for (let i = 0; i <= NUM_FRAMES; i++) {
       const t = i / NUM_FRAMES;
       const interpolatedMean: [number, number] = [
@@ -478,63 +496,21 @@ function setUpConditionalProbabilityPathTfjsImpl(
       ];
       const variance = startVariance + (endVariance - startVariance) * t;
 
-      // Compute Gaussian PDF for all pixels at once
-      const dx = dataXTensor.sub(interpolatedMean[0]);
-      const dy = dataYTensor.sub(interpolatedMean[1]);
+      const result = computeGaussianPdfTfjs(
+        canvas,
+        ctx,
+        xScale,
+        yScale,
+        interpolatedMean[0],
+        interpolatedMean[1],
+        variance,
+        true
+      );
 
-      // For isotropic Gaussian: exp(-0.5 * ((dx^2 + dy^2) / variance))
-      const dxSq = dx.square();
-      const dySq = dy.square();
-      const distSq = dxSq.add(dySq);
-      const exponent = distSq.div(-2 * variance);
-      const normalization = 1.0 / (2 * Math.PI * variance);
-      const pdf = exponent.exp().mul(normalization);
-
-      // Get max value for normalization
-      const maxValue = pdf.max().dataSync()[0];
-
-      // Normalize and convert to image data
-      const normalized = pdf.div(maxValue);
-      const intensity = normalized.mul(255);
-
-      // Create ImageData
-      const imageData = ctx.createImageData(width, height);
-      const intensityData = intensity.dataSync();
-
-      for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
-          const idx = x * height + y;
-          const pixelIdx = (y * width + x) * 4;
-          const intensityVal = intensityData[idx];
-
-          imageData.data[pixelIdx] = 30;
-          imageData.data[pixelIdx + 1] = 150;
-          imageData.data[pixelIdx + 2] = 255;
-          imageData.data[pixelIdx + 3] = intensityVal;
-        }
-      }
-
-      frames.push(imageData);
-
-      // Clean up intermediate tensors
-      dx.dispose();
-      dy.dispose();
-      dxSq.dispose();
-      dySq.dispose();
-      distSq.dispose();
-      exponent.dispose();
-      pdf.dispose();
-      normalized.dispose();
-      intensity.dispose();
+      tempCtx.putImageData(result.imageData, 0, 0);
+      drawGaussianContours(tempCtx, result.probabilityGrid, result.maxValue, canvas.width, canvas.height);
+      frames.push(tempCtx.getImageData(0, 0, canvas.width, canvas.height));
     }
-
-    // Clean up persistent tensors
-    pixelXs.dispose();
-    pixelYs.dispose();
-    meshX.dispose();
-    meshY.dispose();
-    dataXTensor.dispose();
-    dataYTensor.dispose();
 
     return frames;
   }
