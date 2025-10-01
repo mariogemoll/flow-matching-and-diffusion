@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "npx esbuild src/demo.ts src/conditional.ts --bundle --outdir=dist"
+    "build": "npx esbuild src/demo.ts src/conditional.ts src/marginal.ts --bundle --outdir=dist"
   },
   "devDependencies": {
     "@tensorflow/tfjs": "^4.22.0",

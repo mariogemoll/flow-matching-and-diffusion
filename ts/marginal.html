@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Marginal Probability Path</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+  <style>
+    .bottom-controls {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .bottom-controls input[type="range"] { width: 320px; }
+  </style>
+</head>
+<body>
+  <div style="display: flex; gap: 20px;">
+    <div>
+      <h1>Left Canvas</h1>
+      <canvas id="marginal-left-canvas" width="480" height="350" style="width: 480px; height: 350px; border: 1px solid #ccc;"></canvas>
+    </div>
+
+    <div>
+      <h1>Right Canvas</h1>
+      <canvas id="marginal-right-canvas" width="480" height="350" style="width: 480px; height: 350px; border: 1px solid #ccc;"></canvas>
+    </div>
+  </div>
+  <div class="bottom-controls">
+    <button id="playBtn" style="width: 60px;">Play</button>
+    <input type="range" id="timeSlider" min="0" max="1" step="0.01" value="0">
+    <span id="timeValue">0.00</span>
+  </div>
+  <script type="module" src="dist/marginal.js"></script>
+</body>
+</html>
