@@ -16,6 +16,7 @@ function run(): void {
   const rightCanvas = el(document, '#marginal-right-canvas') as HTMLCanvasElement;
   const rightCtx = getContext(rightCanvas);
 
+
   // Define coordinate system (in data space)
   const xRange = [-4, 4] as [number, number];
   const yRange = [-3, 3] as [number, number];
@@ -86,7 +87,9 @@ function run(): void {
     | 'major-neg'
     | 'minor-pos'
     | 'minor-neg'
+    | 'weight-slider'
     | null = null;
+  let showAllWeightSliders = false;
 
   // Color palette for components
   const colorPalette = ['#FF5722', '#4CAF50', '#2196F3', '#AB47BC', '#FFB300', '#009688'];
@@ -189,6 +192,134 @@ function run(): void {
     return null;
   }
 
+  function drawWeightSlider(componentIndex: number, isActive = true): void {
+    const component = components[componentIndex];
+    const [centerX, centerY] = component.mean;
+
+    // Position slider above the component (in data space)
+    const sliderYOffset = 0.8; // data space units above center
+    const sliderWidthData = 1.2; // data space units
+
+    const sliderCenterX = centerX;
+    const sliderCenterY = centerY - sliderYOffset;
+    const sliderX = sliderCenterX - sliderWidthData / 2;
+
+    // Convert to pixel space
+    const sliderPixelX = xScale(sliderX);
+    const sliderPixelY = yScale(sliderCenterY);
+    const sliderPixelWidth = xScale(sliderX + sliderWidthData) - sliderPixelX;
+    const sliderHeight = 6;
+
+    leftCtx.save();
+
+    // Draw slider background (more transparent for inactive sliders)
+    leftCtx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.4)';
+    leftCtx.fillRect(sliderPixelX - 5, sliderPixelY - 15, sliderPixelWidth + 10, 30);
+
+    // Draw slider track
+    leftCtx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)';
+    leftCtx.fillRect(sliderPixelX, sliderPixelY, sliderPixelWidth, sliderHeight);
+
+    // Draw slider fill
+    const color = getComponentColor(componentIndex);
+    leftCtx.fillStyle = color;
+    leftCtx.globalAlpha = isActive ? 1.0 : 0.7;
+    leftCtx.fillRect(
+      sliderPixelX,
+      sliderPixelY,
+      sliderPixelWidth * component.weight,
+      sliderHeight
+    );
+
+    // Draw slider handle (only for active slider)
+    if (isActive) {
+      const handleX = sliderPixelX + sliderPixelWidth * component.weight;
+      leftCtx.globalAlpha = 1.0;
+      leftCtx.fillStyle = 'white';
+      leftCtx.strokeStyle = color;
+      leftCtx.lineWidth = 2;
+      leftCtx.beginPath();
+      leftCtx.arc(handleX, sliderPixelY + sliderHeight / 2, 8, 0, 2 * Math.PI);
+      leftCtx.fill();
+      leftCtx.stroke();
+    }
+
+    // Draw weight text
+    leftCtx.globalAlpha = isActive ? 1.0 : 0.8;
+    leftCtx.fillStyle = 'white';
+    leftCtx.font = '12px Arial';
+    leftCtx.textAlign = 'center';
+    leftCtx.fillText(
+      `Weight: ${component.weight.toFixed(2)}`,
+      xScale(sliderCenterX),
+      sliderPixelY - 5
+    );
+
+    leftCtx.restore();
+  }
+
+  function drawAllWeightSliders(): void {
+    for (let i = 0; i < components.length; i++) {
+      const isActive = i === selectedComponentIndex;
+      drawWeightSlider(i, isActive);
+    }
+  }
+
+  function isPointInWeightSlider(
+    dataX: number,
+    dataY: number,
+    componentIndex: number
+  ): boolean {
+    if (selectedComponentIndex !== componentIndex) {return false;}
+
+    const component = components[componentIndex];
+    const [centerX, centerY] = component.mean;
+
+    const sliderYOffset = 0.8;
+    const sliderWidthData = 1.2;
+
+    const sliderCenterX = centerX;
+    const sliderCenterY = centerY - sliderYOffset;
+    const sliderX = sliderCenterX - sliderWidthData / 2;
+
+    // Check if point is within slider bounds (with some padding)
+    const padding = 0.15;
+    return (
+      dataX >= sliderX - padding &&
+      dataX <= sliderX + sliderWidthData + padding &&
+      dataY >= sliderCenterY - padding &&
+      dataY <= sliderCenterY + padding
+    );
+  }
+
+  function handleWeightSliderDrag(mouseX: number, componentIndex: number): void {
+    const component = components[componentIndex];
+    const [centerX] = component.mean;
+
+    const sliderWidthData = 1.2;
+    const sliderX = centerX - sliderWidthData / 2;
+
+    // Calculate new weight based on mouse position
+    const relativeX = Math.max(0, Math.min(sliderWidthData, mouseX - sliderX));
+    const newWeight = relativeX / sliderWidthData;
+
+    // Update weight
+    components[componentIndex].weight = newWeight;
+    normalizeWeights();
+
+    // Show all weight sliders when adjusting
+    showAllWeightSliders = true;
+  }
+
+  function normalizeWeights(): void {
+    const totalWeight = components.reduce((sum, comp) => sum + comp.weight, 0);
+    if (totalWeight > 0) {
+      components.forEach((comp) => {
+        comp.weight /= totalWeight;
+      });
+    }
+  }
+
   function drawHandles(componentIndex: number): void {
     if (selectedComponentIndex !== componentIndex) {return;}
 
@@ -232,6 +363,11 @@ function run(): void {
     leftCtx.stroke();
 
     leftCtx.setLineDash([]);
+
+    // Draw weight slider (single slider when not showing all)
+    if (!showAllWeightSliders) {
+      drawWeightSlider(componentIndex, true);
+    }
 
     // Draw handles
     const handleRadius = 6;
@@ -323,6 +459,11 @@ function run(): void {
     if (selectedComponentIndex >= 0) {
       drawHandles(selectedComponentIndex);
     }
+
+    // Draw all weight sliders when weight is being adjusted
+    if (showAllWeightSliders && selectedComponentIndex >= 0) {
+      drawAllWeightSliders();
+    }
   }
 
   function handleMajorAxisDrag(mouseX: number, mouseY: number, componentIndex: number): void {
@@ -396,6 +537,15 @@ function run(): void {
   leftCanvas.addEventListener('mousedown', (e) => {
     const [dataX, dataY] = getMousePosition(e);
 
+    // First check for weight slider interaction
+    if (selectedComponentIndex >= 0 && isPointInWeightSlider(dataX, dataY, selectedComponentIndex)) {
+      isDragging = true;
+      selectedHandleType = 'weight-slider';
+      dragOffset = [dataX, dataY];
+      leftCanvas.style.cursor = 'grabbing';
+      return;
+    }
+
     // Check for handle interaction if component is selected
     const handle = findNearestHandle(dataX, dataY);
     if (handle) {
@@ -423,6 +573,7 @@ function run(): void {
 
     // Clicked on empty space - deselect
     selectedComponentIndex = -1;
+    showAllWeightSliders = false;
     render();
   });
 
@@ -433,6 +584,9 @@ function run(): void {
       if (selectedHandleType === 'center') {
         // Update component position
         components[selectedComponentIndex].mean = [dataX - dragOffset[0], dataY - dragOffset[1]];
+      } else if (selectedHandleType === 'weight-slider') {
+        // Handle weight slider dragging
+        handleWeightSliderDrag(dataX, selectedComponentIndex);
       } else if (selectedHandleType?.startsWith('major') === true) {
         // Handle major axis dragging
         handleMajorAxisDrag(dataX, dataY, selectedComponentIndex);
@@ -455,6 +609,15 @@ function run(): void {
   });
 
   leftCanvas.addEventListener('mouseup', () => {
+    if (isDragging && selectedHandleType === 'weight-slider') {
+      // Keep showing weight sliders briefly after weight adjustment
+      setTimeout(() => {
+        if (!isDragging) {
+          showAllWeightSliders = false;
+          render();
+        }
+      }, 1500); // Hide after 1.5 seconds
+    }
     isDragging = false;
     selectedHandleType = null;
     leftCanvas.style.cursor = 'default';
