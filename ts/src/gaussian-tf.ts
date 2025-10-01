@@ -1,6 +1,6 @@
 
 
-import { drawGaussianContours } from './gaussian';
+import { drawGaussianContours, type GaussianComponent } from './gaussian';
 import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
 import { el } from './web-ui-common/dom';
 import type { Scale } from './web-ui-common/types';
@@ -12,6 +12,11 @@ declare const tf: typeof import('@tensorflow/tfjs');
 
 interface GaussianPdfResult {
   imageData: ImageData;
+  probabilityGrid: number[][];
+  maxValue: number;
+}
+
+interface GaussianMixturePdfResult {
   probabilityGrid: number[][];
   maxValue: number;
 }
@@ -94,6 +99,101 @@ export function computeGaussianPdfTfjs(
   }
 
   return { imageData, probabilityGrid, maxValue };
+}
+
+export function computeGaussianMixtureTfjs(
+  xScale: Scale,
+  yScale: Scale,
+  components: GaussianComponent[],
+  canvasWidth: number,
+  canvasHeight: number
+): GaussianMixturePdfResult {
+  return tf.tidy(() => {
+    // Create pixel coordinate grids
+    const pixelXs = tf.range(0, canvasWidth, 1);
+    const pixelYs = tf.range(0, canvasHeight, 1);
+    const [meshY, meshX] = tf.meshgrid(pixelYs, pixelXs);
+
+    // Convert pixel coordinates to data coordinates
+    const dataXs = meshX.dataSync().map((px: number) => xScale.inverse(px));
+    const dataYs = meshY.dataSync().map((py: number) => yScale.inverse(py));
+    const dataXTensor = tf.tensor2d(dataXs, [canvasWidth, canvasHeight]);
+    const dataYTensor = tf.tensor2d(dataYs, [canvasWidth, canvasHeight]);
+
+    // Accumulate probability from all mixture components
+    let totalPdf = tf.zeros([canvasWidth, canvasHeight]);
+
+    for (const component of components) {
+      const [meanX, meanY] = component.mean;
+      const [[covXX, covXY], [covYX, covYY]] = component.covariance;
+
+      // Compute determinant
+      const det = covXX * covYY - covXY * covYX;
+
+      if (Math.abs(det) < 1e-10) {
+        continue; // Skip degenerate covariance
+      }
+
+      // Compute inverse covariance matrix
+      const invCovXX = covYY / det;
+      const invCovXY = -covXY / det;
+      const invCovYX = -covYX / det;
+      const invCovYY = covXX / det;
+
+      // Compute dx and dy
+      const dx = dataXTensor.sub(meanX);
+      const dy = dataYTensor.sub(meanY);
+
+      // Compute quadratic form: (x-μ)^T Σ^(-1) (x-μ)
+      const term1 = dx.mul(invCovXX).add(dy.mul(invCovYX)).mul(dx);
+      const term2 = dx.mul(invCovXY).add(dy.mul(invCovYY)).mul(dy);
+      const quadForm = term1.add(term2);
+
+      // Compute Gaussian PDF
+      const exponent = quadForm.mul(-0.5);
+      const normalization = 1.0 / (2 * Math.PI * Math.sqrt(Math.abs(det)));
+      const componentPdf = exponent.exp().mul(normalization).mul(component.weight);
+
+      // Add to total
+      const newTotal = totalPdf.add(componentPdf);
+      totalPdf.dispose();
+      totalPdf = newTotal;
+
+      // Clean up intermediate tensors
+      dx.dispose();
+      dy.dispose();
+      term1.dispose();
+      term2.dispose();
+      quadForm.dispose();
+      exponent.dispose();
+      componentPdf.dispose();
+    }
+
+    // Get max value and convert to array
+    const maxValue = totalPdf.max().dataSync()[0];
+    const pdfData = totalPdf.dataSync() as Float32Array;
+
+    // Build probability grid
+    const probabilityGrid: number[][] = [];
+    for (let x = 0; x < canvasWidth; x++) {
+      probabilityGrid[x] = [];
+      for (let y = 0; y < canvasHeight; y++) {
+        const idx = x * canvasHeight + y;
+        probabilityGrid[x][y] = pdfData[idx];
+      }
+    }
+
+    // Clean up
+    pixelXs.dispose();
+    pixelYs.dispose();
+    meshX.dispose();
+    meshY.dispose();
+    dataXTensor.dispose();
+    dataYTensor.dispose();
+    totalPdf.dispose();
+
+    return { probabilityGrid, maxValue };
+  });
 }
 
 export function setUpGaussian(): void {
