@@ -84,10 +84,22 @@ export function drawGaussianMixturePDF(
   probabilityGrid: number[][],
   maxValue: number,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
+  color?: string
 ): void {
   const imageData = ctx.createImageData(canvasWidth, canvasHeight);
   const data = imageData.data;
+
+  // Parse color if provided, otherwise use default
+  let r = 30, g = 150, b = 255;
+  if (color !== undefined && color !== '') {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(color);
+    if (result) {
+      r = parseInt(result[1], 16);
+      g = parseInt(result[2], 16);
+      b = parseInt(result[3], 16);
+    }
+  }
 
   for (let pixelX = 0; pixelX < canvasWidth; pixelX++) {
     for (let pixelY = 0; pixelY < canvasHeight; pixelY++) {
@@ -97,9 +109,9 @@ export function drawGaussianMixturePDF(
       const index = (pixelY * canvasWidth + pixelX) * 4;
 
       const intensity = Math.min(255, normalizedValue * 255);
-      data[index] = 30;
-      data[index + 1] = 150;
-      data[index + 2] = 255;
+      data[index] = r;
+      data[index + 1] = g;
+      data[index + 2] = b;
       data[index + 3] = intensity;
     }
   }

@@ -16,6 +16,18 @@ function run(): void {
   const rightCanvas = el(document, '#marginal-right-canvas') as HTMLCanvasElement;
   const rightCtx = getContext(rightCanvas);
 
+  const addComponentBtn = el(document, '#addComponentBtn') as HTMLButtonElement;
+  const controlColorPicker = el(document, '#controlColorPicker') as HTMLInputElement;
+  const pdfColorPicker = el(document, '#pdfColorPicker') as HTMLInputElement;
+  const controlColorValue = el(document, '#controlColorValue') as HTMLSpanElement;
+  const pdfColorValue = el(document, '#pdfColorValue') as HTMLSpanElement;
+
+  // Color state
+  let controlColor = controlColorPicker.value;
+  let pdfColor = pdfColorPicker.value;
+
+  // Throttle state
+  let renderTimeout: number | null = null;
 
   // Define coordinate system (in data space)
   const xRange = [-4, 4] as [number, number];
@@ -90,12 +102,29 @@ function run(): void {
     | 'weight-slider'
     | null = null;
   let showAllWeightSliders = false;
+  let activeRemoveButton: {
+    componentIndex: number; x: number; y: number; size: number
+  } | null = null;
 
-  // Color palette for components
-  const colorPalette = ['#FF5722', '#4CAF50', '#2196F3', '#AB47BC', '#FFB300', '#009688'];
+  function hexToRgb(hex: string): { r: number; g: number; b: number } {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+      ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      }
+      : { r: 100, g: 150, b: 255 };
+  }
 
-  function getComponentColor(index: number): string {
-    return colorPalette[index % colorPalette.length] ?? '#FF5722';
+  function getComponentColor(): string {
+    const rgb = hexToRgb(controlColor);
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`;
+  }
+
+  function getControlColorWithAlpha(alpha: number): string {
+    const rgb = hexToRgb(controlColor);
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
   }
 
   function isPointInEllipse(
@@ -128,6 +157,11 @@ function run(): void {
     const pixelX = e.clientX - rect.left;
     const pixelY = e.clientY - rect.top;
     return [xScale.inverse(pixelX), yScale.inverse(pixelY)];
+  }
+
+  function getMousePixelPosition(e: MouseEvent): [number, number] {
+    const rect = leftCanvas.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
   }
 
   interface Handle {
@@ -197,11 +231,11 @@ function run(): void {
     const [centerX, centerY] = component.mean;
 
     // Position slider above the component (in data space)
-    const sliderYOffset = 0.8; // data space units above center
+    const sliderYOffset = 1.0; // data space units above center
     const sliderWidthData = 1.2; // data space units
 
     const sliderCenterX = centerX;
-    const sliderCenterY = centerY - sliderYOffset;
+    const sliderCenterY = centerY + sliderYOffset; // + because y-axis is inverted
     const sliderX = sliderCenterX - sliderWidthData / 2;
 
     // Convert to pixel space
@@ -213,15 +247,15 @@ function run(): void {
     leftCtx.save();
 
     // Draw slider background (more transparent for inactive sliders)
-    leftCtx.fillStyle = isActive ? 'rgba(0, 0, 0, 0.6)' : 'rgba(0, 0, 0, 0.4)';
-    leftCtx.fillRect(sliderPixelX - 5, sliderPixelY - 15, sliderPixelWidth + 10, 30);
+    leftCtx.fillStyle = isActive ? getControlColorWithAlpha(0.4) : getControlColorWithAlpha(0.3);
+    leftCtx.fillRect(sliderPixelX - 10, sliderPixelY - 20, sliderPixelWidth + 20, 40);
 
     // Draw slider track
     leftCtx.fillStyle = isActive ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.2)';
     leftCtx.fillRect(sliderPixelX, sliderPixelY, sliderPixelWidth, sliderHeight);
 
     // Draw slider fill
-    const color = getComponentColor(componentIndex);
+    const color = getComponentColor();
     leftCtx.fillStyle = color;
     leftCtx.globalAlpha = isActive ? 1.0 : 0.7;
     leftCtx.fillRect(
@@ -255,6 +289,33 @@ function run(): void {
       sliderPixelY - 5
     );
 
+    // Draw remove button (only for active slider and if more than 1 component)
+    if (isActive && components.length > 1) {
+      const removeSize = 22;
+      const desiredX = sliderPixelX + sliderPixelWidth + 20;
+      const clampedX = Math.min(desiredX, leftCanvas.width - removeSize - 10);
+      const desiredY = sliderPixelY + sliderHeight / 2 - removeSize / 2;
+      const clampedY = Math.max(20, Math.min(desiredY, leftCanvas.height - removeSize - 20));
+
+      leftCtx.globalAlpha = 1.0;
+      leftCtx.fillStyle = 'rgba(211, 47, 47, 0.9)';
+      leftCtx.strokeStyle = 'white';
+      leftCtx.lineWidth = 2;
+      leftCtx.beginPath();
+      leftCtx.rect(clampedX, clampedY, removeSize, removeSize);
+      leftCtx.fill();
+      leftCtx.stroke();
+
+      leftCtx.beginPath();
+      leftCtx.moveTo(clampedX + 6, clampedY + 6);
+      leftCtx.lineTo(clampedX + removeSize - 6, clampedY + removeSize - 6);
+      leftCtx.moveTo(clampedX + removeSize - 6, clampedY + 6);
+      leftCtx.lineTo(clampedX + 6, clampedY + removeSize - 6);
+      leftCtx.stroke();
+
+      activeRemoveButton = { componentIndex, x: clampedX, y: clampedY, size: removeSize };
+    }
+
     leftCtx.restore();
   }
 
@@ -275,11 +336,11 @@ function run(): void {
     const component = components[componentIndex];
     const [centerX, centerY] = component.mean;
 
-    const sliderYOffset = 0.8;
+    const sliderYOffset = 1.0;
     const sliderWidthData = 1.2;
 
     const sliderCenterX = centerX;
-    const sliderCenterY = centerY - sliderYOffset;
+    const sliderCenterY = centerY + sliderYOffset; // + because y-axis is inverted
     const sliderX = sliderCenterX - sliderWidthData / 2;
 
     // Check if point is within slider bounds (with some padding)
@@ -320,6 +381,82 @@ function run(): void {
     }
   }
 
+  function getRemoveButtonHit(pixelX: number, pixelY: number): number {
+    if (!activeRemoveButton) {return -1;}
+
+    const { x, y, size, componentIndex } = activeRemoveButton;
+    const withinBounds = pixelX >= x && pixelX <= x + size && pixelY >= y && pixelY <= y + size;
+
+    if (!withinBounds) {return -1;}
+
+    // Only allow removal of the currently selected component
+    return componentIndex === selectedComponentIndex ? componentIndex : -1;
+  }
+
+  function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function createGaussianComponent(): ExtendedGaussianComponent {
+    const index = components.length;
+    const angle = (index % 6) * (Math.PI / 3);
+    const ring = Math.floor(index / 6);
+    const radius = 1.5 + ring * 0.5;
+
+    const candidateX = Math.cos(angle) * radius;
+    const candidateY = Math.sin(angle) * radius;
+
+    const mean: [number, number] = [
+      clamp(candidateX, xRange[0] + 0.8, xRange[1] - 0.8),
+      clamp(candidateY, yRange[0] + 0.6, yRange[1] - 0.6)
+    ];
+
+    const component: ExtendedGaussianComponent = {
+      mean,
+      weight: 1 / (components.length + 1),
+      majorAxis: [0.7, 0.2],
+      minorAxis: [-0.2, 0.6],
+      covariance: [[0, 0], [0, 0]]
+    };
+
+    component.covariance = buildCovarianceFromAxes(component.majorAxis, component.minorAxis);
+    return component;
+  }
+
+  function addNewComponent(): void {
+    const newComponent = createGaussianComponent();
+    components.push(newComponent);
+    normalizeWeights();
+    showAllWeightSliders = false;
+    selectedComponentIndex = components.length - 1;
+    render();
+  }
+
+  function removeComponent(componentIndex: number): void {
+    if (componentIndex < 0 || componentIndex >= components.length) {
+      return;
+    }
+
+    if (components.length <= 1) {
+      return;
+    }
+
+    components.splice(componentIndex, 1);
+    normalizeWeights();
+    showAllWeightSliders = false;
+    activeRemoveButton = null;
+
+    isDragging = false;
+    selectedComponentIndex = -1;
+
+    if (components.length > 0) {
+      const nextIndex = Math.min(componentIndex, components.length - 1);
+      selectedComponentIndex = nextIndex;
+    }
+
+    render();
+  }
+
   function drawHandles(componentIndex: number): void {
     if (selectedComponentIndex !== componentIndex) {return;}
 
@@ -346,7 +483,7 @@ function run(): void {
     leftCtx.save();
 
     // Draw crosshair lines
-    leftCtx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    leftCtx.strokeStyle = getControlColorWithAlpha(0.5);
     leftCtx.lineWidth = 2;
     leftCtx.setLineDash([5, 5]);
 
@@ -371,9 +508,9 @@ function run(): void {
 
     // Draw handles
     const handleRadius = 6;
-    const color = getComponentColor(componentIndex);
+    const color = getComponentColor();
     leftCtx.fillStyle = color;
-    leftCtx.strokeStyle = 'white';
+    leftCtx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
     leftCtx.lineWidth = 2;
 
     // Center handle
@@ -423,6 +560,7 @@ function run(): void {
     // Clear both canvases
     leftCtx.clearRect(0, 0, leftCanvas.width, leftCanvas.height);
     rightCtx.clearRect(0, 0, rightCanvas.width, rightCanvas.height);
+    activeRemoveButton = null;
 
     // Compute and render the mixture PDF using TF.js on left canvas
     const { probabilityGrid, maxValue } = computeGaussianMixtureTfjs(
@@ -438,7 +576,8 @@ function run(): void {
       probabilityGrid,
       maxValue,
       leftCanvas.width,
-      leftCanvas.height
+      leftCanvas.height,
+      pdfColor
     );
     drawGaussianContours(leftCtx, probabilityGrid, maxValue, leftCanvas.width, leftCanvas.height);
 
@@ -450,9 +589,8 @@ function run(): void {
     components.forEach((component, index) => {
       const pixelX = xScale(component.mean[0]);
       const pixelY = yScale(component.mean[1]);
-      const color = getComponentColor(index);
       const radius = selectedComponentIndex === index ? 8 : 6;
-      addDot(leftCtx, pixelX, pixelY, radius, color);
+      addDot(leftCtx, pixelX, pixelY, radius, 'rgba(255, 255, 255, 0.6)');
     });
 
     // Draw handles for selected component
@@ -535,10 +673,21 @@ function run(): void {
   }
 
   leftCanvas.addEventListener('mousedown', (e) => {
+    const [pixelX, pixelY] = getMousePixelPosition(e);
     const [dataX, dataY] = getMousePosition(e);
 
+    // Check for remove button click
+    const removeHit = getRemoveButtonHit(pixelX, pixelY);
+    if (removeHit >= 0) {
+      removeComponent(removeHit);
+      return;
+    }
+
     // First check for weight slider interaction
-    if (selectedComponentIndex >= 0 && isPointInWeightSlider(dataX, dataY, selectedComponentIndex)) {
+    if (
+      selectedComponentIndex >= 0 &&
+      isPointInWeightSlider(dataX, dataY, selectedComponentIndex)
+    ) {
       isDragging = true;
       selectedHandleType = 'weight-slider';
       dragOffset = [dataX, dataY];
@@ -627,6 +776,38 @@ function run(): void {
     isDragging = false;
     selectedHandleType = null;
     leftCanvas.style.cursor = 'default';
+  });
+
+  addComponentBtn.addEventListener('click', () => {
+    addNewComponent();
+  });
+
+  controlColorPicker.addEventListener('input', () => {
+    controlColor = controlColorPicker.value;
+    controlColorValue.textContent = controlColor;
+
+    // Throttle render updates
+    if (renderTimeout !== null) {
+      clearTimeout(renderTimeout);
+    }
+    renderTimeout = window.setTimeout(() => {
+      render();
+      renderTimeout = null;
+    }, 50); // 50ms throttle
+  });
+
+  pdfColorPicker.addEventListener('input', () => {
+    pdfColor = pdfColorPicker.value;
+    pdfColorValue.textContent = pdfColor;
+
+    // Throttle render updates
+    if (renderTimeout !== null) {
+      clearTimeout(renderTimeout);
+    }
+    renderTimeout = window.setTimeout(() => {
+      render();
+      renderTimeout = null;
+    }, 50); // 50ms throttle
   });
 
   render();
