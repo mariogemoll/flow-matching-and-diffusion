@@ -1,5 +1,7 @@
+import { viridis } from './color-maps';
+import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
 import { drawGaussianContours, drawGaussianMixturePDF, type GaussianComponent } from './gaussian';
-import { computeGaussianMixtureTfjs } from './gaussian-tf';
+import { computeGaussianMixtureTfjs, computeGaussianPdfTfjs } from './gaussian-tf';
 import {
   makeCircularCircularScheduler,
   makeConstantVarianceScheduler,
@@ -13,6 +15,10 @@ import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas'
 import { el } from './web-ui-common/dom';
 import { makeScale } from './web-ui-common/util';
 import { renderSchedulerPlot } from './widgets/plot-renderers';
+
+// TF.js is loaded from CDN in the HTML
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+declare const tf: typeof import('@tensorflow/tfjs');
 
 interface ExtendedGaussianComponent extends GaussianComponent {
   majorAxis: [number, number]; // In data space
@@ -28,6 +34,9 @@ function run(): void {
 
   const addComponentBtn = el(document, '#addComponentBtn') as HTMLButtonElement;
   const playBtn = el(document, '#playBtn') as HTMLButtonElement;
+  const sampleBtn = el(document, '#sampleBtn') as HTMLButtonElement;
+  const sampleBtnRight = el(document, '#sampleBtnRight') as HTMLButtonElement;
+  const clearBtnRight = el(document, '#clearBtnRight') as HTMLButtonElement;
   const timeSlider = el(document, '#timeSlider') as HTMLInputElement;
   const timeValue = el(document, '#timeValue') as HTMLSpanElement;
   const weightSummary = el(document, '#marginal-weights') as HTMLElement;
@@ -52,6 +61,12 @@ function run(): void {
   let animationFrameId: number | null = null;
   let lastTimestamp: number | null = null;
   let scheduler: NoiseScheduler = makeConstantVarianceScheduler();
+
+  // Sample state
+  let sampledPoints: { x: number; y: number }[] = [];
+  let rightInitialSamples: [number, number][] = [];
+  let rightCurrentSamples: [number, number][] = [];
+  let lastPropagationTime = 0;
 
   // Define coordinate system (in data space)
   const xRange = [-4, 4] as [number, number];
@@ -580,6 +595,146 @@ function run(): void {
     leftCtx.restore();
   }
 
+  // Compute vector field for a batch of samples (simple CPU version for speed)
+  function computeMarginalVectorFieldBatch(
+    samplesTensor: ReturnType<typeof tf.tensor2d>,
+    components: GaussianComponent[],
+    alpha: number,
+    beta: number,
+    alphaDot: number,
+    betaDot: number
+  ): ReturnType<typeof tf.tensor2d> {
+    // For small batches, CPU computation is actually faster
+    const samplesData = samplesTensor.arraySync();
+    const velocities: number[][] = [];
+
+    for (const [x, y] of samplesData) {
+      const [ux, uy] = computeMarginalVectorField(
+        x,
+        y,
+        components,
+        alpha,
+        beta,
+        alphaDot,
+        betaDot
+      );
+      velocities.push([ux, uy]);
+    }
+
+    return tf.tensor2d(velocities);
+  }
+
+  // Update sample positions using Euler method with TF.js
+  // Propagates from lastPropagationTime to currentT
+  function updateMarginalSamples(currentT: number): void {
+    if (rightCurrentSamples.length === 0) {
+      return;
+    }
+
+    // If we're going backward or jumping, reset from initial samples
+    if (currentT < lastPropagationTime || Math.abs(currentT - lastPropagationTime) > 0.1) {
+      rightCurrentSamples = rightInitialSamples.map(([x, y]) => [x, y]);
+      lastPropagationTime = 0;
+    }
+
+    const dt = currentT - lastPropagationTime;
+    if (Math.abs(dt) < 1e-6) {
+      return;
+    }
+
+    // Use multiple Euler steps for better accuracy
+    // Reduce steps to 20 per unit time for better performance
+    const numSteps = Math.max(1, Math.ceil(Math.abs(dt) * 20));
+    const stepSize = dt / numSteps;
+
+    // Do all the Euler steps inside a single tf.tidy to reuse memory
+    const newSamplesArray = tf.tidy(() => {
+      let samplesTensor: ReturnType<typeof tf.tensor2d> = tf.tensor2d(rightCurrentSamples);
+
+      for (let step = 0; step < numSteps; step++) {
+        const stepT = lastPropagationTime + (step + 0.5) * stepSize;
+        const alpha = scheduler.getAlpha(stepT);
+        const beta = scheduler.getBeta(stepT);
+        const alphaDot = getAlphaDerivative(scheduler, stepT);
+        const betaDot = getBetaDerivative(scheduler, stepT);
+
+        // Compute vector field for all samples at once
+        const velocities = computeMarginalVectorFieldBatch(
+          samplesTensor,
+          components,
+          alpha,
+          beta,
+          alphaDot,
+          betaDot
+        );
+
+        // Update: x_{n+1} = x_n + dt * u_t(x_n)
+        const updated = samplesTensor.add(velocities.mul(stepSize));
+        samplesTensor = updated as ReturnType<typeof tf.tensor2d>;
+      }
+
+      // Convert back to array before leaving tidy
+      return samplesTensor.arraySync();
+    });
+
+    rightCurrentSamples = newSamplesArray.map(([x, y]) => [x, y]);
+    lastPropagationTime = currentT;
+  }
+
+  // Get the current sample positions in pixel coordinates
+  function getCurrentSamplePixels(): { x: number; y: number }[] {
+    return rightCurrentSamples.map(([x, y]) => ({ x: xScale(x), y: yScale(y) }));
+  }
+
+  // Sample from a 2D Gaussian mixture
+  function sampleFromGaussianMixture(
+    count: number,
+    components: ExtendedGaussianComponent[]
+  ): [number, number][] {
+    const samples: [number, number][] = [];
+
+    // Normalize weights
+    const totalWeight = components.reduce((sum, c) => sum + c.weight, 0);
+    const normalizedWeights = components.map((c) => c.weight / totalWeight);
+
+    // Sample component indices according to weights
+    for (let i = 0; i < count; i++) {
+      // Choose component according to weight
+      const rand = Math.random();
+      let cumulative = 0;
+      let componentIndex = 0;
+      for (let k = 0; k < components.length; k++) {
+        cumulative += normalizedWeights[k];
+        if (rand <= cumulative) {
+          componentIndex = k;
+          break;
+        }
+      }
+
+      const component = components[componentIndex];
+      const [meanX, meanY] = component.mean;
+      const [[covXX], [covYX, covYY]] = component.covariance;
+
+      // Cholesky decomposition for sampling: Σ = L L^T
+      // For 2D: L = [[sqrt(a), 0], [b/sqrt(a), sqrt(d - b²/a)]]
+      const L11 = Math.sqrt(Math.max(0, covXX));
+      const L21 = L11 > 1e-10 ? covYX / L11 : 0;
+      const L22 = Math.sqrt(Math.max(0, covYY - L21 * L21));
+
+      // Sample from standard normal
+      const z1 = tf.randomNormal([1], 0, 1).dataSync()[0];
+      const z2 = tf.randomNormal([1], 0, 1).dataSync()[0];
+
+      // Transform: x = μ + L z
+      const x = meanX + L11 * z1;
+      const y = meanY + L21 * z1 + L22 * z2;
+
+      samples.push([x, y]);
+    }
+
+    return samples;
+  }
+
   function render(): void {
     // Clear both canvases
     leftCtx.clearRect(0, 0, leftCanvas.width, leftCanvas.height);
@@ -614,6 +769,53 @@ function run(): void {
     // Add coordinate frame to left canvas
     addFrameUsingScales(leftCtx, xScale, yScale, 11);
 
+    // Draw sampled points on left canvas
+    if (sampledPoints.length > 0) {
+      leftCtx.save();
+      leftCtx.fillStyle = SAMPLED_POINT_COLOR;
+      for (const point of sampledPoints) {
+        leftCtx.beginPath();
+        leftCtx.arc(point.x, point.y, SAMPLED_POINT_RADIUS, 0, 2 * Math.PI);
+        leftCtx.fill();
+      }
+      leftCtx.restore();
+    }
+
+    // Draw standard normal PDF at t=0 on right canvas
+    if (Math.abs(t) < 0.01) {
+      const result = computeGaussianPdfTfjs(
+        rightCanvas,
+        rightCtx,
+        xScale,
+        yScale,
+        0,
+        0,
+        1,
+        false
+      );
+      rightCtx.putImageData(result.imageData, 0, 0);
+    }
+
+    // Draw marginal vector field on right canvas
+    drawMarginalVectorField(rightCtx, xScale, yScale, components, t, scheduler);
+
+    // Add coordinate frame to right canvas
+    addFrameUsingScales(rightCtx, xScale, yScale, 11);
+
+    // Update and draw sampled points on right canvas
+    if (rightCurrentSamples.length > 0) {
+      updateMarginalSamples(t);
+      const currentPoints = getCurrentSamplePixels();
+      rightCtx.save();
+      rightCtx.fillStyle = SAMPLED_POINT_COLOR;
+      for (const point of currentPoints) {
+        rightCtx.beginPath();
+        rightCtx.arc(point.x, point.y, SAMPLED_POINT_RADIUS, 0, 2 * Math.PI);
+        rightCtx.fill();
+      }
+      rightCtx.restore();
+    }
+
     // Only draw data controls when t = 1
     if (Math.abs(t - 1) < 0.01) {
       // Draw component centers
@@ -647,6 +849,243 @@ function run(): void {
     // Update mean trajectory plot
     const meanPlotCanvas = el(document, '#marginal-mean-plot') as HTMLCanvasElement;
     renderMeanTrajectoryPlot(meanPlotCanvas, scheduler, t, components);
+  }
+
+  function drawMarginalVectorField(
+    ctx: CanvasRenderingContext2D,
+    xScale: ReturnType<typeof makeScale>,
+    yScale: ReturnType<typeof makeScale>,
+    components: GaussianComponent[],
+    t: number,
+    scheduler: NoiseScheduler
+  ): void {
+    const alpha = scheduler.getAlpha(t);
+    const beta = scheduler.getBeta(t);
+
+    // Get scheduler derivatives
+    const alphaDot = getAlphaDerivative(scheduler, t);
+    const betaDot = getBetaDerivative(scheduler, t);
+
+    const gridSize = 20;
+    const [xMin, xMax] = xRange;
+    const [yMin, yMax] = yRange;
+    const dx = (xMax - xMin) / gridSize;
+    const dy = (yMax - yMin) / gridSize;
+
+    // Find max vector length for normalization
+    let maxLength = 0;
+    for (let i = 0; i <= gridSize; i++) {
+      for (let j = 0; j <= gridSize; j++) {
+        const x = xMin + i * dx;
+        const y = yMin + j * dy;
+        const [vx, vy] = computeMarginalVectorField(
+          x,
+          y,
+          components,
+          alpha,
+          beta,
+          alphaDot,
+          betaDot
+        );
+        const length = Math.sqrt(vx * vx + vy * vy);
+        maxLength = Math.max(maxLength, length);
+      }
+    }
+
+    // Draw vector field
+    const arrowScale = Math.min(dx, dy) * 0.4;
+    for (let i = 0; i <= gridSize; i++) {
+      for (let j = 0; j <= gridSize; j++) {
+        const x = xMin + i * dx;
+        const y = yMin + j * dy;
+        const [vx, vy] = computeMarginalVectorField(
+          x,
+          y,
+          components,
+          alpha,
+          beta,
+          alphaDot,
+          betaDot
+        );
+
+        const length = Math.sqrt(vx * vx + vy * vy);
+        if (length < 1e-6) {
+          continue;
+        }
+
+        const normalizedLength = length / (maxLength + 1e-10);
+        const colorValue = Math.min(1, normalizedLength);
+        const color = viridis(colorValue);
+
+        const scale = arrowScale / (maxLength + 1e-10);
+        const endX = x + vx * scale;
+        const endY = y + vy * scale;
+
+        drawArrow(ctx, xScale, yScale, x, y, endX, endY, color);
+      }
+    }
+  }
+
+  function computeMarginalVectorField(
+    x: number,
+    y: number,
+    components: GaussianComponent[],
+    alpha: number,
+    beta: number,
+    alphaDot: number,
+    betaDot: number
+  ): [number, number] {
+    // Compute posterior weights γ_k(x,t) = π_k N(x; α_t μ_k, α_t² Σ_k + β_t² I) / p_t(x)
+    const gammas: number[] = [];
+    let totalProb = 0;
+
+    const alpha2 = alpha * alpha;
+    const beta2 = beta * beta;
+
+    for (const comp of components) {
+      const [muX, muY] = comp.mean;
+      const [[covXX, covXY], [, covYY]] = comp.covariance;
+
+      // Transformed parameters
+      const meanX = alpha * muX;
+      const meanY = alpha * muY;
+      const sigmaXX = alpha2 * covXX + beta2;
+      const sigmaXY = alpha2 * covXY;
+      const sigmaYY = alpha2 * covYY + beta2;
+
+      // Compute Gaussian PDF
+      const det = sigmaXX * sigmaYY - sigmaXY * sigmaXY;
+      if (det <= 1e-10) {
+        gammas.push(0);
+        continue;
+      }
+
+      const invXX = sigmaYY / det;
+      const invXY = -sigmaXY / det;
+      const invYY = sigmaXX / det;
+
+      const dx = x - meanX;
+      const dy = y - meanY;
+
+      const quadForm = dx * (invXX * dx + invXY * dy) + dy * (invXY * dx + invYY * dy);
+      const normalization = 1 / (2 * Math.PI * Math.sqrt(det));
+      const prob = comp.weight * normalization * Math.exp(-0.5 * quadForm);
+
+      gammas.push(prob);
+      totalProb += prob;
+    }
+
+    // Normalize gammas
+    if (totalProb < 1e-10) {
+      return [0, 0];
+    }
+
+    for (let k = 0; k < gammas.length; k++) {
+      gammas[k] /= totalProb;
+    }
+
+    // Compute vector field: u_t(x) = (β̇_t/β_t) x + (α̇_t - (β̇_t/β_t) α_t) Σ_k γ_k(x,t) [...]
+    const betaRatio = beta > 1e-10 ? betaDot / beta : 0;
+    const coeff = alphaDot - betaRatio * alpha;
+
+    let ux = betaRatio * x;
+    let uy = betaRatio * y;
+
+    for (let k = 0; k < components.length; k++) {
+      const comp = components[k];
+      const [muX, muY] = comp.mean;
+      const [[covXX, covXY], [, covYY]] = comp.covariance;
+
+      const alpha2 = alpha * alpha;
+      const beta2 = beta * beta;
+
+      // Σ_t = α_t² Σ_k + β_t² I
+      const sigmaXX = alpha2 * covXX + beta2;
+      const sigmaXY = alpha2 * covXY;
+      const sigmaYY = alpha2 * covYY + beta2;
+
+      // Inverse of Σ_t
+      const det = sigmaXX * sigmaYY - sigmaXY * sigmaXY;
+      if (det <= 1e-10) {continue;}
+
+      const invXX = sigmaYY / det;
+      const invXY = -sigmaXY / det;
+      const invYY = sigmaXX / det;
+
+      // (x - α_t μ_k)
+      const dx = x - alpha * muX;
+      const dy = y - alpha * muY;
+
+      // α_t Σ_k (α_t² Σ_k + β_t² I)^{-1} (x - α_t μ_k)
+      const termX = alpha * (covXX * (invXX * dx + invXY * dy) + covXY * (invXY * dx + invYY * dy));
+      const termY = alpha * (covXY * (invXX * dx + invXY * dy) + covYY * (invXY * dx + invYY * dy));
+
+      // μ_k + α_t Σ_k (...)^{-1} (...)
+      const targetX = muX + termX;
+      const targetY = muY + termY;
+
+      ux += coeff * gammas[k] * targetX;
+      uy += coeff * gammas[k] * targetY;
+    }
+
+    return [ux, uy];
+  }
+
+  function getAlphaDerivative(scheduler: NoiseScheduler, t: number): number {
+    const dt = 1e-5;
+    const alpha1 = scheduler.getAlpha(Math.max(0, t - dt));
+    const alpha2 = scheduler.getAlpha(Math.min(1, t + dt));
+    return (alpha2 - alpha1) / (2 * dt);
+  }
+
+  function getBetaDerivative(scheduler: NoiseScheduler, t: number): number {
+    const dt = 1e-5;
+    const beta1 = scheduler.getBeta(Math.max(0, t - dt));
+    const beta2 = scheduler.getBeta(Math.min(1, t + dt));
+    return (beta2 - beta1) / (2 * dt);
+  }
+
+  function drawArrow(
+    ctx: CanvasRenderingContext2D,
+    xScale: ReturnType<typeof makeScale>,
+    yScale: ReturnType<typeof makeScale>,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    color: string
+  ): void {
+    const px1 = xScale(x1);
+    const py1 = yScale(y1);
+    const px2 = xScale(x2);
+    const py2 = yScale(y2);
+
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 1.5;
+
+    // Draw line
+    ctx.beginPath();
+    ctx.moveTo(px1, py1);
+    ctx.lineTo(px2, py2);
+    ctx.stroke();
+
+    // Draw arrowhead
+    const angle = Math.atan2(py2 - py1, px2 - px1);
+    const headLength = 5;
+
+    ctx.beginPath();
+    ctx.moveTo(px2, py2);
+    ctx.lineTo(
+      px2 - headLength * Math.cos(angle - Math.PI / 6),
+      py2 - headLength * Math.sin(angle - Math.PI / 6)
+    );
+    ctx.lineTo(
+      px2 - headLength * Math.cos(angle + Math.PI / 6),
+      py2 - headLength * Math.sin(angle + Math.PI / 6)
+    );
+    ctx.closePath();
+    ctx.fill();
   }
 
   function renderMeanTrajectoryPlot(
@@ -999,6 +1438,7 @@ function run(): void {
     if (isPlaying) {
       return;
     }
+    sampledPoints = [];
     isPlaying = true;
     playBtn.textContent = 'Pause';
     animationFrameId = requestAnimationFrame(stepAnimation);
@@ -1008,6 +1448,7 @@ function run(): void {
     if (isPlaying) {
       stopAnimation();
     }
+    sampledPoints = [];
     t = Math.max(0, Math.min(1, Number.parseFloat(timeSlider.value)));
     render();
   });
@@ -1023,6 +1464,64 @@ function run(): void {
       render();
     }
     startAnimation();
+  });
+
+  sampleBtn.addEventListener('click', () => {
+    // Sample from the data distribution (t=1)
+    const dataSamples = sampleFromGaussianMixture(NUM_SAMPLES, components);
+
+    // Apply marginal path transformation to get samples at current time t
+    const alpha = scheduler.getAlpha(t);
+    const beta = scheduler.getBeta(t);
+
+    sampledPoints = [];
+    for (const [dataX, dataY] of dataSamples) {
+      // Apply conditional path: X_t | X_1 ~ N(α_t X_1, β_t² I)
+      const conditionalMeanX = alpha * dataX;
+      const conditionalMeanY = alpha * dataY;
+      const conditionalStdDev = beta;
+
+      // Sample from conditional distribution
+      const z1 = tf.randomNormal([1], 0, 1).dataSync()[0];
+      const z2 = tf.randomNormal([1], 0, 1).dataSync()[0];
+
+      const sampleX = conditionalMeanX + conditionalStdDev * z1;
+      const sampleY = conditionalMeanY + conditionalStdDev * z2;
+
+      sampledPoints.push({ x: xScale(sampleX), y: yScale(sampleY) });
+    }
+
+    render();
+  });
+
+  sampleBtnRight.addEventListener('click', () => {
+    if (Math.abs(t) >= 0.01) {
+      return;
+    }
+
+    // Sample from standard normal at t=0
+    const samples = tf.randomNormal([NUM_SAMPLES, 2], 0, 1);
+    const flat = samples.dataSync() as Float32Array;
+
+    rightInitialSamples = [];
+    rightCurrentSamples = [];
+    for (let i = 0; i < NUM_SAMPLES; i++) {
+      const sx = flat[2 * i];
+      const sy = flat[2 * i + 1];
+      rightInitialSamples.push([sx, sy]);
+      rightCurrentSamples.push([sx, sy]);
+    }
+
+    lastPropagationTime = 0;
+    samples.dispose();
+    render();
+  });
+
+  clearBtnRight.addEventListener('click', () => {
+    rightInitialSamples = [];
+    rightCurrentSamples = [];
+    lastPropagationTime = 0;
+    render();
   });
 
   schedulerRadios.forEach((radio) => {
