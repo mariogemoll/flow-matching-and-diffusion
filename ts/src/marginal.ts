@@ -1,6 +1,14 @@
 import { drawGaussianContours, drawGaussianMixturePDF, type GaussianComponent } from './gaussian';
 import { computeGaussianMixtureTfjs } from './gaussian-tf';
-import { makeConstantVarianceScheduler, type NoiseScheduler } from './math/noise-scheduler';
+import {
+  makeCircularCircularScheduler,
+  makeConstantVarianceScheduler,
+  makeInverseSqrtNoiseScheduler,
+  makeLinearNoiseScheduler,
+  makeSqrtNoiseScheduler,
+  makeSqrtSqrtScheduler,
+  type NoiseScheduler
+} from './math/noise-scheduler';
 import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
 import { el } from './web-ui-common/dom';
 import { makeScale } from './web-ui-common/util';
@@ -21,10 +29,14 @@ function run(): void {
   const playBtn = el(document, '#playBtn') as HTMLButtonElement;
   const timeSlider = el(document, '#timeSlider') as HTMLInputElement;
   const timeValue = el(document, '#timeValue') as HTMLSpanElement;
+  const weightSummary = el(document, '#marginal-weights') as HTMLElement;
   const controlColorPicker = el(document, '#controlColorPicker') as HTMLInputElement;
   const pdfColorPicker = el(document, '#pdfColorPicker') as HTMLInputElement;
   const controlColorValue = el(document, '#controlColorValue') as HTMLSpanElement;
   const pdfColorValue = el(document, '#pdfColorValue') as HTMLSpanElement;
+  const schedulerRadios = Array.from(
+    document.querySelectorAll<HTMLInputElement>('input[name="marginal-scheduler"]')
+  );
 
   // Color state
   let controlColor = controlColorPicker.value;
@@ -38,7 +50,7 @@ function run(): void {
   let isPlaying = false;
   let animationFrameId: number | null = null;
   let lastTimestamp: number | null = null;
-  const scheduler: NoiseScheduler = makeConstantVarianceScheduler();
+  let scheduler: NoiseScheduler = makeConstantVarianceScheduler();
 
   // Define coordinate system (in data space)
   const xRange = [-4, 4] as [number, number];
@@ -622,8 +634,10 @@ function run(): void {
       }
     }
 
-    // Update time display
+    // Update time display and weights
     timeValue.textContent = t.toFixed(2);
+    const summaryParts = [`α_t = ${alpha.toFixed(2)}`, `β_t = ${beta.toFixed(2)}`];
+    weightSummary.textContent = summaryParts.join(', ');
   }
 
   function handleMajorAxisDrag(mouseX: number, mouseY: number, componentIndex: number): void {
@@ -899,6 +913,27 @@ function run(): void {
       render();
     }
     startAnimation();
+  });
+
+  schedulerRadios.forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (radio.checked) {
+        if (radio.value === 'linear') {
+          scheduler = makeLinearNoiseScheduler();
+        } else if (radio.value === 'sqrt') {
+          scheduler = makeSqrtNoiseScheduler();
+        } else if (radio.value === 'inverse-sqrt') {
+          scheduler = makeInverseSqrtNoiseScheduler();
+        } else if (radio.value === 'constant') {
+          scheduler = makeConstantVarianceScheduler();
+        } else if (radio.value === 'sqrt-sqrt') {
+          scheduler = makeSqrtSqrtScheduler();
+        } else if (radio.value === 'circular-circular') {
+          scheduler = makeCircularCircularScheduler();
+        }
+        render();
+      }
+    });
   });
 
   render();
