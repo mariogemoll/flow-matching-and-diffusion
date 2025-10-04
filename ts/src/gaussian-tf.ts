@@ -106,7 +106,9 @@ export function computeGaussianMixtureTfjs(
   yScale: Scale,
   components: GaussianComponent[],
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
+  alpha = 1.0,
+  beta = 0.0
 ): GaussianMixturePdfResult {
   return tf.tidy(() => {
     // Create pixel coordinate grids
@@ -123,26 +125,38 @@ export function computeGaussianMixtureTfjs(
     // Accumulate probability from all mixture components
     let totalPdf = tf.zeros([canvasWidth, canvasHeight]);
 
+    const alpha2 = alpha * alpha;
+    const beta2 = beta * beta;
+
     for (const component of components) {
       const [meanX, meanY] = component.mean;
       const [[covXX, covXY], [covYX, covYY]] = component.covariance;
 
-      // Compute determinant
-      const det = covXX * covYY - covXY * covYX;
+      // Apply marginal path transformation: A_t Σ_k A_t^T + Σ_ε
+      // where A_t = α_t and Σ_ε = β_t² I
+      const transformedMeanX = alpha * meanX;
+      const transformedMeanY = alpha * meanY;
+      const transformedCovXX = alpha2 * covXX + beta2;
+      const transformedCovXY = alpha2 * covXY;
+      const transformedCovYX = alpha2 * covYX;
+      const transformedCovYY = alpha2 * covYY + beta2;
+
+      // Compute determinant of transformed covariance
+      const det = transformedCovXX * transformedCovYY - transformedCovXY * transformedCovYX;
 
       if (Math.abs(det) < 1e-10) {
         continue; // Skip degenerate covariance
       }
 
       // Compute inverse covariance matrix
-      const invCovXX = covYY / det;
-      const invCovXY = -covXY / det;
-      const invCovYX = -covYX / det;
-      const invCovYY = covXX / det;
+      const invCovXX = transformedCovYY / det;
+      const invCovXY = -transformedCovXY / det;
+      const invCovYX = -transformedCovYX / det;
+      const invCovYY = transformedCovXX / det;
 
       // Compute dx and dy
-      const dx = dataXTensor.sub(meanX);
-      const dy = dataYTensor.sub(meanY);
+      const dx = dataXTensor.sub(transformedMeanX);
+      const dy = dataYTensor.sub(transformedMeanY);
 
       // Compute quadratic form: (x-μ)^T Σ^(-1) (x-μ)
       const term1 = dx.mul(invCovXX).add(dy.mul(invCovYX)).mul(dx);

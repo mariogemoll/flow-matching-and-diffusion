@@ -1,5 +1,6 @@
 import { drawGaussianContours, drawGaussianMixturePDF, type GaussianComponent } from './gaussian';
 import { computeGaussianMixtureTfjs } from './gaussian-tf';
+import { makeConstantVarianceScheduler, type NoiseScheduler } from './math/noise-scheduler';
 import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
 import { el } from './web-ui-common/dom';
 import { makeScale } from './web-ui-common/util';
@@ -17,6 +18,9 @@ function run(): void {
   const rightCtx = getContext(rightCanvas);
 
   const addComponentBtn = el(document, '#addComponentBtn') as HTMLButtonElement;
+  const playBtn = el(document, '#playBtn') as HTMLButtonElement;
+  const timeSlider = el(document, '#timeSlider') as HTMLInputElement;
+  const timeValue = el(document, '#timeValue') as HTMLSpanElement;
   const controlColorPicker = el(document, '#controlColorPicker') as HTMLInputElement;
   const pdfColorPicker = el(document, '#pdfColorPicker') as HTMLInputElement;
   const controlColorValue = el(document, '#controlColorValue') as HTMLSpanElement;
@@ -28,6 +32,13 @@ function run(): void {
 
   // Throttle state
   let renderTimeout: number | null = null;
+
+  // Animation state
+  let t = 0;
+  let isPlaying = false;
+  let animationFrameId: number | null = null;
+  let lastTimestamp: number | null = null;
+  const scheduler: NoiseScheduler = makeConstantVarianceScheduler();
 
   // Define coordinate system (in data space)
   const xRange = [-4, 4] as [number, number];
@@ -562,13 +573,19 @@ function run(): void {
     rightCtx.clearRect(0, 0, rightCanvas.width, rightCanvas.height);
     activeRemoveButton = null;
 
-    // Compute and render the mixture PDF using TF.js on left canvas
+    const alpha = scheduler.getAlpha(t);
+    const beta = scheduler.getBeta(t);
+
+    // Compute and render the marginal path PDF on left canvas
+    // The transformation is done inside computeGaussianMixtureTfjs for efficiency
     const { probabilityGrid, maxValue } = computeGaussianMixtureTfjs(
       xScale,
       yScale,
       components,
       leftCanvas.width,
-      leftCanvas.height
+      leftCanvas.height,
+      alpha,
+      beta
     );
 
     drawGaussianMixturePDF(
@@ -581,27 +598,32 @@ function run(): void {
     );
     drawGaussianContours(leftCtx, probabilityGrid, maxValue, leftCanvas.width, leftCanvas.height);
 
-    // Add coordinate frames to both canvases
+    // Add coordinate frame to left canvas
     addFrameUsingScales(leftCtx, xScale, yScale, 11);
-    addFrameUsingScales(rightCtx, xScale, yScale, 11);
 
-    // Draw component centers
-    components.forEach((component, index) => {
-      const pixelX = xScale(component.mean[0]);
-      const pixelY = yScale(component.mean[1]);
-      const radius = selectedComponentIndex === index ? 8 : 6;
-      addDot(leftCtx, pixelX, pixelY, radius, 'rgba(255, 255, 255, 0.6)');
-    });
+    // Only draw data controls when t = 1
+    if (Math.abs(t - 1) < 0.01) {
+      // Draw component centers
+      components.forEach((component, index) => {
+        const pixelX = xScale(component.mean[0]);
+        const pixelY = yScale(component.mean[1]);
+        const radius = selectedComponentIndex === index ? 8 : 6;
+        addDot(leftCtx, pixelX, pixelY, radius, 'rgba(255, 255, 255, 0.6)');
+      });
 
-    // Draw handles for selected component
-    if (selectedComponentIndex >= 0) {
-      drawHandles(selectedComponentIndex);
+      // Draw handles for selected component
+      if (selectedComponentIndex >= 0) {
+        drawHandles(selectedComponentIndex);
+      }
+
+      // Draw all weight sliders when weight is being adjusted
+      if (showAllWeightSliders && selectedComponentIndex >= 0) {
+        drawAllWeightSliders();
+      }
     }
 
-    // Draw all weight sliders when weight is being adjusted
-    if (showAllWeightSliders && selectedComponentIndex >= 0) {
-      drawAllWeightSliders();
-    }
+    // Update time display
+    timeValue.textContent = t.toFixed(2);
   }
 
   function handleMajorAxisDrag(mouseX: number, mouseY: number, componentIndex: number): void {
@@ -673,6 +695,11 @@ function run(): void {
   }
 
   leftCanvas.addEventListener('mousedown', (e) => {
+    // Only allow interaction when t = 1
+    if (Math.abs(t - 1) >= 0.01) {
+      return;
+    }
+
     const [pixelX, pixelY] = getMousePixelPosition(e);
     const [dataX, dataY] = getMousePosition(e);
 
@@ -808,6 +835,70 @@ function run(): void {
       render();
       renderTimeout = null;
     }, 50); // 50ms throttle
+  });
+
+  const stopAnimation = (): void => {
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+    }
+    isPlaying = false;
+    lastTimestamp = null;
+    playBtn.textContent = 'Play';
+  };
+
+  const stepAnimation = (timestamp: number): void => {
+    if (!isPlaying) {
+      return;
+    }
+
+    const previousTimestamp = lastTimestamp ?? timestamp;
+    lastTimestamp = timestamp;
+    const delta = timestamp - previousTimestamp;
+    const durationMs = 4000;
+    t += delta / durationMs;
+
+    if (t >= 1) {
+      t = 1;
+      timeSlider.value = t.toFixed(3);
+      render();
+      stopAnimation();
+      return;
+    }
+
+    timeSlider.value = t.toFixed(3);
+    render();
+    animationFrameId = requestAnimationFrame(stepAnimation);
+  };
+
+  const startAnimation = (): void => {
+    if (isPlaying) {
+      return;
+    }
+    isPlaying = true;
+    playBtn.textContent = 'Pause';
+    animationFrameId = requestAnimationFrame(stepAnimation);
+  };
+
+  timeSlider.addEventListener('input', () => {
+    if (isPlaying) {
+      stopAnimation();
+    }
+    t = Math.max(0, Math.min(1, Number.parseFloat(timeSlider.value)));
+    render();
+  });
+
+  playBtn.addEventListener('click', () => {
+    if (isPlaying) {
+      stopAnimation();
+      return;
+    }
+    if (t >= 1) {
+      t = 0;
+      timeSlider.value = t.toFixed(3);
+      render();
+    }
+    startAnimation();
   });
 
   render();
