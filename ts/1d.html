@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Demo</title>
+</head>
+<body>
+    <h1>Widgets</h1>
+    <section>
+        <h2>Conditional Path</h2>
+        <div style="display: flex; gap: 20px;">
+            <div>
+                <div id="frame-controls">
+                    <label for="conditional-slider">t = <span id="conditional-t">1.00</span></label>
+                    <input
+                        type="range"
+                        id="conditional-slider"
+                        min="0"
+                        max="1"
+                        step="0.001"
+                        value="1"
+                    />
+                    <button id="conditional-play" type="button">Play</button>
+                    <div id="conditional-weights">α_t = 0.00, β_t = 1.00, μ_t = 0.00, σ_t = 1.00</div>
+                    <div>
+                        <label>
+                            <input type="radio" name="conditional-scheduler" value="linear" /> α=t, β=1-t
+                        </label>
+                        <label>
+                            <input type="radio" name="conditional-scheduler" value="sqrt" /> α=t, β=√(1-t)
+                        </label>
+                        <label>
+                            <input type="radio" name="conditional-scheduler" value="inverse-sqrt" /> α=t, β=1-t²
+                        </label>
+                        <label>
+                            <input type="radio" name="conditional-scheduler" value="constant" checked /> α=t, β=√(1-t²)
+                        </label>
+                        <label>
+                            <input type="radio" name="conditional-scheduler" value="sqrt-sqrt" /> α=√t, β=√(1-t)
+                        </label>
+                        <label>
+                            <input type="radio" name="conditional-scheduler" value="circular-circular" /> α=sin(πt/2), β=cos(πt/2)
+                        </label>
+                    </div>
+                </div>
+                <p>Click or drag on the axis to reposition the target delta spike.</p>
+                <canvas id="frame-canvas" width="480" height="350" style="width: 480px; height: 350px;">
+                </canvas>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <canvas id="conditional-scheduler-plot" width="160" height="160" style="width: 160px; height: 160px; border: 1px solid #ccc;"></canvas>
+                <canvas id="conditional-mean-plot" width="160" height="120" style="width: 160px; height: 120px; border: 1px solid #ccc;"></canvas>
+                <canvas id="conditional-variance-plot" width="160" height="120" style="width: 160px; height: 120px; border: 1px solid #ccc;"></canvas>
+            </div>
+        </div>
+    </section>
+    <section>
+        <h2>Marginal Path</h2>
+        <div style="display: flex; gap: 20px;">
+            <div>
+                <div id="simple-frame-controls">
+                    <label for="simple-slider">t = <span id="simple-t">1.00</span></label>
+                    <input
+                        type="range"
+                        id="simple-slider"
+                        min="0"
+                        max="1"
+                        step="0.001"
+                        value="1"
+                    />
+                    <button id="simple-play" type="button">Play</button>
+                    <div id="simple-weights">α_t = 0.00, β_t = 1.00</div>
+                    <div>
+                        <label>
+                            <input type="radio" name="scheduler" value="linear" /> α=t, β=1-t
+                        </label>
+                        <label>
+                            <input type="radio" name="scheduler" value="sqrt" /> α=t, β=√(1-t)
+                        </label>
+                        <label>
+                            <input type="radio" name="scheduler" value="inverse-sqrt" /> α=t, β=1-t²
+                        </label>
+                        <label>
+                            <input type="radio" name="scheduler" value="constant" checked /> α=t, β=√(1-t²)
+                        </label>
+                        <label>
+                            <input type="radio" name="scheduler" value="sqrt-sqrt" /> α=√t, β=√(1-t)
+                        </label>
+                        <label>
+                            <input type="radio" name="scheduler" value="circular-circular" /> α=sin(πt/2), β=cos(πt/2)
+                        </label>
+                    </div>
+                </div>
+                <canvas id="simple-frame-canvas" width="480" height="350" style="width: 480px; height: 350px;">
+                </canvas>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <canvas id="scheduler-plot" width="160" height="160" style="width: 160px; height: 160px; border: 1px solid #ccc;"></canvas>
+                <canvas id="mean-plot" width="160" height="120" style="width: 160px; height: 120px; border: 1px solid #ccc;"></canvas>
+                <canvas id="variance-plot" width="160" height="120" style="width: 160px; height: 120px; border: 1px solid #ccc;"></canvas>
+            </div>
+        </div>
+    </section>
+    <section>
+        <h2>Gaussian Mixture Marginal Path</h2>
+        <div style="display: flex; gap: 20px;">
+            <div>
+                <div id="mixture-controls">
+                    <label for="mixture-slider">t = <span id="mixture-t">1.00</span></label>
+                    <input
+                        type="range"
+                        id="mixture-slider"
+                        min="0"
+                        max="1"
+                        step="0.001"
+                        value="1"
+                    />
+                    <button id="mixture-play" type="button">Play</button>
+                    <button id="mixture-add-component" type="button">Add Component</button>
+                    <div id="mixture-weights">α_t = 0.00, β_t = 1.00</div>
+                    <div>
+                        <label>
+                            <input type="radio" name="mixture-scheduler" value="linear" /> α=t, β=1-t
+                        </label>
+                        <label>
+                            <input type="radio" name="mixture-scheduler" value="sqrt" /> α=t, β=√(1-t)
+                        </label>
+                        <label>
+                            <input type="radio" name="mixture-scheduler" value="inverse-sqrt" /> α=t, β=1-t²
+                        </label>
+                        <label>
+                            <input type="radio" name="mixture-scheduler" value="constant" checked /> α=t, β=√(1-t²)
+                        </label>
+                        <label>
+                            <input type="radio" name="mixture-scheduler" value="sqrt-sqrt" /> α=√t, β=√(1-t)
+                        </label>
+                        <label>
+                            <input type="radio" name="mixture-scheduler" value="circular-circular" /> α=sin(πt/2), β=cos(πt/2)
+                        </label>
+                    </div>
+                </div>
+                <p>Drag the handles on the axis to adjust component parameters.</p>
+                <canvas id="mixture-canvas" width="480" height="350" style="width: 480px; height: 350px;">
+                </canvas>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <canvas id="mixture-scheduler-plot" width="160" height="160" style="width: 160px; height: 160px; border: 1px solid #ccc;"></canvas>
+                <canvas id="mixture-mean-plot" width="160" height="120" style="width: 160px; height: 120px; border: 1px solid #ccc;"></canvas>
+                <canvas id="mixture-variance-plot" width="160" height="120" style="width: 160px; height: 120px; border: 1px solid #ccc;"></canvas>
+            </div>
+        </div>
+    </section>
+    <script type="module" src="dist/1d.js"></script>
+</body>
+</html>
