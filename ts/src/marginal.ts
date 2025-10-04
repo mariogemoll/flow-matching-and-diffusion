@@ -12,6 +12,7 @@ import {
 import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
 import { el } from './web-ui-common/dom';
 import { makeScale } from './web-ui-common/util';
+import { renderSchedulerPlot } from './widgets/plot-renderers';
 
 interface ExtendedGaussianComponent extends GaussianComponent {
   majorAxis: [number, number]; // In data space
@@ -638,6 +639,10 @@ function run(): void {
     timeValue.textContent = t.toFixed(2);
     const summaryParts = [`α_t = ${alpha.toFixed(2)}`, `β_t = ${beta.toFixed(2)}`];
     weightSummary.textContent = summaryParts.join(', ');
+
+    // Update scheduler plot
+    const schedulerPlotCanvas = el(document, '#marginal-scheduler-plot') as HTMLCanvasElement;
+    renderSchedulerPlot(schedulerPlotCanvas, scheduler, t, 'Scheduler');
   }
 
   function handleMajorAxisDrag(mouseX: number, mouseY: number, componentIndex: number): void {
