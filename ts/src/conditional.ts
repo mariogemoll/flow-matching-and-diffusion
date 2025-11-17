@@ -15,6 +15,51 @@ const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 360;
 const ORANGE = '#ff6200ff';
 
+function initTimeSliderWidget(
+  container: HTMLElement,
+  initialTime: number,
+  onChange: (time: number) => void
+): (time: number) => void {
+  // Create time slider container
+  const sliderDiv = document.createElement('div');
+  sliderDiv.style.marginTop = '16px';
+  container.appendChild(sliderDiv);
+
+  // Create time slider
+  const timeSlider = document.createElement('input');
+  timeSlider.type = 'range';
+  timeSlider.min = '0';
+  timeSlider.max = '1';
+  timeSlider.step = '0.01';
+  timeSlider.value = initialTime.toString();
+  timeSlider.style.width = '320px';
+  sliderDiv.appendChild(timeSlider);
+
+  // Create time value display
+  const timeValue = document.createElement('span');
+  timeValue.textContent = initialTime.toFixed(2);
+  timeValue.style.marginLeft = '8px';
+  sliderDiv.appendChild(timeValue);
+
+  let currentTime = initialTime;
+
+  // Time slider event handler
+  timeSlider.addEventListener('input', () => {
+    const newTime = parseFloat(timeSlider.value);
+    currentTime = newTime;
+    timeValue.textContent = newTime.toFixed(2);
+    onChange(newTime);
+  });
+
+  function update(newTime: number): void {
+    currentTime = newTime;
+    timeSlider.value = newTime.toString();
+    timeValue.textContent = newTime.toFixed(2);
+  }
+
+  return update;
+}
+
 function initMovableDotWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
@@ -57,14 +102,31 @@ function initMovableDotWidget(
 function initConditionalProbabilityPathWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
-  onChange: (position: Pair<number>) => void,
-  time: number,
-  sampleBtn: HTMLButtonElement,
-  sampleContinuouslyCheckbox: HTMLInputElement
-): (position: Pair<number>, time: number, clearSamples?: boolean) => void {
+  initialTime: number,
+  onChange: (position: Pair<number>) => void
+): (position: Pair<number>, time: number) => void {
   // Add a canvas element to the container
   const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
   const ctx = getContext(canvas);
+
+  // Create controls container
+  const controlsDiv = document.createElement('div');
+  controlsDiv.style.marginTop = '8px';
+  container.appendChild(controlsDiv);
+
+  // Create sample button
+  const sampleBtn = document.createElement('button');
+  sampleBtn.textContent = 'Sample';
+  controlsDiv.appendChild(sampleBtn);
+
+  // Create sample continuously checkbox
+  const sampleContinuouslyLabel = document.createElement('label');
+  sampleContinuouslyLabel.style.marginLeft = '12px';
+  const sampleContinuouslyCheckbox = document.createElement('input');
+  sampleContinuouslyCheckbox.type = 'checkbox';
+  sampleContinuouslyLabel.appendChild(sampleContinuouslyCheckbox);
+  sampleContinuouslyLabel.appendChild(document.createTextNode(' Sample continuously'));
+  controlsDiv.appendChild(sampleContinuouslyLabel);
 
   const xRange = [-4, 4] as [number, number];
   const yRange = [-3, 3] as [number, number];
@@ -72,6 +134,9 @@ function initConditionalProbabilityPathWidget(
   const yScale = makeScale(yRange, [CANVAS_HEIGHT - defaultMargins.bottom, defaultMargins.top]);
 
   let sampledPoints: { x: number; y: number }[] = [];
+
+  let currentPosition = initialPosition;
+  let currentTime = initialTime;
 
   // Create movable dot for the data point first
   const dot = createMovableDot(
@@ -83,24 +148,20 @@ function initConditionalProbabilityPathWidget(
     {
       radius: 5,
       fill: ORANGE,
-      onChange: (newPosition) => {
-        sampledPoints = [];
-        onChange(newPosition);
-      }
+      onChange: onChange
     }
   );
 
-  let currentPosition = initialPosition;
-  let currentTime = time;
-
-  function update(newPosition: Pair<number>, newTime: number, clearSamples = false): void {
-    currentPosition = newPosition;
-    currentTime = newTime;
-
-    // Clear samples if requested (e.g., when slider moves)
-    if (clearSamples) {
+  function update(newPosition: Pair<number>, newTime: number): void {
+    // Clear samples if position or time changed
+    const positionChanged = newPosition[0] !== currentPosition[0] || newPosition[1] !== currentPosition[1];
+    const timeChanged = newTime !== currentTime;
+    if (positionChanged || timeChanged) {
       sampledPoints = [];
     }
+
+    currentPosition = newPosition;
+    currentTime = newTime;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -167,7 +228,7 @@ function initConditionalProbabilityPathWidget(
   });
 
   // Initial render
-  update(initialPosition, time);
+  update(initialPosition, initialTime);
 
   return update;
 }
@@ -175,42 +236,46 @@ function initConditionalProbabilityPathWidget(
 function run(): void {
   const containerA = el(document, '#containerA') as HTMLElement;
   const containerB = el(document, '#containerB') as HTMLElement;
-  const timeSlider = el(document, '#timeSlider') as HTMLInputElement;
-  const timeValue = el(document, '#timeValue') as HTMLSpanElement;
-  const sampleBtn = el(document, '#sampleBtn') as HTMLButtonElement;
-  const sampleContinuouslyCheckbox = el(document, '#sampleContinuously') as HTMLInputElement;
+  const containerC = el(document, '#containerC') as HTMLElement;
 
   let currentPosition: Pair<number> = [1, 0.5];
   let currentTime = 0;
 
-  // Initialize widgets first
   // eslint-disable-next-line prefer-const
   let updateWidgetA: (position: Pair<number>) => void;
   // eslint-disable-next-line prefer-const
-  let updateWidgetB: (position: Pair<number>, time: number, clearSamples?: boolean) => void;
+  let updateWidgetB: (position: Pair<number>, time: number) => void;
+  // eslint-disable-next-line prefer-const
+  let updateWidgetC: (position: Pair<number>, time: number) => void;
+  // eslint-disable-next-line prefer-const
+  let updateTimeSliderB: (time: number) => void;
+  // eslint-disable-next-line prefer-const
+  let updateTimeSliderC: (time: number) => void;
 
-  function update(newPosition: Pair<number>): void {
+  function onPositionChange(newPosition: Pair<number>): void {
     currentPosition = newPosition;
     updateWidgetA(currentPosition);
     updateWidgetB(currentPosition, currentTime);
+    updateWidgetC(currentPosition, currentTime);
   }
 
-  function updateTime(newTime: number): void {
+  function onTimeChange(newTime: number): void {
     currentTime = newTime;
-    timeValue.textContent = newTime.toFixed(2);
-    updateWidgetB(currentPosition, currentTime, true); // Always clear samples when slider moves
+    updateWidgetB(currentPosition, currentTime);
+    updateWidgetC(currentPosition, currentTime);
+    updateTimeSliderB(currentTime);
+    updateTimeSliderC(currentTime);
   }
 
-  updateWidgetA = initMovableDotWidget(containerA, currentPosition, update);
+  updateWidgetA = initMovableDotWidget(containerA, currentPosition, onPositionChange);
   updateWidgetB = initConditionalProbabilityPathWidget(
-    containerB, currentPosition, update, currentTime, sampleBtn, sampleContinuouslyCheckbox
+    containerB, currentPosition, currentTime, onPositionChange
   );
-
-  // Time slider event
-  timeSlider.addEventListener('input', () => {
-    const newTime = parseFloat(timeSlider.value);
-    updateTime(newTime);
-  });
+  updateWidgetC = initConditionalProbabilityPathWidget(
+    containerC, currentPosition, currentTime, onPositionChange
+  );
+  updateTimeSliderB = initTimeSliderWidget(containerB, currentTime, onTimeChange);
+  updateTimeSliderC = initTimeSliderWidget(containerC, currentTime, onTimeChange);
 }
 
 run();
