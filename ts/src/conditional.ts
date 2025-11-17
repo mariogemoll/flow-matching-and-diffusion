@@ -427,31 +427,35 @@ function initVectorFieldView(
 function initConditionalProbPathWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
-  initialTime: number,
-  onPositionChange: (position: Pair<number>) => void,
-  onTimeChange: (time: number) => void
-): (position: Pair<number>, time: number) => void {
+  initialTime: number
+): void {
+  let currentPosition = initialPosition;
+  let currentTime = initialTime;
+
   const updateView = initConditionalProbabilityPathView(
     container,
     initialPosition,
     initialTime,
-    onPositionChange
+    (newPosition: Pair<number>) => {
+      currentPosition = newPosition;
+      updateView(currentPosition, currentTime);
+    }
   );
-  const updateSlider = initTimeSliderWidget(container, initialTime, onTimeChange);
-
-  return (newPosition: Pair<number>, newTime: number) => {
-    updateView(newPosition, newTime);
-    updateSlider(newTime);
-  };
+  const updateSlider = initTimeSliderWidget(container, initialTime, (newTime: number) => {
+    currentTime = newTime;
+    updateView(currentPosition, currentTime);
+    updateSlider(currentTime);
+  });
 }
 
 function initConditionalProbPathAndVectorFieldWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
-  initialTime: number,
-  onPositionChange: (position: Pair<number>) => void,
-  onTimeChange: (time: number) => void
-): (position: Pair<number>, time: number) => void {
+  initialTime: number
+): void {
+  let currentPosition = initialPosition;
+  let currentTime = initialTime;
+
   // Create a container for side-by-side views
   const viewsContainer = document.createElement('div');
   viewsContainer.style.display = 'flex';
@@ -467,21 +471,28 @@ function initConditionalProbPathAndVectorFieldWidget(
     leftContainer,
     initialPosition,
     initialTime,
-    onPositionChange
+    (newPosition: Pair<number>) => {
+      currentPosition = newPosition;
+      updateCondProbView(currentPosition, currentTime);
+      updateVectorFieldView(currentPosition, currentTime);
+    }
   );
   const updateVectorFieldView = initVectorFieldView(
     rightContainer,
     initialPosition,
     initialTime,
-    onPositionChange
+    (newPosition: Pair<number>) => {
+      currentPosition = newPosition;
+      updateCondProbView(currentPosition, currentTime);
+      updateVectorFieldView(currentPosition, currentTime);
+    }
   );
-  const updateSlider = initTimeSliderWidget(container, initialTime, onTimeChange);
-
-  return (newPosition: Pair<number>, newTime: number) => {
-    updateCondProbView(newPosition, newTime);
-    updateVectorFieldView(newPosition, newTime);
-    updateSlider(newTime);
-  };
+  const updateSlider = initTimeSliderWidget(container, initialTime, (newTime: number) => {
+    currentTime = newTime;
+    updateCondProbView(currentPosition, currentTime);
+    updateVectorFieldView(currentPosition, currentTime);
+    updateSlider(currentTime);
+  });
 }
 
 function run(): void {
@@ -489,36 +500,16 @@ function run(): void {
   const containerB = el(document, '#containerB') as HTMLElement;
   const containerC = el(document, '#containerC') as HTMLElement;
 
-  let currentPosition: Pair<number> = [1.0, 0.5];
-  let currentTime = 0;
+  const initialPosition: Pair<number> = [1.0, 0.5];
+  const initialTime = 0;
 
-  // eslint-disable-next-line prefer-const
-  let updateWidgetA: (position: Pair<number>) => void;
-  // eslint-disable-next-line prefer-const
-  let updateWidgetB: (position: Pair<number>, time: number) => void;
-  // eslint-disable-next-line prefer-const
-  let updateWidgetC: (position: Pair<number>, time: number) => void;
+  // Widget A with its own controller
+  const updateWidgetA = initMovableDotWidget(containerA, initialPosition, (newPosition) => {
+    updateWidgetA(newPosition);
+  });
 
-  function onPositionChange(newPosition: Pair<number>): void {
-    currentPosition = newPosition;
-    updateWidgetA(currentPosition);
-    updateWidgetB(currentPosition, currentTime);
-    updateWidgetC(currentPosition, currentTime);
-  }
-
-  function onTimeChange(newTime: number): void {
-    currentTime = newTime;
-    updateWidgetB(currentPosition, currentTime);
-    updateWidgetC(currentPosition, currentTime);
-  }
-
-  updateWidgetA = initMovableDotWidget(containerA, currentPosition, onPositionChange);
-  updateWidgetB = initConditionalProbPathWidget(
-    containerB, currentPosition, currentTime, onPositionChange, onTimeChange
-  );
-  updateWidgetC = initConditionalProbPathAndVectorFieldWidget(
-    containerC, currentPosition, currentTime, onPositionChange, onTimeChange
-  );
+  initConditionalProbPathWidget(containerB, initialPosition, initialTime);
+  initConditionalProbPathAndVectorFieldWidget(containerC, initialPosition, initialTime);
 }
 
 run();
