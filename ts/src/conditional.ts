@@ -10,7 +10,6 @@ function run(): void {
     '#wallTimeTfjsNoContours',
     '#sampleBtnTfjsNoContours',
     false,
-    false,
     'TF.js on-the-fly (no contours)',
     linearNoiseScheduler,
     linearNoiseSchedulerDerivative,

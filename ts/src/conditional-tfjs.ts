@@ -1,4 +1,4 @@
-import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { addDot, addFrameUsingScales, createMovableDot, getContext } from 'web-ui-common/canvas';
 import { el } from 'web-ui-common/dom';
 import { makeScale } from 'web-ui-common/util';
 
@@ -8,7 +8,6 @@ import {
   computeGaussianParams,
   computeGlobalMaxVectorLength,
   computeVectorFieldArrows,
-  precomputeGaussianFrames,
   propagateVectorFieldSamples,
   renderGaussianFrame,
   sampleGaussianPoints,
@@ -30,7 +29,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   timeValueId: string,
   wallTimeDisplayId: string,
   sampleBtnId: string | null,
-  usePrecomputation: boolean,
   withContours: boolean,
   logPrefix: string,
   noiseScheduler: NoiseScheduler,
@@ -80,7 +78,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
     : makeScale(yRange, [vectorFieldCanvas.height - margins.bottom, margins.top]);
 
   let dataPoint: [number, number] = [1, 0.5];
-  let isDragging = false;
   let isSliderDragging = false;
   const animationState: AnimationState = {
     isAnimating: false,
@@ -88,9 +85,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   };
   let animationStartTime: number | null = null;
 
-  const NUM_FRAMES = 60;
-  let precomputedFrames: (ImageData | undefined)[] = new Array(NUM_FRAMES + 1)
-    .fill(undefined) as (ImageData | undefined)[];
   let sampledPoints: { x: number; y: number }[] = [];
   let vectorFieldSampledPoints: { x: number; y: number }[] = [];
   let vectorFieldInitialSamples: [number, number][] = []; // Store initial data coordinates
@@ -128,30 +122,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
     });
   }
 
-  function precomputeFramesForCurrentPoint(): ImageData[] {
-    return precomputeGaussianFrames({
-      canvas,
-      ctx,
-      xScale,
-      yScale,
-      noiseScheduler,
-      dataPoint,
-      frameCount: NUM_FRAMES,
-      withContours
-    });
-  }
-
-  function clearPrecomputedFrames(): void {
-    precomputedFrames = new Array(NUM_FRAMES + 1).fill(undefined) as (ImageData | undefined)[];
-  }
-
-  function precomputeFrames(): void {
-    if (!usePrecomputation) {
-      return;
-    }
-
-    precomputedFrames = precomputeFramesForCurrentPoint();
-  }
 
   function updateVectorFieldSampledPoints(): void {
     if (vectorFieldXScale === null || vectorFieldYScale === null) {
@@ -281,21 +251,13 @@ export function setUpConditionalProbabilityPathTfjsImpl(
       });
     }
 
-    let imageData: ImageData;
-    if (usePrecomputation) {
-      const frameIndex = Math.round(animationState.time * NUM_FRAMES);
-      const frame = precomputedFrames[frameIndex];
-      imageData = frame ?? computeFrameImage(animationState.time);
-    } else {
-      imageData = computeFrameImage(animationState.time);
-    }
+    const imageData = computeFrameImage(animationState.time);
     ctx.putImageData(imageData, 0, 0);
 
     addFrameUsingScales(ctx, xScale, yScale, 11);
 
-    const dataPointPixelX = xScale(dataPoint[0]);
-    const dataPointPixelY = yScale(dataPoint[1]);
-    addDot(ctx, dataPointPixelX, dataPointPixelY, DATA_POINT_RADIUS, '#2196F3');
+    // Render the movable dot at current position
+    movableDotRenderer.render(dataPoint);
 
     sampledPoints.forEach(({ x, y }) => {
       addDot(ctx, x, y, SAMPLED_POINT_RADIUS, SAMPLED_POINT_COLOR);
@@ -328,62 +290,32 @@ export function setUpConditionalProbabilityPathTfjsImpl(
     requestAnimationFrame(animate);
   }
 
-  function getMousePosition(e: MouseEvent): [number, number] {
-    const rect = canvas.getBoundingClientRect();
-    const pixelX = e.clientX - rect.left;
-    const pixelY = e.clientY - rect.top;
-    return [pixelX, pixelY];
-  }
-
-  function isPointNear(px: number, py: number, x: number, y: number, threshold = 15): boolean {
-    return Math.sqrt((px - x) ** 2 + (py - y) ** 2) < threshold;
-  }
-
-  canvas.addEventListener('mousedown', (e) => {
-    const [pixelX, pixelY] = getMousePosition(e);
-    const dataPointPixelX = xScale(dataPoint[0]);
-    const dataPointPixelY = yScale(dataPoint[1]);
-
-    if (isPointNear(pixelX, pixelY, dataPointPixelX, dataPointPixelY)) {
+  // Create movable dot for the data point
+  let isDragging = false;
+  const movableDotRenderer = createMovableDot(canvas, ctx, xScale, yScale, dataPoint, {
+    radius: DATA_POINT_RADIUS,
+    fill: '#2196F3',
+    onChange: (newPosition) => {
       isDragging = true;
-      clearPrecomputedFrames();
-      canvas.style.cursor = 'grabbing';
+      dataPoint = newPosition;
       sampledPoints = [];
       render();
     }
   });
 
-  canvas.addEventListener('mousemove', (e) => {
-    const [pixelX, pixelY] = getMousePosition(e);
-    const dataPointPixelX = xScale(dataPoint[0]);
-    const dataPointPixelY = yScale(dataPoint[1]);
-
-    if (isDragging) {
-      dataPoint = [xScale.inverse(pixelX), yScale.inverse(pixelY)];
-      render();
-    } else if (isPointNear(pixelX, pixelY, dataPointPixelX, dataPointPixelY)) {
-      canvas.style.cursor = 'grab';
-    } else {
-      canvas.style.cursor = 'default';
-    }
-  });
-
+  // Track when dragging ends to recompute
   canvas.addEventListener('mouseup', () => {
     if (isDragging) {
       recomputeGlobalMaxVectorLength();
-      precomputeFrames();
+      isDragging = false;
     }
-    isDragging = false;
-    canvas.style.cursor = 'default';
   });
 
   canvas.addEventListener('mouseleave', () => {
     if (isDragging) {
       recomputeGlobalMaxVectorLength();
-      precomputeFrames();
+      isDragging = false;
     }
-    isDragging = false;
-    canvas.style.cursor = 'default';
   });
 
   playBtn.addEventListener('click', () => {
@@ -474,7 +406,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   }
 
   recomputeGlobalMaxVectorLength();
-  precomputeFrames();
   render();
 
   animate();

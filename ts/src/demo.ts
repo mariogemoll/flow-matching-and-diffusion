@@ -21,7 +21,6 @@ function run(): void {
     '#timeValueTfjs',
     '#wallTimeTfjs',
     null,
-    false,
     true,
     'TF.js on-the-fly',
     linearNoiseScheduler
@@ -34,7 +33,6 @@ function run(): void {
     '#wallTimeTfjsPrecompute',
     null,
     true,
-    true,
     'TF.js with precomputation',
     linearNoiseScheduler
   );
@@ -45,7 +43,6 @@ function run(): void {
     '#timeValueTfjsNoContours',
     '#wallTimeTfjsNoContours',
     '#sampleBtnTfjsNoContours',
-    false,
     false,
     'TF.js on-the-fly (no contours)',
     linearNoiseScheduler,
@@ -62,7 +59,6 @@ function run(): void {
     '#timeValueTfjsPrecomputeNoContours',
     '#wallTimeTfjsPrecomputeNoContours',
     null,
-    true,
     false,
     'TF.js with precomputation (no contours)',
     linearNoiseScheduler
