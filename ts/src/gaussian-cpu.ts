@@ -1,12 +1,13 @@
+import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { el } from 'web-ui-common/dom';
+import { makeScale } from 'web-ui-common/util';
+
 import {
   computeGaussianMixture,
   drawGaussianContours,
   drawGaussianMixturePDF,
   type GaussianComponent
 } from './gaussian';
-import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
-import { el } from './web-ui-common/dom';
-import { makeScale } from './web-ui-common/util';
 
 export function setUpGaussianCpu(): void {
   const canvas = el(document, '#gaussian-cpu-canvas') as HTMLCanvasElement;

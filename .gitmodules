@@ -1,3 +1,0 @@
-[submodule "ts/web-ui-common"]
-	path = ts/web-ui-common
-	url = git@github.com:mariogemoll/web-ui-common.git

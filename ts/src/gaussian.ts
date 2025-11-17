@@ -1,4 +1,4 @@
-import type { Scale } from './web-ui-common/types';
+import type { Scale } from 'web-ui-common/types';
 
 export interface GaussianComponent {
   mean: [number, number];

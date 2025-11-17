@@ -1,4 +1,13 @@
 import {
+  addFrameUsingScales,
+  defaultMargins,
+  drawFunction1D,
+  getContext
+} from 'web-ui-common/canvas';
+import { el } from 'web-ui-common/dom';
+import { makeScale } from 'web-ui-common/util';
+
+import {
   type GaussianComponent,
   makeGaussianMixture,
   normalizeGaussianComponents
@@ -12,14 +21,6 @@ import {
   makeSqrtSqrtScheduler,
   type NoiseScheduler
 } from '../math/noise-scheduler';
-import {
-  addFrameUsingScales,
-  defaultMargins,
-  drawFunction1D,
-  getContext
-} from '../web-ui-common/canvas';
-import { el } from '../web-ui-common/dom';
-import { makeScale } from '../web-ui-common/util';
 import { renderMeanPlot, renderSchedulerPlot, renderVariancePlot } from './plot-renderers';
 
 export function setUpMixtureWidget(): void {

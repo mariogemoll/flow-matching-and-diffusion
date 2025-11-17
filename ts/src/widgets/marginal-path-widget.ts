@@ -1,3 +1,12 @@
+import {
+  addFrameUsingScales,
+  defaultMargins,
+  drawFunction1D,
+  getContext
+} from 'web-ui-common/canvas';
+import { el } from 'web-ui-common/dom';
+import { makeScale } from 'web-ui-common/util';
+
 import { gaussianPdf } from '../math/gaussian';
 import {
   makeCircularCircularScheduler,
@@ -8,14 +17,6 @@ import {
   makeSqrtSqrtScheduler,
   type NoiseScheduler
 } from '../math/noise-scheduler';
-import {
-  addFrameUsingScales,
-  defaultMargins,
-  drawFunction1D,
-  getContext
-} from '../web-ui-common/canvas';
-import { el } from '../web-ui-common/dom';
-import { makeScale } from '../web-ui-common/util';
 import { renderMeanPlot, renderSchedulerPlot, renderVariancePlot } from './plot-renderers';
 
 export function setUpMarginalPathWidget(): void {

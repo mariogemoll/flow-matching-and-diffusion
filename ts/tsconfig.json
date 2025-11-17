@@ -3,13 +3,12 @@
     "target": "ES2022",
     "lib": ["ES2022", "DOM"],
     "module": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src/**/*", "node_modules/web-ui-common/src/**/*"]
 }

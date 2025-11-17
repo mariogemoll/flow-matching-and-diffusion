@@ -1,10 +1,11 @@
 
 
+import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { el } from 'web-ui-common/dom';
+import type { Scale } from 'web-ui-common/types';
+import { makeScale } from 'web-ui-common/util';
+
 import { drawGaussianContours, type GaussianComponent } from './gaussian';
-import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
-import { el } from './web-ui-common/dom';
-import type { Scale } from './web-ui-common/types';
-import { makeScale } from './web-ui-common/util';
 
 // TF.js is loaded from CDN in the HTML
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports

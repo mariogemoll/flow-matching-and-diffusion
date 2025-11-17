@@ -1,3 +1,7 @@
+import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { el } from 'web-ui-common/dom';
+import { makeScale } from 'web-ui-common/util';
+
 import type { AnimationState } from './animation-state';
 import { DATA_POINT_RADIUS } from './constants';
 import {
@@ -7,9 +11,6 @@ import {
   type GaussianComponent
 } from './gaussian';
 import type { NoiseScheduler } from './noise-schedulers';
-import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
-import { el } from './web-ui-common/dom';
-import { makeScale } from './web-ui-common/util';
 
 const MIN_VARIANCE = 0.0001;
 

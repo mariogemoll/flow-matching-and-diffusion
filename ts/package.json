@@ -5,6 +5,9 @@
   "scripts": {
     "build": "npx esbuild src/demo.ts src/conditional.ts src/marginal.ts src/1d.ts --bundle --outdir=dist"
   },
+  "dependencies": {
+    "web-ui-common": "mariogemoll/web-ui-common#2a2f35ee447f04555101749f10d662ebf0e3e9f7"
+  },
   "devDependencies": {
     "@tensorflow/tfjs": "^4.22.0",
     "esbuild": "^0.25.10",

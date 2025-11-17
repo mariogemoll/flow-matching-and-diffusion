@@ -1,3 +1,7 @@
+import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { el } from 'web-ui-common/dom';
+import { makeScale } from 'web-ui-common/util';
+
 import { viridis } from './color-maps';
 import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
 import { drawGaussianContours, drawGaussianMixturePDF, type GaussianComponent } from './gaussian';
@@ -11,9 +15,6 @@ import {
   makeSqrtSqrtScheduler,
   type NoiseScheduler
 } from './math/noise-scheduler';
-import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
-import { el } from './web-ui-common/dom';
-import { makeScale } from './web-ui-common/util';
 import { renderSchedulerPlot } from './widgets/plot-renderers';
 
 // TF.js is loaded from CDN in the HTML

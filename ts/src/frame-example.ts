@@ -1,6 +1,6 @@
-import { addFrameUsingScales, getContext } from './web-ui-common/canvas';
-import { el } from './web-ui-common/dom';
-import { makeScale } from './web-ui-common/util';
+import { addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { el } from 'web-ui-common/dom';
+import { makeScale } from 'web-ui-common/util';
 
 export function setUpFrameExample(): void {
   const canvas = el(document, '#frame-canvas') as HTMLCanvasElement;

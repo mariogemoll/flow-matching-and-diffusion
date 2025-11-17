@@ -1,6 +1,7 @@
+import { addFrameUsingScales, drawFunction1D, getContext } from 'web-ui-common/canvas';
+import { makeScale } from 'web-ui-common/util';
+
 import { type NoiseScheduler } from '../math/noise-scheduler';
-import { addFrameUsingScales, drawFunction1D, getContext } from '../web-ui-common/canvas';
-import { makeScale } from '../web-ui-common/util';
 
 export function renderSchedulerPlot(
   canvas: HTMLCanvasElement,

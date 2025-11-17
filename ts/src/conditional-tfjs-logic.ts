@@ -1,3 +1,5 @@
+import type { Scale } from 'web-ui-common/types';
+
 import {
   VECTOR_FIELD_COMPRESSION_EXPONENT,
   VECTOR_FIELD_COMPRESSION_MODE,
@@ -7,7 +9,6 @@ import {
 import { drawGaussianContours } from './gaussian';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
 import type { NoiseScheduler, NoiseSchedulerDerivative } from './noise-schedulers';
-import type { Scale } from './web-ui-common/types';
 
 export const MIN_VARIANCE = 0.0001;
 

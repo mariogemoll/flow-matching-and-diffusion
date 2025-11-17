@@ -1,3 +1,7 @@
+import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { el } from 'web-ui-common/dom';
+import { makeScale } from 'web-ui-common/util';
+
 import type { AnimationState } from './animation-state';
 import { viridis } from './color-maps';
 import {
@@ -18,9 +22,6 @@ import {
 } from './constants';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
 import type { NoiseScheduler, NoiseSchedulerDerivative } from './noise-schedulers';
-import { addDot, addFrameUsingScales, getContext } from './web-ui-common/canvas';
-import { el } from './web-ui-common/dom';
-import { makeScale } from './web-ui-common/util';
 
 export function setUpConditionalProbabilityPathTfjsImpl(
   canvasId: string,
