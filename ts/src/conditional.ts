@@ -5,11 +5,19 @@ import { addCanvas, el } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
+import { viridis } from './color-maps';
 import {
-  computeGaussianParams, renderGaussianFrame, sampleGaussianPoints
+  computeGaussianParams,
+  computeGlobalMaxVectorLength,
+  computeVectorFieldArrows,
+  propagateVectorFieldSamples,
+  renderGaussianFrame,
+  sampleGaussianPoints,
+  sampleStandardNormalPoints
 } from './conditional-tfjs-logic';
 import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
-import { linearNoiseScheduler } from './noise-schedulers';
+import { computeGaussianPdfTfjs } from './gaussian-tf';
+import { linearNoiseScheduler, linearNoiseSchedulerDerivative } from './noise-schedulers';
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 360;
@@ -41,18 +49,14 @@ function initTimeSliderWidget(
   timeValue.style.marginLeft = '8px';
   sliderDiv.appendChild(timeValue);
 
-  let currentTime = initialTime;
-
   // Time slider event handler
   timeSlider.addEventListener('input', () => {
     const newTime = parseFloat(timeSlider.value);
-    currentTime = newTime;
     timeValue.textContent = newTime.toFixed(2);
     onChange(newTime);
   });
 
   function update(newTime: number): void {
-    currentTime = newTime;
     timeSlider.value = newTime.toString();
     timeValue.textContent = newTime.toFixed(2);
   }
@@ -99,7 +103,7 @@ function initMovableDotWidget(
   return update;
 }
 
-function initConditionalProbabilityPathWidget(
+function initConditionalProbabilityPathView(
   container: HTMLElement,
   initialPosition: Pair<number>,
   initialTime: number,
@@ -154,7 +158,8 @@ function initConditionalProbabilityPathWidget(
 
   function update(newPosition: Pair<number>, newTime: number): void {
     // Clear samples if position or time changed
-    const positionChanged = newPosition[0] !== currentPosition[0] || newPosition[1] !== currentPosition[1];
+    const positionChanged =
+      newPosition[0] !== currentPosition[0] || newPosition[1] !== currentPosition[1];
     const timeChanged = newTime !== currentTime;
     if (positionChanged || timeChanged) {
       sampledPoints = [];
@@ -233,12 +238,258 @@ function initConditionalProbabilityPathWidget(
   return update;
 }
 
+function initVectorFieldView(
+  container: HTMLElement,
+  initialPosition: Pair<number>,
+  initialTime: number,
+  onChange: (position: Pair<number>) => void
+): (position: Pair<number>, time: number) => void {
+  // Add a canvas element to the container
+  const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
+  const ctx = getContext(canvas);
+
+  // Create controls container
+  const controlsDiv = document.createElement('div');
+  controlsDiv.style.marginTop = '8px';
+  container.appendChild(controlsDiv);
+
+  // Create sample button
+  const sampleBtn = document.createElement('button');
+  sampleBtn.textContent = 'Sample';
+  controlsDiv.appendChild(sampleBtn);
+
+  // Create clear button
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'Clear';
+  clearBtn.style.marginLeft = '8px';
+  controlsDiv.appendChild(clearBtn);
+
+  const xRange = [-4, 4] as [number, number];
+  const yRange = [-3, 3] as [number, number];
+  const xScale = makeScale(xRange, [defaultMargins.left, CANVAS_WIDTH - defaultMargins.right]);
+  const yScale = makeScale(yRange, [CANVAS_HEIGHT - defaultMargins.bottom, defaultMargins.top]);
+
+  let currentPosition = initialPosition;
+  let currentTime = initialTime;
+  let vectorFieldSampledPoints: { x: number; y: number }[] = [];
+  let vectorFieldInitialSamples: [number, number][] = [];
+  let globalMaxVectorLength = 0;
+
+  // Create movable dot for the data point
+  const dot = createMovableDot(
+    canvas,
+    ctx,
+    xScale,
+    yScale,
+    initialPosition,
+    {
+      radius: 5,
+      fill: ORANGE,
+      onChange: onChange
+    }
+  );
+
+  function recomputeGlobalMaxVectorLength(): void {
+    globalMaxVectorLength = computeGlobalMaxVectorLength({
+      xRange,
+      yRange,
+      dataPoint: currentPosition,
+      noiseScheduler: linearNoiseScheduler,
+      noiseSchedulerDerivative: linearNoiseSchedulerDerivative,
+      vectorFieldXScale: xScale,
+      vectorFieldYScale: yScale
+    });
+  }
+
+  function update(newPosition: Pair<number>, newTime: number): void {
+    currentPosition = newPosition;
+    currentTime = newTime;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw standard normal at t=0
+    if (Math.abs(currentTime) < 0.01) {
+      const result = computeGaussianPdfTfjs(
+        canvas,
+        ctx,
+        xScale,
+        yScale,
+        0,
+        0,
+        1,
+        false
+      );
+      ctx.putImageData(result.imageData, 0, 0);
+    }
+
+    addFrameUsingScales(ctx, xScale, yScale, 11);
+
+    // Update and render vector field arrows
+    const arrows = computeVectorFieldArrows({
+      time: currentTime,
+      xRange,
+      yRange,
+      dataPoint: currentPosition,
+      noiseScheduler: linearNoiseScheduler,
+      noiseSchedulerDerivative: linearNoiseSchedulerDerivative,
+      vectorFieldXScale: xScale,
+      vectorFieldYScale: yScale,
+      globalMaxVectorLength
+    });
+
+    for (const { startX, startY, dx, dy, normalizedLength } of arrows) {
+      const endX = startX + dx;
+      const endY = startY + dy;
+      const color = viridis(normalizedLength);
+
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      const angle = Math.atan2(dy, dx);
+      const headLen = 5;
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(
+        endX - headLen * Math.cos(angle - Math.PI / 6),
+        endY - headLen * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.lineTo(
+        endX - headLen * Math.cos(angle + Math.PI / 6),
+        endY - headLen * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Render data point (orange dot)
+    dot.render(currentPosition);
+
+    // Update and render sampled points
+    if (vectorFieldInitialSamples.length > 0) {
+      vectorFieldSampledPoints = propagateVectorFieldSamples({
+        initialSamples: vectorFieldInitialSamples,
+        time: currentTime,
+        dataPoint: currentPosition,
+        noiseScheduler: linearNoiseScheduler,
+        vectorFieldXScale: xScale,
+        vectorFieldYScale: yScale
+      });
+
+      vectorFieldSampledPoints.forEach(({ x, y }) => {
+        addDot(ctx, x, y, SAMPLED_POINT_RADIUS, SAMPLED_POINT_COLOR);
+      });
+    }
+  }
+
+  // Sample button handler
+  sampleBtn.addEventListener('click', () => {
+    if (Math.abs(currentTime) < 0.01) {
+      const { initialSamples, pixelSamples } = sampleStandardNormalPoints({
+        count: NUM_SAMPLES,
+        xScale,
+        yScale
+      });
+      vectorFieldInitialSamples = initialSamples;
+      vectorFieldSampledPoints = pixelSamples;
+      update(currentPosition, currentTime);
+    }
+  });
+
+  // Clear button handler
+  clearBtn.addEventListener('click', () => {
+    vectorFieldSampledPoints = [];
+    vectorFieldInitialSamples = [];
+    update(currentPosition, currentTime);
+  });
+
+  // Update button states
+  function updateButtonStates(): void {
+    sampleBtn.disabled = Math.abs(currentTime) >= 0.01;
+    clearBtn.disabled = vectorFieldInitialSamples.length === 0;
+  }
+
+  // Initial computation
+  recomputeGlobalMaxVectorLength();
+  update(initialPosition, initialTime);
+  updateButtonStates();
+
+  return (newPosition: Pair<number>, newTime: number) => {
+    update(newPosition, newTime);
+    updateButtonStates();
+  };
+}
+
+function initConditionalProbPathWidget(
+  container: HTMLElement,
+  initialPosition: Pair<number>,
+  initialTime: number,
+  onPositionChange: (position: Pair<number>) => void,
+  onTimeChange: (time: number) => void
+): (position: Pair<number>, time: number) => void {
+  const updateView = initConditionalProbabilityPathView(
+    container,
+    initialPosition,
+    initialTime,
+    onPositionChange
+  );
+  const updateSlider = initTimeSliderWidget(container, initialTime, onTimeChange);
+
+  return (newPosition: Pair<number>, newTime: number) => {
+    updateView(newPosition, newTime);
+    updateSlider(newTime);
+  };
+}
+
+function initConditionalProbPathAndVectorFieldWidget(
+  container: HTMLElement,
+  initialPosition: Pair<number>,
+  initialTime: number,
+  onPositionChange: (position: Pair<number>) => void,
+  onTimeChange: (time: number) => void
+): (position: Pair<number>, time: number) => void {
+  // Create a container for side-by-side views
+  const viewsContainer = document.createElement('div');
+  viewsContainer.style.display = 'flex';
+  viewsContainer.style.gap = '16px';
+  container.appendChild(viewsContainer);
+
+  const leftContainer = document.createElement('div');
+  const rightContainer = document.createElement('div');
+  viewsContainer.appendChild(leftContainer);
+  viewsContainer.appendChild(rightContainer);
+
+  const updateCondProbView = initConditionalProbabilityPathView(
+    leftContainer,
+    initialPosition,
+    initialTime,
+    onPositionChange
+  );
+  const updateVectorFieldView = initVectorFieldView(
+    rightContainer,
+    initialPosition,
+    initialTime,
+    onPositionChange
+  );
+  const updateSlider = initTimeSliderWidget(container, initialTime, onTimeChange);
+
+  return (newPosition: Pair<number>, newTime: number) => {
+    updateCondProbView(newPosition, newTime);
+    updateVectorFieldView(newPosition, newTime);
+    updateSlider(newTime);
+  };
+}
+
 function run(): void {
   const containerA = el(document, '#containerA') as HTMLElement;
   const containerB = el(document, '#containerB') as HTMLElement;
   const containerC = el(document, '#containerC') as HTMLElement;
 
-  let currentPosition: Pair<number> = [1, 0.5];
+  let currentPosition: Pair<number> = [1.0, 0.5];
   let currentTime = 0;
 
   // eslint-disable-next-line prefer-const
@@ -247,10 +498,6 @@ function run(): void {
   let updateWidgetB: (position: Pair<number>, time: number) => void;
   // eslint-disable-next-line prefer-const
   let updateWidgetC: (position: Pair<number>, time: number) => void;
-  // eslint-disable-next-line prefer-const
-  let updateTimeSliderB: (time: number) => void;
-  // eslint-disable-next-line prefer-const
-  let updateTimeSliderC: (time: number) => void;
 
   function onPositionChange(newPosition: Pair<number>): void {
     currentPosition = newPosition;
@@ -263,19 +510,15 @@ function run(): void {
     currentTime = newTime;
     updateWidgetB(currentPosition, currentTime);
     updateWidgetC(currentPosition, currentTime);
-    updateTimeSliderB(currentTime);
-    updateTimeSliderC(currentTime);
   }
 
   updateWidgetA = initMovableDotWidget(containerA, currentPosition, onPositionChange);
-  updateWidgetB = initConditionalProbabilityPathWidget(
-    containerB, currentPosition, currentTime, onPositionChange
+  updateWidgetB = initConditionalProbPathWidget(
+    containerB, currentPosition, currentTime, onPositionChange, onTimeChange
   );
-  updateWidgetC = initConditionalProbabilityPathWidget(
-    containerC, currentPosition, currentTime, onPositionChange
+  updateWidgetC = initConditionalProbPathAndVectorFieldWidget(
+    containerC, currentPosition, currentTime, onPositionChange, onTimeChange
   );
-  updateTimeSliderB = initTimeSliderWidget(containerB, currentTime, onTimeChange);
-  updateTimeSliderC = initTimeSliderWidget(containerC, currentTime, onTimeChange);
 }
 
 run();
