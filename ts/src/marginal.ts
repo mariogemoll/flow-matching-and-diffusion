@@ -1,4 +1,5 @@
 import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { removePlaceholder } from 'web-ui-common/dom';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
@@ -26,6 +27,7 @@ interface ExtendedGaussianComponent extends GaussianComponent {
 }
 
 export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement): void {
+  removePlaceholder(container);
   // Create main layout structure
   const mainDiv = document.createElement('div');
   mainDiv.style.display = 'flex';
