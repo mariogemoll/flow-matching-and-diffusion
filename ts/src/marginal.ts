@@ -101,14 +101,6 @@ export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement)
   schedulerPlotCanvas.style.border = '1px solid #ccc';
   plotSection.appendChild(schedulerPlotCanvas);
 
-  const meanPlotCanvas = document.createElement('canvas');
-  meanPlotCanvas.width = 160;
-  meanPlotCanvas.height = 160;
-  meanPlotCanvas.style.width = '160px';
-  meanPlotCanvas.style.height = '160px';
-  meanPlotCanvas.style.border = '1px solid #ccc';
-  plotSection.appendChild(meanPlotCanvas);
-
   // Bottom controls
   const bottomControls = document.createElement('div');
   bottomControls.className = 'bottom-controls';
@@ -1020,9 +1012,6 @@ export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement)
 
     // Update scheduler plot
     renderSchedulerPlot(schedulerPlotCanvas, scheduler, t, 'Scheduler');
-
-    // Update mean trajectory plot
-    renderMeanTrajectoryPlot(meanPlotCanvas, scheduler, t, components);
   }
 
   function drawMarginalVectorField(
@@ -1262,106 +1251,6 @@ export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement)
     ctx.fill();
   }
 
-  function renderMeanTrajectoryPlot(
-    canvas: HTMLCanvasElement,
-    scheduler: NoiseScheduler,
-    currentT: number,
-    components: GaussianComponent[]
-  ): void {
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {return;}
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Calculate average mean at t=1 (data distribution)
-    let avgMeanX = 0;
-    let avgMeanY = 0;
-    for (const comp of components) {
-      avgMeanX += comp.weight * comp.mean[0];
-      avgMeanY += comp.weight * comp.mean[1];
-    }
-
-    // Set up coordinate system for the plot
-    const margin = 10;
-    const plotWidth = canvas.width - 2 * margin;
-    const plotHeight = canvas.height - 2 * margin;
-
-    // Determine bounds based on the data mean
-    const maxExtent = Math.max(Math.abs(avgMeanX), Math.abs(avgMeanY), 1);
-    const xRange = [-maxExtent * 1.2, maxExtent * 1.2] as [number, number];
-    const yRange = [-maxExtent * 1.2, maxExtent * 1.2] as [number, number];
-
-    const xScale = makeScale(xRange, [margin, margin + plotWidth]);
-    const yScale = makeScale(yRange, [margin + plotHeight, margin]);
-
-    // Draw axes
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 1;
-
-    // X axis
-    ctx.beginPath();
-    ctx.moveTo(margin, yScale(0));
-    ctx.lineTo(margin + plotWidth, yScale(0));
-    ctx.stroke();
-
-    // Y axis
-    ctx.beginPath();
-    ctx.moveTo(xScale(0), margin);
-    ctx.lineTo(xScale(0), margin + plotHeight);
-    ctx.stroke();
-
-    // Draw trajectory from t=0 to t=1
-    ctx.strokeStyle = 'rgba(255, 220, 100, 0.8)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-
-    const steps = 100;
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const alpha = scheduler.getAlpha(t);
-
-      const meanX = alpha * avgMeanX;
-      const meanY = alpha * avgMeanY;
-
-      const px = xScale(meanX);
-      const py = yScale(meanY);
-
-      if (i === 0) {
-        ctx.moveTo(px, py);
-      } else {
-        ctx.lineTo(px, py);
-      }
-    }
-    ctx.stroke();
-
-    // Draw current position
-    const currentAlpha = scheduler.getAlpha(currentT);
-    const currentMeanX = currentAlpha * avgMeanX;
-    const currentMeanY = currentAlpha * avgMeanY;
-
-    ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
-    ctx.beginPath();
-    ctx.arc(xScale(currentMeanX), yScale(currentMeanY), 4, 0, 2 * Math.PI);
-    ctx.fill();
-
-    // Draw start point (t=0, at origin)
-    ctx.fillStyle = 'rgba(150, 150, 150, 0.7)';
-    ctx.beginPath();
-    ctx.arc(xScale(0), yScale(0), 3, 0, 2 * Math.PI);
-    ctx.fill();
-
-    // Draw end point (t=1, data mean)
-    ctx.fillStyle = 'rgba(100, 200, 100, 0.9)';
-    ctx.beginPath();
-    ctx.arc(xScale(avgMeanX), yScale(avgMeanY), 3, 0, 2 * Math.PI);
-    ctx.fill();
-
-    // Draw title
-    ctx.fillStyle = '#ddd';
-    ctx.font = '11px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Mean Path', canvas.width / 2, 10);
-  }
 
   function handleMajorAxisDrag(mouseX: number, mouseY: number, componentIndex: number): void {
     const component = components[componentIndex];
