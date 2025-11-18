@@ -36,10 +36,6 @@ export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement)
   const leftSection = document.createElement('div');
   mainDiv.appendChild(leftSection);
 
-  const leftTitle = document.createElement('h1');
-  leftTitle.textContent = 'Left Canvas';
-  leftSection.appendChild(leftTitle);
-
   const leftCanvas = document.createElement('canvas');
   leftCanvas.width = 480;
   leftCanvas.height = 350;
@@ -57,13 +53,54 @@ export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement)
   sampleBtn.style.marginLeft = '0';
   leftControls.appendChild(sampleBtn);
 
+  const addComponentBtn = document.createElement('button');
+  addComponentBtn.textContent = 'Add Component';
+  leftControls.appendChild(addComponentBtn);
+
+  // Color controls below left canvas
+  const leftColorControls = document.createElement('div');
+  leftColorControls.style.marginTop = '8px';
+  leftColorControls.style.display = 'flex';
+  leftColorControls.style.gap = '8px';
+  leftColorControls.style.alignItems = 'center';
+  leftSection.appendChild(leftColorControls);
+
+  const controlColorLabel = document.createElement('label');
+  controlColorLabel.textContent = 'Control:';
+  controlColorLabel.style.fontSize = '12px';
+  leftColorControls.appendChild(controlColorLabel);
+
+  const controlColorPicker = document.createElement('input');
+  controlColorPicker.type = 'color';
+  controlColorPicker.value = '#6496ff';
+  leftColorControls.appendChild(controlColorPicker);
+
+  const controlColorValue = document.createElement('span');
+  controlColorValue.textContent = '#6496ff';
+  controlColorValue.style.fontFamily = 'monospace';
+  controlColorValue.style.fontSize = '12px';
+  leftColorControls.appendChild(controlColorValue);
+
+  const pdfColorLabel = document.createElement('label');
+  pdfColorLabel.textContent = 'PDF:';
+  pdfColorLabel.style.fontSize = '12px';
+  pdfColorLabel.style.marginLeft = '8px';
+  leftColorControls.appendChild(pdfColorLabel);
+
+  const pdfColorPicker = document.createElement('input');
+  pdfColorPicker.type = 'color';
+  pdfColorPicker.value = '#c850c8';
+  leftColorControls.appendChild(pdfColorPicker);
+
+  const pdfColorValue = document.createElement('span');
+  pdfColorValue.textContent = '#c850c8';
+  pdfColorValue.style.fontFamily = 'monospace';
+  pdfColorValue.style.fontSize = '12px';
+  leftColorControls.appendChild(pdfColorValue);
+
   // Right canvas section
   const rightSection = document.createElement('div');
   mainDiv.appendChild(rightSection);
-
-  const rightTitle = document.createElement('h1');
-  rightTitle.textContent = 'Right Canvas';
-  rightSection.appendChild(rightTitle);
 
   const rightCanvas = document.createElement('canvas');
   rightCanvas.width = 480;
@@ -101,6 +138,44 @@ export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement)
   schedulerPlotCanvas.style.border = '1px solid #ccc';
   plotSection.appendChild(schedulerPlotCanvas);
 
+  // Weight summary between chart and radio buttons
+  const weightSummary = document.createElement('span');
+  weightSummary.textContent = 'α_t = 0.00, β_t = 1.00';
+  weightSummary.style.fontSize = '12px';
+  weightSummary.style.textAlign = 'center';
+  plotSection.appendChild(weightSummary);
+
+  // Scheduler radio buttons
+  const schedulerRadiosContainer = document.createElement('div');
+  schedulerRadiosContainer.style.display = 'flex';
+  schedulerRadiosContainer.style.flexDirection = 'column';
+  schedulerRadiosContainer.style.gap = '4px';
+  schedulerRadiosContainer.style.fontSize = '12px';
+  plotSection.appendChild(schedulerRadiosContainer);
+
+  const schedulers = [
+    { value: 'linear', label: 'α=t, β=1-t' },
+    { value: 'sqrt', label: 'α=t, β=√(1-t)' },
+    { value: 'inverse-sqrt', label: 'α=t, β=1-t²' },
+    { value: 'constant', label: 'α=t, β=√(1-t²)', checked: true },
+    { value: 'sqrt-sqrt', label: 'α=√t, β=√(1-t)' },
+    { value: 'circular-circular', label: 'α=sin(πt/2), β=cos(πt/2)' }
+  ];
+
+  const schedulerRadios: HTMLInputElement[] = [];
+  schedulers.forEach(({ value, label, checked }) => {
+    const radioLabel = document.createElement('label');
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'marginal-scheduler';
+    radio.value = value;
+    if (checked === true) { radio.checked = true; }
+    schedulerRadios.push(radio);
+    radioLabel.appendChild(radio);
+    radioLabel.appendChild(document.createTextNode(` ${label}`));
+    schedulerRadiosContainer.appendChild(radioLabel);
+  });
+
   // Bottom controls
   const bottomControls = document.createElement('div');
   bottomControls.className = 'bottom-controls';
@@ -132,89 +207,6 @@ export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement)
   timeSlider.value = '0';
   timeSlider.style.width = '320px';
   bottomControls.appendChild(timeSlider);
-
-  const weightSummary = document.createElement('span');
-  weightSummary.textContent = 'α_t = 0.00, β_t = 1.00';
-  bottomControls.appendChild(weightSummary);
-
-  const addComponentBtn = document.createElement('button');
-  addComponentBtn.textContent = 'Add Component';
-  addComponentBtn.style.marginLeft = '20px';
-  bottomControls.appendChild(addComponentBtn);
-
-  // Scheduler controls
-  const schedulerControls = document.createElement('div');
-  schedulerControls.className = 'bottom-controls';
-  schedulerControls.style.display = 'flex';
-  schedulerControls.style.justifyContent = 'center';
-  schedulerControls.style.alignItems = 'center';
-  schedulerControls.style.gap = '8px';
-  schedulerControls.style.marginTop = '8px';
-  container.appendChild(schedulerControls);
-
-  const schedulers = [
-    { value: 'linear', label: 'α=t, β=1-t' },
-    { value: 'sqrt', label: 'α=t, β=√(1-t)' },
-    { value: 'inverse-sqrt', label: 'α=t, β=1-t²' },
-    { value: 'constant', label: 'α=t, β=√(1-t²)', checked: true },
-    { value: 'sqrt-sqrt', label: 'α=√t, β=√(1-t)' },
-    { value: 'circular-circular', label: 'α=sin(πt/2), β=cos(πt/2)' }
-  ];
-
-  const schedulerRadios: HTMLInputElement[] = [];
-  schedulers.forEach(({ value, label, checked }) => {
-    const radioLabel = document.createElement('label');
-    const radio = document.createElement('input');
-    radio.type = 'radio';
-    radio.name = 'marginal-scheduler';
-    radio.value = value;
-    if (checked === true) { radio.checked = true; }
-    schedulerRadios.push(radio);
-    radioLabel.appendChild(radio);
-    radioLabel.appendChild(document.createTextNode(` ${label}`));
-    schedulerControls.appendChild(radioLabel);
-  });
-
-  // Color controls
-  const colorControls = document.createElement('div');
-  colorControls.className = 'bottom-controls';
-  colorControls.style.display = 'flex';
-  colorControls.style.justifyContent = 'center';
-  colorControls.style.alignItems = 'center';
-  colorControls.style.gap = '8px';
-  colorControls.style.marginTop = '8px';
-  container.appendChild(colorControls);
-
-  const controlColorLabel = document.createElement('label');
-  controlColorLabel.textContent = 'Control Color:';
-  colorControls.appendChild(controlColorLabel);
-
-  const controlColorPicker = document.createElement('input');
-  controlColorPicker.type = 'color';
-  controlColorPicker.value = '#6496ff';
-  colorControls.appendChild(controlColorPicker);
-
-  const controlColorValue = document.createElement('span');
-  controlColorValue.textContent = '#6496ff';
-  controlColorValue.style.fontFamily = 'monospace';
-  controlColorValue.style.marginLeft = '4px';
-  colorControls.appendChild(controlColorValue);
-
-  const pdfColorLabel = document.createElement('label');
-  pdfColorLabel.textContent = 'PDF Color:';
-  pdfColorLabel.style.marginLeft = '12px';
-  colorControls.appendChild(pdfColorLabel);
-
-  const pdfColorPicker = document.createElement('input');
-  pdfColorPicker.type = 'color';
-  pdfColorPicker.value = '#c850c8';
-  colorControls.appendChild(pdfColorPicker);
-
-  const pdfColorValue = document.createElement('span');
-  pdfColorValue.textContent = '#c850c8';
-  pdfColorValue.style.fontFamily = 'monospace';
-  pdfColorValue.style.marginLeft = '4px';
-  colorControls.appendChild(pdfColorValue);
 
   // Color state
   let controlColor = controlColorPicker.value;
