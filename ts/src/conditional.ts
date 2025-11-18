@@ -1,7 +1,7 @@
 import {
   addDot, addFrameUsingScales, createMovableDot, defaultMargins,getContext
 } from 'web-ui-common/canvas';
-import { addCanvas, el } from 'web-ui-common/dom';
+import { addCanvas } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
@@ -548,22 +548,3 @@ export function initConditionalProbPathAndVectorFieldWidget(
     updateSlider(currentTime);
   });
 }
-
-function run(): void {
-  const containerA = el(document, '#containerA') as HTMLElement;
-  const containerB = el(document, '#containerB') as HTMLElement;
-  const containerC = el(document, '#containerC') as HTMLElement;
-
-  const initialPosition: Pair<number> = [1.0, 0.5];
-  const initialTime = 0;
-
-  // Widget A with its own controller
-  const updateWidgetA = initMovableDotWidget(containerA, initialPosition, (newPosition) => {
-    updateWidgetA(newPosition);
-  });
-
-  initConditionalProbPathWidget(containerB, initialPosition, initialTime);
-  initConditionalProbPathAndVectorFieldWidget(containerC, initialPosition, initialTime);
-}
-
-run();
