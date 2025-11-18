@@ -2,77 +2,10 @@
 <html>
 <head>
   <title>Marginal Probability Path</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
-  <style>
-    .bottom-controls {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-      margin-top: 16px;
-    }
-    .bottom-controls input[type="range"] { width: 320px; }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 </head>
 <body>
-  <div style="display: flex; gap: 20px;">
-    <div>
-      <h1>Left Canvas</h1>
-      <canvas id="marginal-left-canvas" width="480" height="350" style="width: 480px; height: 350px; border: 1px solid #ccc;"></canvas>
-      <div>
-        <button id="sampleBtn" style="margin-left: 0;">Sample</button>
-      </div>
-    </div>
-
-    <div>
-      <h1>Right Canvas</h1>
-      <canvas id="marginal-right-canvas" width="480" height="350" style="width: 480px; height: 350px; border: 1px solid #ccc;"></canvas>
-      <div>
-        <button id="sampleBtnRight" style="margin-left: 0;">Sample</button>
-        <button id="clearBtnRight">Clear</button>
-      </div>
-    </div>
-
-    <div style="display: flex; flex-direction: column; gap: 10px;">
-      <canvas id="marginal-scheduler-plot" width="160" height="160" style="width: 160px; height: 160px; border: 1px solid #ccc;"></canvas>
-      <canvas id="marginal-mean-plot" width="160" height="160" style="width: 160px; height: 160px; border: 1px solid #ccc;"></canvas>
-    </div>
-  </div>
-  <div class="bottom-controls">
-    <button id="playBtn" style="width: 60px;">Play</button>
-    <label for="timeSlider">t = <span id="timeValue">0.00</span></label>
-    <input type="range" id="timeSlider" min="0" max="1" step="0.001" value="0">
-    <span id="marginal-weights">α_t = 0.00, β_t = 1.00</span>
-    <button id="addComponentBtn" style="margin-left: 20px;">Add Component</button>
-  </div>
-  <div class="bottom-controls" style="margin-top: 8px;">
-    <label>
-      <input type="radio" name="marginal-scheduler" value="linear" /> α=t, β=1-t
-    </label>
-    <label>
-      <input type="radio" name="marginal-scheduler" value="sqrt" /> α=t, β=√(1-t)
-    </label>
-    <label>
-      <input type="radio" name="marginal-scheduler" value="inverse-sqrt" /> α=t, β=1-t²
-    </label>
-    <label>
-      <input type="radio" name="marginal-scheduler" value="constant" checked /> α=t, β=√(1-t²)
-    </label>
-    <label>
-      <input type="radio" name="marginal-scheduler" value="sqrt-sqrt" /> α=√t, β=√(1-t)
-    </label>
-    <label>
-      <input type="radio" name="marginal-scheduler" value="circular-circular" /> α=sin(πt/2), β=cos(πt/2)
-    </label>
-  </div>
-  <div class="bottom-controls" style="margin-top: 8px;">
-    <label for="controlColorPicker">Control Color:</label>
-    <input type="color" id="controlColorPicker" value="#6496ff">
-    <span id="controlColorValue" style="font-family: monospace; margin-left: 4px;">#6496ff</span>
-    <label for="pdfColorPicker" style="margin-left: 12px;">PDF Color:</label>
-    <input type="color" id="pdfColorPicker" value="#c850c8">
-    <span id="pdfColorValue" style="font-family: monospace; margin-left: 4px;">#c850c8</span>
-  </div>
-  <script type="module" src="dist/marginal.js"></script>
+  <div id="container"></div>
+  <script type="module" src="dist/marginal-page.js"></script>
 </body>
 </html>

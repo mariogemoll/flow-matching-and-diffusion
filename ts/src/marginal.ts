@@ -1,5 +1,4 @@
 import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
-import { el } from 'web-ui-common/dom';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
@@ -26,28 +25,204 @@ interface ExtendedGaussianComponent extends GaussianComponent {
   minorAxis: [number, number]; // In data space
 }
 
-function run(): void {
-  const leftCanvas = el(document, '#marginal-left-canvas') as HTMLCanvasElement;
+export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement): void {
+  // Create main layout structure
+  const mainDiv = document.createElement('div');
+  mainDiv.style.display = 'flex';
+  mainDiv.style.gap = '20px';
+  container.appendChild(mainDiv);
+
+  // Left canvas section
+  const leftSection = document.createElement('div');
+  mainDiv.appendChild(leftSection);
+
+  const leftTitle = document.createElement('h1');
+  leftTitle.textContent = 'Left Canvas';
+  leftSection.appendChild(leftTitle);
+
+  const leftCanvas = document.createElement('canvas');
+  leftCanvas.width = 480;
+  leftCanvas.height = 350;
+  leftCanvas.style.width = '480px';
+  leftCanvas.style.height = '350px';
+  leftCanvas.style.border = '1px solid #ccc';
+  leftSection.appendChild(leftCanvas);
   const leftCtx = getContext(leftCanvas);
 
-  const rightCanvas = el(document, '#marginal-right-canvas') as HTMLCanvasElement;
+  const leftControls = document.createElement('div');
+  leftSection.appendChild(leftControls);
+
+  const sampleBtn = document.createElement('button');
+  sampleBtn.textContent = 'Sample';
+  sampleBtn.style.marginLeft = '0';
+  leftControls.appendChild(sampleBtn);
+
+  // Right canvas section
+  const rightSection = document.createElement('div');
+  mainDiv.appendChild(rightSection);
+
+  const rightTitle = document.createElement('h1');
+  rightTitle.textContent = 'Right Canvas';
+  rightSection.appendChild(rightTitle);
+
+  const rightCanvas = document.createElement('canvas');
+  rightCanvas.width = 480;
+  rightCanvas.height = 350;
+  rightCanvas.style.width = '480px';
+  rightCanvas.style.height = '350px';
+  rightCanvas.style.border = '1px solid #ccc';
+  rightSection.appendChild(rightCanvas);
   const rightCtx = getContext(rightCanvas);
 
-  const addComponentBtn = el(document, '#addComponentBtn') as HTMLButtonElement;
-  const playBtn = el(document, '#playBtn') as HTMLButtonElement;
-  const sampleBtn = el(document, '#sampleBtn') as HTMLButtonElement;
-  const sampleBtnRight = el(document, '#sampleBtnRight') as HTMLButtonElement;
-  const clearBtnRight = el(document, '#clearBtnRight') as HTMLButtonElement;
-  const timeSlider = el(document, '#timeSlider') as HTMLInputElement;
-  const timeValue = el(document, '#timeValue') as HTMLSpanElement;
-  const weightSummary = el(document, '#marginal-weights') as HTMLElement;
-  const controlColorPicker = el(document, '#controlColorPicker') as HTMLInputElement;
-  const pdfColorPicker = el(document, '#pdfColorPicker') as HTMLInputElement;
-  const controlColorValue = el(document, '#controlColorValue') as HTMLSpanElement;
-  const pdfColorValue = el(document, '#pdfColorValue') as HTMLSpanElement;
-  const schedulerRadios = Array.from(
-    document.querySelectorAll<HTMLInputElement>('input[name="marginal-scheduler"]')
-  );
+  const rightControls = document.createElement('div');
+  rightSection.appendChild(rightControls);
+
+  const sampleBtnRight = document.createElement('button');
+  sampleBtnRight.textContent = 'Sample';
+  sampleBtnRight.style.marginLeft = '0';
+  rightControls.appendChild(sampleBtnRight);
+
+  const clearBtnRight = document.createElement('button');
+  clearBtnRight.textContent = 'Clear';
+  rightControls.appendChild(clearBtnRight);
+
+  // Plot canvases section
+  const plotSection = document.createElement('div');
+  plotSection.style.display = 'flex';
+  plotSection.style.flexDirection = 'column';
+  plotSection.style.gap = '10px';
+  mainDiv.appendChild(plotSection);
+
+  const schedulerPlotCanvas = document.createElement('canvas');
+  schedulerPlotCanvas.width = 160;
+  schedulerPlotCanvas.height = 160;
+  schedulerPlotCanvas.style.width = '160px';
+  schedulerPlotCanvas.style.height = '160px';
+  schedulerPlotCanvas.style.border = '1px solid #ccc';
+  plotSection.appendChild(schedulerPlotCanvas);
+
+  const meanPlotCanvas = document.createElement('canvas');
+  meanPlotCanvas.width = 160;
+  meanPlotCanvas.height = 160;
+  meanPlotCanvas.style.width = '160px';
+  meanPlotCanvas.style.height = '160px';
+  meanPlotCanvas.style.border = '1px solid #ccc';
+  plotSection.appendChild(meanPlotCanvas);
+
+  // Bottom controls
+  const bottomControls = document.createElement('div');
+  bottomControls.className = 'bottom-controls';
+  bottomControls.style.display = 'flex';
+  bottomControls.style.justifyContent = 'center';
+  bottomControls.style.alignItems = 'center';
+  bottomControls.style.gap = '8px';
+  bottomControls.style.marginTop = '16px';
+  container.appendChild(bottomControls);
+
+  const playBtn = document.createElement('button');
+  playBtn.textContent = 'Play';
+  playBtn.style.width = '60px';
+  bottomControls.appendChild(playBtn);
+
+  const timeLabel = document.createElement('label');
+  timeLabel.textContent = 't = ';
+  bottomControls.appendChild(timeLabel);
+
+  const timeValue = document.createElement('span');
+  timeValue.textContent = '0.00';
+  timeLabel.appendChild(timeValue);
+
+  const timeSlider = document.createElement('input');
+  timeSlider.type = 'range';
+  timeSlider.min = '0';
+  timeSlider.max = '1';
+  timeSlider.step = '0.001';
+  timeSlider.value = '0';
+  timeSlider.style.width = '320px';
+  bottomControls.appendChild(timeSlider);
+
+  const weightSummary = document.createElement('span');
+  weightSummary.textContent = 'α_t = 0.00, β_t = 1.00';
+  bottomControls.appendChild(weightSummary);
+
+  const addComponentBtn = document.createElement('button');
+  addComponentBtn.textContent = 'Add Component';
+  addComponentBtn.style.marginLeft = '20px';
+  bottomControls.appendChild(addComponentBtn);
+
+  // Scheduler controls
+  const schedulerControls = document.createElement('div');
+  schedulerControls.className = 'bottom-controls';
+  schedulerControls.style.display = 'flex';
+  schedulerControls.style.justifyContent = 'center';
+  schedulerControls.style.alignItems = 'center';
+  schedulerControls.style.gap = '8px';
+  schedulerControls.style.marginTop = '8px';
+  container.appendChild(schedulerControls);
+
+  const schedulers = [
+    { value: 'linear', label: 'α=t, β=1-t' },
+    { value: 'sqrt', label: 'α=t, β=√(1-t)' },
+    { value: 'inverse-sqrt', label: 'α=t, β=1-t²' },
+    { value: 'constant', label: 'α=t, β=√(1-t²)', checked: true },
+    { value: 'sqrt-sqrt', label: 'α=√t, β=√(1-t)' },
+    { value: 'circular-circular', label: 'α=sin(πt/2), β=cos(πt/2)' }
+  ];
+
+  const schedulerRadios: HTMLInputElement[] = [];
+  schedulers.forEach(({ value, label, checked }) => {
+    const radioLabel = document.createElement('label');
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'marginal-scheduler';
+    radio.value = value;
+    if (checked === true) { radio.checked = true; }
+    schedulerRadios.push(radio);
+    radioLabel.appendChild(radio);
+    radioLabel.appendChild(document.createTextNode(` ${label}`));
+    schedulerControls.appendChild(radioLabel);
+  });
+
+  // Color controls
+  const colorControls = document.createElement('div');
+  colorControls.className = 'bottom-controls';
+  colorControls.style.display = 'flex';
+  colorControls.style.justifyContent = 'center';
+  colorControls.style.alignItems = 'center';
+  colorControls.style.gap = '8px';
+  colorControls.style.marginTop = '8px';
+  container.appendChild(colorControls);
+
+  const controlColorLabel = document.createElement('label');
+  controlColorLabel.textContent = 'Control Color:';
+  colorControls.appendChild(controlColorLabel);
+
+  const controlColorPicker = document.createElement('input');
+  controlColorPicker.type = 'color';
+  controlColorPicker.value = '#6496ff';
+  colorControls.appendChild(controlColorPicker);
+
+  const controlColorValue = document.createElement('span');
+  controlColorValue.textContent = '#6496ff';
+  controlColorValue.style.fontFamily = 'monospace';
+  controlColorValue.style.marginLeft = '4px';
+  colorControls.appendChild(controlColorValue);
+
+  const pdfColorLabel = document.createElement('label');
+  pdfColorLabel.textContent = 'PDF Color:';
+  pdfColorLabel.style.marginLeft = '12px';
+  colorControls.appendChild(pdfColorLabel);
+
+  const pdfColorPicker = document.createElement('input');
+  pdfColorPicker.type = 'color';
+  pdfColorPicker.value = '#c850c8';
+  colorControls.appendChild(pdfColorPicker);
+
+  const pdfColorValue = document.createElement('span');
+  pdfColorValue.textContent = '#c850c8';
+  pdfColorValue.style.fontFamily = 'monospace';
+  pdfColorValue.style.marginLeft = '4px';
+  colorControls.appendChild(pdfColorValue);
 
   // Color state
   let controlColor = controlColorPicker.value;
@@ -844,11 +1019,9 @@ function run(): void {
     weightSummary.textContent = summaryParts.join(', ');
 
     // Update scheduler plot
-    const schedulerPlotCanvas = el(document, '#marginal-scheduler-plot') as HTMLCanvasElement;
     renderSchedulerPlot(schedulerPlotCanvas, scheduler, t, 'Scheduler');
 
     // Update mean trajectory plot
-    const meanPlotCanvas = el(document, '#marginal-mean-plot') as HTMLCanvasElement;
     renderMeanTrajectoryPlot(meanPlotCanvas, scheduler, t, components);
   }
 
@@ -1550,5 +1723,3 @@ function run(): void {
 
   console.log('Marginal probability path initialized with TF.js');
 }
-
-run();
