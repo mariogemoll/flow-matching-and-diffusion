@@ -23,7 +23,7 @@ const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 360;
 const ORANGE = '#ff6200ff';
 
-function initTimeSliderWidget(
+export function initTimeSliderWidget(
   container: HTMLElement,
   initialTime: number,
   onChange: (time: number) => void
@@ -118,7 +118,7 @@ function initTimeSliderWidget(
   return update;
 }
 
-function initMovableDotWidget(
+export function initMovableDotWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
   onChange: (position: Pair<number>) => void
@@ -478,7 +478,7 @@ function initVectorFieldView(
   };
 }
 
-function initConditionalProbPathWidget(
+export function initConditionalProbPathWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
   initialTime: number
@@ -502,7 +502,7 @@ function initConditionalProbPathWidget(
   });
 }
 
-function initConditionalProbPathAndVectorFieldWidget(
+export function initConditionalProbPathAndVectorFieldWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
   initialTime: number
