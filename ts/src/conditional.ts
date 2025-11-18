@@ -1,7 +1,7 @@
 import {
   addDot, addFrameUsingScales, createMovableDot, defaultMargins,getContext
 } from 'web-ui-common/canvas';
-import { addCanvas } from 'web-ui-common/dom';
+import { addCanvas, removePlaceholder } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
@@ -483,6 +483,7 @@ export function initConditionalProbPathWidget(
   initialPosition: Pair<number>,
   initialTime: number
 ): void {
+  removePlaceholder(container);
   let currentPosition = initialPosition;
   let currentTime = initialTime;
 
@@ -507,6 +508,7 @@ export function initConditionalProbPathAndVectorFieldWidget(
   initialPosition: Pair<number>,
   initialTime: number
 ): void {
+  removePlaceholder(container);
   let currentPosition = initialPosition;
   let currentTime = initialTime;
 
