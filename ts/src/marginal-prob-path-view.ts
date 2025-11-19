@@ -840,14 +840,19 @@ export function initMarginalProbPathView(
       resampleIfNeeded();
       render();
     } else {
-      let hovering = false;
-      for (const component of components) {
-        if (isPointInEllipse(dataX, dataY, component)) {
-          hovering = true;
-          break;
+      // Only show grab cursor when editing is enabled (at t=1)
+      if (Math.abs(currentTime - 1) < 0.01) {
+        let hovering = false;
+        for (const component of components) {
+          if (isPointInEllipse(dataX, dataY, component)) {
+            hovering = true;
+            break;
+          }
         }
+        canvas.style.cursor = hovering ? 'grab' : 'default';
+      } else {
+        canvas.style.cursor = 'default';
       }
-      canvas.style.cursor = hovering ? 'grab' : 'default';
     }
   });
 
