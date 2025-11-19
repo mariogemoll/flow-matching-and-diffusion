@@ -470,6 +470,7 @@ export function initMarginalProbPathView(
     showAllWeightSliders = false;
     selectedComponentIndex = components.length - 1;
     onComponentsChange(components);
+    resampleIfNeeded();
     render();
   }
 
@@ -496,6 +497,7 @@ export function initMarginalProbPathView(
     }
 
     onComponentsChange(components);
+    resampleIfNeeded();
     render();
   }
 
@@ -580,6 +582,32 @@ export function initMarginalProbPathView(
     ctx.stroke();
 
     ctx.restore();
+  }
+
+  function resampleIfNeeded(): void {
+    if (!sampleContinuouslyCheckbox.checked) {
+      sampledPoints = [];
+      return;
+    }
+
+    const dataSamples = sampleFromGaussianMixture(NUM_SAMPLES, components);
+    const alpha = currentScheduler.getAlpha(currentTime);
+    const beta = currentScheduler.getBeta(currentTime);
+
+    sampledPoints = [];
+    for (const [dataX, dataY] of dataSamples) {
+      const conditionalMeanX = alpha * dataX;
+      const conditionalMeanY = alpha * dataY;
+      const conditionalStdDev = beta;
+
+      const z1 = tf.randomNormal([1], 0, 1).dataSync()[0];
+      const z2 = tf.randomNormal([1], 0, 1).dataSync()[0];
+
+      const sampleX = conditionalMeanX + conditionalStdDev * z1;
+      const sampleY = conditionalMeanY + conditionalStdDev * z2;
+
+      sampledPoints.push({ x: xScale(sampleX), y: yScale(sampleY) });
+    }
   }
 
   function sampleFromGaussianMixture(
@@ -808,6 +836,7 @@ export function initMarginalProbPathView(
         handleMinorAxisDrag(dataX, dataY, selectedComponentIndex);
         onComponentsChange(components);
       }
+      resampleIfNeeded();
       render();
     } else {
       let hovering = false;
