@@ -44,6 +44,10 @@ export function initMarginalProbPathView(
   sampleBtn.style.marginLeft = '0';
   controls.appendChild(sampleBtn);
 
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'Clear';
+  controls.appendChild(clearBtn);
+
   // Create sample continuously checkbox
   const sampleContinuouslyLabel = document.createElement('label');
   sampleContinuouslyLabel.style.marginLeft = '12px';
@@ -888,6 +892,11 @@ export function initMarginalProbPathView(
       sampledPoints.push({ x: xScale(sampleX), y: yScale(sampleY) });
     }
 
+    render();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    sampledPoints = [];
     render();
   });
 
