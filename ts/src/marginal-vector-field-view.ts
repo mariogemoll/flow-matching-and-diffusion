@@ -40,6 +40,34 @@ export function initMarginalVectorFieldView(
   container.appendChild(canvas);
   const ctx = getContext(canvas);
 
+  // Helper to check if components have changed
+  function componentsEqual(a: GaussianComponent[], b: GaussianComponent[]): boolean {
+    if (a.length !== b.length) {return false;}
+    for (let i = 0; i < a.length; i++) {
+      const ca = a[i];
+      const cb = b[i];
+      if (ca.weight !== cb.weight) {return false;}
+      if (ca.mean[0] !== cb.mean[0] || ca.mean[1] !== cb.mean[1]) {return false;}
+      if (ca.covariance[0][0] !== cb.covariance[0][0]) {return false;}
+      if (ca.covariance[0][1] !== cb.covariance[0][1]) {return false;}
+      if (ca.covariance[1][0] !== cb.covariance[1][0]) {return false;}
+      if (ca.covariance[1][1] !== cb.covariance[1][1]) {return false;}
+    }
+    return true;
+  }
+
+  // Helper to deep copy components
+  function copyComponents(comps: GaussianComponent[]): GaussianComponent[] {
+    return comps.map(c => ({
+      weight: c.weight,
+      mean: [c.mean[0], c.mean[1]] as [number, number],
+      covariance: [
+        [c.covariance[0][0], c.covariance[0][1]],
+        [c.covariance[1][0], c.covariance[1][1]]
+      ] as [[number, number], [number, number]]
+    }));
+  }
+
   // State
   let components = initialComponents;
   let currentTime = initialTime;
@@ -47,6 +75,7 @@ export function initMarginalVectorFieldView(
   let rightInitialSamples: [number, number][] = [];
   let rightCurrentSamples: [number, number][] = [];
   let lastPropagationTime = 0;
+  let lastComponents = copyComponents(initialComponents);
 
   // Define coordinate system
   const xRange = [-4, 4] as [number, number];
@@ -311,12 +340,15 @@ export function initMarginalVectorFieldView(
     return tf.tensor2d(velocities);
   }
 
-  function updateMarginalSamples(currentT: number): void {
+  function updateMarginalSamples(currentT: number, forceReset = false): void {
     if (rightCurrentSamples.length === 0) {
       return;
     }
 
-    if (currentT < lastPropagationTime || Math.abs(currentT - lastPropagationTime) > 0.1) {
+    // Reset to initial samples if time moved backwards, jumped significantly, or forced
+    if (
+      forceReset || currentT < lastPropagationTime || Math.abs(currentT - lastPropagationTime) > 0.1
+    ) {
       rightCurrentSamples = rightInitialSamples.map(([x, y]) => [x, y]);
       lastPropagationTime = 0;
     }
@@ -363,8 +395,11 @@ export function initMarginalVectorFieldView(
     return rightCurrentSamples.map(([x, y]) => ({ x: xScale(x), y: yScale(y) }));
   }
 
-  function render(): void {
+  function render(forceReset = false): void {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Clamp time to avoid issues at t=1
+    const clampedTime = Math.min(currentTime, 0.999);
 
     drawStandardNormalBackground(canvas, ctx, xScale, yScale, currentTime);
 
@@ -373,7 +408,7 @@ export function initMarginalVectorFieldView(
     addFrameUsingScales(ctx, xScale, yScale, 11);
 
     if (rightCurrentSamples.length > 0) {
-      updateMarginalSamples(currentTime);
+      updateMarginalSamples(clampedTime, forceReset);
       const currentPoints = getCurrentSamplePixels();
       drawSamplePoints(ctx, currentPoints);
     }
@@ -405,10 +440,16 @@ export function initMarginalVectorFieldView(
     newTime: number,
     newScheduler: NoiseScheduler
   ): void {
+    const componentsChanged = !componentsEqual(newComponents, lastComponents);
+    const schedulerChanged = newScheduler !== currentScheduler;
+    const needsReset = componentsChanged || schedulerChanged;
+
     components = newComponents;
+    lastComponents = copyComponents(newComponents);
     currentTime = newTime;
     currentScheduler = newScheduler;
-    render();
+
+    render(needsReset);
   }
 
   return update;
