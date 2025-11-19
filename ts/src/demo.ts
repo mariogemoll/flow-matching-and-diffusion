@@ -6,12 +6,14 @@ import { setUpConditionalProbabilityPathTfjsImpl } from './conditional-tfjs';
 import { setUpFrameExample } from './frame-example';
 import { setUpGaussianCpu } from './gaussian-cpu';
 import { setUpGaussian } from './gaussian-tf';
-import { linearNoiseScheduler, linearNoiseSchedulerDerivative } from './noise-schedulers';
+import { makeLinearNoiseScheduler } from './math/noise-scheduler';
 
 function run(): void {
   setUpFrameExample();
   setUpGaussianCpu();
   setUpGaussian();
+
+  const linearNoiseScheduler = makeLinearNoiseScheduler();
   setUpConditionalProbabilityPathCpuOnTheFly(linearNoiseScheduler);
   setUpConditionalProbabilityPath(linearNoiseScheduler);
   setUpConditionalProbabilityPathTfjsImpl(
@@ -46,7 +48,6 @@ function run(): void {
     false,
     'TF.js on-the-fly (no contours)',
     linearNoiseScheduler,
-    linearNoiseSchedulerDerivative,
     '#conditional-vector-field-canvas',
     null,
     null,

@@ -14,7 +14,7 @@ import {
 } from './conditional-tfjs-logic';
 import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
-import { linearNoiseScheduler, linearNoiseSchedulerDerivative } from './noise-schedulers';
+import type { NoiseScheduler } from './math/noise-scheduler';
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 360;
@@ -24,8 +24,9 @@ export function initVectorFieldView(
   container: HTMLElement,
   initialPosition: Pair<number>,
   initialTime: number,
+  initialScheduler: NoiseScheduler,
   onChange: (position: Pair<number>) => void
-): (position: Pair<number>, time: number) => void {
+): (position: Pair<number>, time: number, scheduler: NoiseScheduler) => void {
   // Add a canvas element to the container
   const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
   const ctx = getContext(canvas);
@@ -53,6 +54,7 @@ export function initVectorFieldView(
 
   let currentPosition = initialPosition;
   let currentTime = initialTime;
+  let currentScheduler = initialScheduler;
   let vectorFieldSampledPoints: { x: number; y: number }[] = [];
   let vectorFieldInitialSamples: [number, number][] = [];
   let globalMaxVectorLength = 0;
@@ -76,16 +78,22 @@ export function initVectorFieldView(
       xRange,
       yRange,
       dataPoint: currentPosition,
-      noiseScheduler: linearNoiseScheduler,
-      noiseSchedulerDerivative: linearNoiseSchedulerDerivative,
+      noiseScheduler: currentScheduler,
       vectorFieldXScale: xScale,
       vectorFieldYScale: yScale
     });
   }
 
-  function update(newPosition: Pair<number>, newTime: number): void {
+  function update(newPosition: Pair<number>, newTime: number, newScheduler: NoiseScheduler): void {
+    const schedulerChanged = newScheduler !== currentScheduler;
     currentPosition = newPosition;
     currentTime = newTime;
+    currentScheduler = newScheduler;
+
+    // Recompute global max if scheduler changed
+    if (schedulerChanged) {
+      recomputeGlobalMaxVectorLength();
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -112,8 +120,7 @@ export function initVectorFieldView(
       xRange,
       yRange,
       dataPoint: currentPosition,
-      noiseScheduler: linearNoiseScheduler,
-      noiseSchedulerDerivative: linearNoiseSchedulerDerivative,
+      noiseScheduler: currentScheduler,
       vectorFieldXScale: xScale,
       vectorFieldYScale: yScale,
       globalMaxVectorLength
@@ -157,7 +164,7 @@ export function initVectorFieldView(
         initialSamples: vectorFieldInitialSamples,
         time: currentTime,
         dataPoint: currentPosition,
-        noiseScheduler: linearNoiseScheduler,
+        noiseScheduler: currentScheduler,
         vectorFieldXScale: xScale,
         vectorFieldYScale: yScale
       });
@@ -178,7 +185,7 @@ export function initVectorFieldView(
       });
       vectorFieldInitialSamples = initialSamples;
       vectorFieldSampledPoints = pixelSamples;
-      update(currentPosition, currentTime);
+      update(currentPosition, currentTime, currentScheduler);
     }
   });
 
@@ -186,7 +193,7 @@ export function initVectorFieldView(
   clearBtn.addEventListener('click', () => {
     vectorFieldSampledPoints = [];
     vectorFieldInitialSamples = [];
-    update(currentPosition, currentTime);
+    update(currentPosition, currentTime, currentScheduler);
   });
 
   // Update button states
@@ -197,11 +204,11 @@ export function initVectorFieldView(
 
   // Initial computation
   recomputeGlobalMaxVectorLength();
-  update(initialPosition, initialTime);
+  update(initialPosition, initialTime, initialScheduler);
   updateButtonStates();
 
-  return (newPosition: Pair<number>, newTime: number) => {
-    update(newPosition, newTime);
+  return (newPosition: Pair<number>, newTime: number, newScheduler: NoiseScheduler) => {
+    update(newPosition, newTime, newScheduler);
     updateButtonStates();
   };
 }

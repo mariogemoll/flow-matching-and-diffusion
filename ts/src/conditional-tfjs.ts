@@ -20,7 +20,7 @@ import {
   SAMPLED_POINT_RADIUS
 } from './constants';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
-import type { NoiseScheduler, NoiseSchedulerDerivative } from './noise-schedulers';
+import type { NoiseScheduler } from './math/noise-scheduler';
 
 export function setUpConditionalProbabilityPathTfjsImpl(
   canvasId: string,
@@ -32,7 +32,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   withContours: boolean,
   logPrefix: string,
   noiseScheduler: NoiseScheduler,
-  noiseSchedulerDerivative: NoiseSchedulerDerivative | null = null,
   vectorFieldCanvasId: string | null = null,
   vectorFieldSampleBtnId: string | null = null,
   vectorFieldClearBtnId: string | null = null,
@@ -91,8 +90,7 @@ export function setUpConditionalProbabilityPathTfjsImpl(
   let globalMaxVectorLength = 0; // Global max across all time points
 
   function recomputeGlobalMaxVectorLength(): void {
-    if (vectorFieldXScale === null || vectorFieldYScale === null ||
-        noiseSchedulerDerivative === null) {
+    if (vectorFieldXScale === null || vectorFieldYScale === null) {
       globalMaxVectorLength = 0;
       return;
     }
@@ -102,7 +100,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
       yRange,
       dataPoint,
       noiseScheduler,
-      noiseSchedulerDerivative,
       vectorFieldXScale,
       vectorFieldYScale
     });
@@ -140,8 +137,7 @@ export function setUpConditionalProbabilityPathTfjsImpl(
 
   function renderVectorField(): void {
     if (vectorFieldCtx === null || vectorFieldCanvas === null ||
-        vectorFieldXScale === null || vectorFieldYScale === null ||
-        noiseSchedulerDerivative === null) {
+        vectorFieldXScale === null || vectorFieldYScale === null) {
       return;
     }
 
@@ -171,7 +167,6 @@ export function setUpConditionalProbabilityPathTfjsImpl(
       yRange,
       dataPoint,
       noiseScheduler,
-      noiseSchedulerDerivative,
       vectorFieldXScale,
       vectorFieldYScale,
       globalMaxVectorLength

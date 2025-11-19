@@ -1,7 +1,8 @@
 import { setUpConditionalProbabilityPathTfjsImpl } from './conditional-tfjs';
-import { linearNoiseScheduler, linearNoiseSchedulerDerivative } from './noise-schedulers';
+import { makeLinearNoiseScheduler } from './math/noise-scheduler';
 
 function run(): void {
+  const linearNoiseScheduler = makeLinearNoiseScheduler();
   setUpConditionalProbabilityPathTfjsImpl(
     '#conditional-probability-canvas-tfjs-no-contours',
     '#playBtnTfjsNoContours',
@@ -12,7 +13,6 @@ function run(): void {
     false,
     'TF.js on-the-fly (no contours)',
     linearNoiseScheduler,
-    linearNoiseSchedulerDerivative,
     '#conditional-vector-field-canvas',
     '#sampleBtnVectorField',
     '#clearBtnVectorField',

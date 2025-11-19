@@ -10,7 +10,7 @@ import {
   drawGaussianMixturePDF,
   type GaussianComponent
 } from './gaussian';
-import type { NoiseScheduler } from './noise-schedulers';
+import type { NoiseScheduler } from './math/noise-scheduler';
 
 const MIN_VARIANCE = 0.0001;
 
@@ -40,7 +40,8 @@ export function setUpConditionalProbabilityPathCpuOnTheFly(
   let animationStartTime: number | null = null;
 
   const computeGaussianParams = (t: number): { mean: [number, number]; variance: number } => {
-    const { alpha, beta } = noiseScheduler(t);
+    const alpha = noiseScheduler.getAlpha(t);
+    const beta = noiseScheduler.getBeta(t);
     const mean: [number, number] = [
       alpha * dataPoint[0],
       alpha * dataPoint[1]
@@ -229,7 +230,8 @@ export function setUpConditionalProbabilityPath(
   let computationId = 0;
 
   const computeGaussianParams = (t: number): { mean: [number, number]; variance: number } => {
-    const { alpha, beta } = noiseScheduler(t);
+    const alpha = noiseScheduler.getAlpha(t);
+    const beta = noiseScheduler.getBeta(t);
     const mean: [number, number] = [
       alpha * dataPoint[0],
       alpha * dataPoint[1]

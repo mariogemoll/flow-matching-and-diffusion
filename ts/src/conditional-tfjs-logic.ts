@@ -8,7 +8,7 @@ import {
 } from './constants';
 import { drawGaussianContours } from './gaussian';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
-import type { NoiseScheduler, NoiseSchedulerDerivative } from './noise-schedulers';
+import type { NoiseScheduler } from './math/noise-scheduler';
 
 export const MIN_VARIANCE = 0.0001;
 
@@ -26,7 +26,8 @@ export function computeGaussianParams(
   dataPoint: [number, number],
   t: number
 ): GaussianParams {
-  const { alpha, beta } = noiseScheduler(t);
+  const alpha = noiseScheduler.getAlpha(t);
+  const beta = noiseScheduler.getBeta(t);
   const mean: [number, number] = [
     alpha * dataPoint[0],
     alpha * dataPoint[1]
@@ -134,7 +135,6 @@ export interface GlobalMaxVectorLengthConfig {
   yRange: [number, number];
   dataPoint: [number, number];
   noiseScheduler: NoiseScheduler;
-  noiseSchedulerDerivative: NoiseSchedulerDerivative;
   vectorFieldXScale: Scale;
   vectorFieldYScale: Scale;
   referenceTime?: number;
@@ -146,15 +146,16 @@ export function computeGlobalMaxVectorLength({
   yRange,
   dataPoint,
   noiseScheduler,
-  noiseSchedulerDerivative,
   vectorFieldXScale,
   vectorFieldYScale,
   referenceTime = 0.99,
   gridSpacing = 0.5
 }: GlobalMaxVectorLengthConfig): number {
   return tf.tidy(() => {
-    const { alpha, beta } = noiseScheduler(referenceTime);
-    const { alphaDot, betaDot } = noiseSchedulerDerivative(referenceTime);
+    const alpha = noiseScheduler.getAlpha(referenceTime);
+    const beta = noiseScheduler.getBeta(referenceTime);
+    const alphaDot = noiseScheduler.getAlphaDerivative(referenceTime);
+    const betaDot = noiseScheduler.getBetaDerivative(referenceTime);
 
     const numX = Math.floor((xRange[1] - xRange[0]) / gridSpacing) + 1;
     const numY = Math.floor((yRange[1] - yRange[0]) / gridSpacing) + 1;
@@ -225,7 +226,6 @@ export interface VectorFieldArrowConfig {
   yRange: [number, number];
   dataPoint: [number, number];
   noiseScheduler: NoiseScheduler;
-  noiseSchedulerDerivative: NoiseSchedulerDerivative;
   vectorFieldXScale: Scale;
   vectorFieldYScale: Scale;
   globalMaxVectorLength: number;
@@ -240,7 +240,6 @@ export function computeVectorFieldArrows({
   yRange,
   dataPoint,
   noiseScheduler,
-  noiseSchedulerDerivative,
   vectorFieldXScale,
   vectorFieldYScale,
   globalMaxVectorLength,
@@ -249,8 +248,10 @@ export function computeVectorFieldArrows({
   compressionExponent = VECTOR_FIELD_COMPRESSION_EXPONENT
 }: VectorFieldArrowConfig): VectorFieldArrowData[] {
   const clampedTime = Math.max(0.001, Math.min(0.999, time));
-  const { alpha, beta } = noiseScheduler(clampedTime);
-  const { alphaDot, betaDot } = noiseSchedulerDerivative(clampedTime);
+  const alpha = noiseScheduler.getAlpha(clampedTime);
+  const beta = noiseScheduler.getBeta(clampedTime);
+  const alphaDot = noiseScheduler.getAlphaDerivative(clampedTime);
+  const betaDot = noiseScheduler.getBetaDerivative(clampedTime);
 
   const numX = Math.floor((xRange[1] - xRange[0]) / gridSpacing) + 1;
   const numY = Math.floor((yRange[1] - yRange[0]) / gridSpacing) + 1;
@@ -363,8 +364,8 @@ export function propagateVectorFieldSamples({
 }: PropagateSamplesConfig): { x: number; y: number }[] {
   const clampedTime = Math.max(0, Math.min(1, time));
   return initialSamples.map(sample => {
-    const { beta: beta0 } = noiseScheduler(0);
-    const { beta: betaT } = noiseScheduler(Math.max(clampedTime, 0.001));
+    const beta0 = noiseScheduler.getBeta(0);
+    const betaT = noiseScheduler.getBeta(Math.max(clampedTime, 0.001));
     if (beta0 === 0) {
       return {
         x: vectorFieldXScale(dataPoint[0]),

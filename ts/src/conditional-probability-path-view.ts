@@ -11,7 +11,7 @@ import {
   sampleGaussianPoints
 } from './conditional-tfjs-logic';
 import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
-import { linearNoiseScheduler } from './noise-schedulers';
+import type { NoiseScheduler } from './math/noise-scheduler';
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 360;
@@ -21,8 +21,9 @@ export function initConditionalProbabilityPathView(
   container: HTMLElement,
   initialPosition: Pair<number>,
   initialTime: number,
+  initialScheduler: NoiseScheduler,
   onChange: (position: Pair<number>) => void
-): (position: Pair<number>, time: number) => void {
+): (position: Pair<number>, time: number, scheduler: NoiseScheduler) => void {
   // Add a canvas element to the container
   const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
   const ctx = getContext(canvas);
@@ -55,6 +56,7 @@ export function initConditionalProbabilityPathView(
 
   let currentPosition = initialPosition;
   let currentTime = initialTime;
+  let currentScheduler = initialScheduler;
 
   // Create movable dot for the data point first
   const dot = createMovableDot(
@@ -70,22 +72,24 @@ export function initConditionalProbabilityPathView(
     }
   );
 
-  function update(newPosition: Pair<number>, newTime: number): void {
+  function update(newPosition: Pair<number>, newTime: number, newScheduler: NoiseScheduler): void {
     // Clear samples if position or time changed
     const positionChanged =
       newPosition[0] !== currentPosition[0] || newPosition[1] !== currentPosition[1];
     const timeChanged = newTime !== currentTime;
-    if (positionChanged || timeChanged) {
+    const schedulerChanged = newScheduler !== currentScheduler;
+    if (positionChanged || timeChanged || schedulerChanged) {
       sampledPoints = [];
     }
 
     currentPosition = newPosition;
     currentTime = newTime;
+    currentScheduler = newScheduler;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Compute Gaussian parameters based on time
-    const { mean, variance } = computeGaussianParams(linearNoiseScheduler, newPosition, newTime);
+    const { mean, variance } = computeGaussianParams(newScheduler, newPosition, newTime);
 
     // Sample continuously if checkbox is checked
     if (sampleContinuouslyCheckbox.checked) {
@@ -125,7 +129,7 @@ export function initConditionalProbabilityPathView(
   // Sample button handler
   sampleBtn.addEventListener('click', () => {
     const { mean, variance } = computeGaussianParams(
-      linearNoiseScheduler, currentPosition, currentTime
+      currentScheduler, currentPosition, currentTime
     );
     const sd = Math.sqrt(variance);
     sampledPoints = sampleGaussianPoints({
@@ -135,19 +139,19 @@ export function initConditionalProbabilityPathView(
       xScale,
       yScale
     });
-    update(currentPosition, currentTime);
+    update(currentPosition, currentTime, currentScheduler);
   });
 
   // Sample continuously checkbox handler
   sampleContinuouslyCheckbox.addEventListener('change', () => {
     if (sampleContinuouslyCheckbox.checked) {
       // Trigger a sample when checkbox is enabled
-      update(currentPosition, currentTime);
+      update(currentPosition, currentTime, currentScheduler);
     }
   });
 
   // Initial render
-  update(initialPosition, initialTime);
+  update(initialPosition, initialTime, initialScheduler);
 
   return update;
 }
