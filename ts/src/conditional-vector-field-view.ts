@@ -1,20 +1,24 @@
 import {
-  addDot, addFrameUsingScales, createMovableDot, defaultMargins, getContext
+  addFrameUsingScales, createMovableDot, defaultMargins, getContext
 } from 'web-ui-common/canvas';
 import { addCanvas } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
-import { viridis } from './color-maps';
 import {
   computeGlobalMaxVectorLength,
   computeVectorFieldArrows,
   propagateVectorFieldSamples,
   sampleStandardNormalPoints
 } from './conditional-tfjs-logic';
-import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
-import { computeGaussianPdfTfjs } from './gaussian-tf';
+import { NUM_SAMPLES } from './constants';
 import type { NoiseScheduler } from './math/noise-scheduler';
+import {
+  createSampleButtons,
+  drawArrows,
+  drawSamplePoints,
+  drawStandardNormalBackground
+} from './vector-field-view-common';
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 360;
@@ -30,22 +34,6 @@ export function initVectorFieldView(
   // Add a canvas element to the container
   const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
   const ctx = getContext(canvas);
-
-  // Create controls container
-  const controlsDiv = document.createElement('div');
-  controlsDiv.style.marginTop = '8px';
-  container.appendChild(controlsDiv);
-
-  // Create sample button
-  const sampleBtn = document.createElement('button');
-  sampleBtn.textContent = 'Sample';
-  controlsDiv.appendChild(sampleBtn);
-
-  // Create clear button
-  const clearBtn = document.createElement('button');
-  clearBtn.textContent = 'Clear';
-  clearBtn.style.marginLeft = '8px';
-  controlsDiv.appendChild(clearBtn);
 
   const xRange = [-4, 4] as [number, number];
   const yRange = [-3, 3] as [number, number];
@@ -73,6 +61,28 @@ export function initVectorFieldView(
     }
   );
 
+  // Create sample/clear buttons
+  const { updateButtonStates } = createSampleButtons({
+    container,
+    onSample: () => {
+      if (Math.abs(currentTime) < 0.01) {
+        const { initialSamples, pixelSamples } = sampleStandardNormalPoints({
+          count: NUM_SAMPLES,
+          xScale,
+          yScale
+        });
+        vectorFieldInitialSamples = initialSamples;
+        vectorFieldSampledPoints = pixelSamples;
+        update(currentPosition, currentTime, currentScheduler);
+      }
+    },
+    onClear: () => {
+      vectorFieldSampledPoints = [];
+      vectorFieldInitialSamples = [];
+      update(currentPosition, currentTime, currentScheduler);
+    }
+  });
+
   function recomputeGlobalMaxVectorLength(): void {
     globalMaxVectorLength = computeGlobalMaxVectorLength({
       xRange,
@@ -98,19 +108,7 @@ export function initVectorFieldView(
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Draw standard normal at t=0
-    if (Math.abs(currentTime) < 0.01) {
-      const result = computeGaussianPdfTfjs(
-        canvas,
-        ctx,
-        xScale,
-        yScale,
-        0,
-        0,
-        1,
-        false
-      );
-      ctx.putImageData(result.imageData, 0, 0);
-    }
+    drawStandardNormalBackground(canvas, ctx, xScale, yScale, currentTime);
 
     addFrameUsingScales(ctx, xScale, yScale, 11);
 
@@ -126,34 +124,7 @@ export function initVectorFieldView(
       globalMaxVectorLength
     });
 
-    for (const { startX, startY, dx, dy, normalizedLength } of arrows) {
-      const endX = startX + dx;
-      const endY = startY + dy;
-      const color = viridis(normalizedLength);
-
-      ctx.strokeStyle = color;
-      ctx.fillStyle = color;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      ctx.lineTo(endX, endY);
-      ctx.stroke();
-
-      const angle = Math.atan2(dy, dx);
-      const headLen = 5;
-      ctx.beginPath();
-      ctx.moveTo(endX, endY);
-      ctx.lineTo(
-        endX - headLen * Math.cos(angle - Math.PI / 6),
-        endY - headLen * Math.sin(angle - Math.PI / 6)
-      );
-      ctx.lineTo(
-        endX - headLen * Math.cos(angle + Math.PI / 6),
-        endY - headLen * Math.sin(angle + Math.PI / 6)
-      );
-      ctx.closePath();
-      ctx.fill();
-    }
+    drawArrows(ctx, arrows);
 
     // Render data point (orange dot)
     dot.render(currentPosition);
@@ -169,46 +140,17 @@ export function initVectorFieldView(
         vectorFieldYScale: yScale
       });
 
-      vectorFieldSampledPoints.forEach(({ x, y }) => {
-        addDot(ctx, x, y, SAMPLED_POINT_RADIUS, SAMPLED_POINT_COLOR);
-      });
+      drawSamplePoints(ctx, vectorFieldSampledPoints);
     }
-  }
-
-  // Sample button handler
-  sampleBtn.addEventListener('click', () => {
-    if (Math.abs(currentTime) < 0.01) {
-      const { initialSamples, pixelSamples } = sampleStandardNormalPoints({
-        count: NUM_SAMPLES,
-        xScale,
-        yScale
-      });
-      vectorFieldInitialSamples = initialSamples;
-      vectorFieldSampledPoints = pixelSamples;
-      update(currentPosition, currentTime, currentScheduler);
-    }
-  });
-
-  // Clear button handler
-  clearBtn.addEventListener('click', () => {
-    vectorFieldSampledPoints = [];
-    vectorFieldInitialSamples = [];
-    update(currentPosition, currentTime, currentScheduler);
-  });
-
-  // Update button states
-  function updateButtonStates(): void {
-    sampleBtn.disabled = Math.abs(currentTime) >= 0.01;
-    clearBtn.disabled = vectorFieldInitialSamples.length === 0;
   }
 
   // Initial computation
   recomputeGlobalMaxVectorLength();
   update(initialPosition, initialTime, initialScheduler);
-  updateButtonStates();
+  updateButtonStates(currentTime, vectorFieldInitialSamples.length > 0);
 
   return (newPosition: Pair<number>, newTime: number, newScheduler: NoiseScheduler) => {
     update(newPosition, newTime, newScheduler);
-    updateButtonStates();
+    updateButtonStates(currentTime, vectorFieldInitialSamples.length > 0);
   };
 }

@@ -2,10 +2,14 @@ import { addFrameUsingScales, getContext } from 'web-ui-common/canvas';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
-import { SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
 import type { GaussianComponent } from './gaussian';
-import { computeGaussianPdfTfjs } from './gaussian-tf';
 import type { NoiseScheduler } from './math/noise-scheduler';
+import {
+  createSampleButtons,
+  drawArrowDataSpace,
+  drawSamplePoints,
+  drawStandardNormalBackground
+} from './vector-field-view-common';
 
 // TF.js is loaded from CDN in the HTML
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -30,18 +34,6 @@ export function initMarginalVectorFieldView(
   container.appendChild(canvas);
   const ctx = getContext(canvas);
 
-  const controls = document.createElement('div');
-  container.appendChild(controls);
-
-  const sampleBtn = document.createElement('button');
-  sampleBtn.textContent = 'Sample';
-  sampleBtn.style.marginLeft = '0';
-  controls.appendChild(sampleBtn);
-
-  const clearBtn = document.createElement('button');
-  clearBtn.textContent = 'Clear';
-  controls.appendChild(clearBtn);
-
   // State
   let components = initialComponents;
   let currentTime = initialTime;
@@ -56,6 +48,38 @@ export function initMarginalVectorFieldView(
   const margins = { top: 20, right: 20, bottom: 40, left: 40 };
   const xScale = makeScale(xRange, [margins.left, CANVAS_WIDTH - margins.right]);
   const yScale = makeScale(yRange, [CANVAS_HEIGHT - margins.bottom, margins.top]);
+
+  // Create sample/clear buttons
+  const { updateButtonStates } = createSampleButtons({
+    container,
+    onSample: () => {
+      if (Math.abs(currentTime) >= 0.01) {
+        return;
+      }
+
+      const samples = tf.randomNormal([NUM_SAMPLES, 2], 0, 1);
+      const flat = samples.dataSync() as Float32Array;
+
+      rightInitialSamples = [];
+      rightCurrentSamples = [];
+      for (let i = 0; i < NUM_SAMPLES; i++) {
+        const sx = flat[2 * i];
+        const sy = flat[2 * i + 1];
+        rightInitialSamples.push([sx, sy]);
+        rightCurrentSamples.push([sx, sy]);
+      }
+
+      lastPropagationTime = 0;
+      samples.dispose();
+      render();
+    },
+    onClear: () => {
+      rightInitialSamples = [];
+      rightCurrentSamples = [];
+      lastPropagationTime = 0;
+      render();
+    }
+  });
 
   function getAlphaDerivative(scheduler: NoiseScheduler, t: number): number {
     const dt = 1e-5;
@@ -233,50 +257,9 @@ export function initMarginalVectorFieldView(
         const endX = x + vx * scale;
         const endY = y + vy * scale;
 
-        drawArrow(ctx, xScale, yScale, x, y, endX, endY, color);
+        drawArrowDataSpace(ctx, xScale, yScale, x, y, endX, endY, color);
       }
     }
-  }
-
-  function drawArrow(
-    ctx: CanvasRenderingContext2D,
-    xScale: ReturnType<typeof makeScale>,
-    yScale: ReturnType<typeof makeScale>,
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    color: string
-  ): void {
-    const px1 = xScale(x1);
-    const py1 = yScale(y1);
-    const px2 = xScale(x2);
-    const py2 = yScale(y2);
-
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    ctx.lineWidth = 1.5;
-
-    ctx.beginPath();
-    ctx.moveTo(px1, py1);
-    ctx.lineTo(px2, py2);
-    ctx.stroke();
-
-    const angle = Math.atan2(py2 - py1, px2 - px1);
-    const headLength = 5;
-
-    ctx.beginPath();
-    ctx.moveTo(px2, py2);
-    ctx.lineTo(
-      px2 - headLength * Math.cos(angle - Math.PI / 6),
-      py2 - headLength * Math.sin(angle - Math.PI / 6)
-    );
-    ctx.lineTo(
-      px2 - headLength * Math.cos(angle + Math.PI / 6),
-      py2 - headLength * Math.sin(angle + Math.PI / 6)
-    );
-    ctx.closePath();
-    ctx.fill();
   }
 
   function computeMarginalVectorFieldBatch(
@@ -361,19 +344,7 @@ export function initMarginalVectorFieldView(
   function render(): void {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (Math.abs(currentTime) < 0.01) {
-      const result = computeGaussianPdfTfjs(
-        canvas,
-        ctx,
-        xScale,
-        yScale,
-        0,
-        0,
-        1,
-        false
-      );
-      ctx.putImageData(result.imageData, 0, 0);
-    }
+    drawStandardNormalBackground(canvas, ctx, xScale, yScale, currentTime);
 
     drawMarginalVectorField(ctx, xScale, yScale, components, currentTime, currentScheduler);
 
@@ -382,52 +353,11 @@ export function initMarginalVectorFieldView(
     if (rightCurrentSamples.length > 0) {
       updateMarginalSamples(currentTime);
       const currentPoints = getCurrentSamplePixels();
-      ctx.save();
-      ctx.fillStyle = SAMPLED_POINT_COLOR;
-      for (const point of currentPoints) {
-        ctx.beginPath();
-        ctx.arc(point.x, point.y, SAMPLED_POINT_RADIUS, 0, 2 * Math.PI);
-        ctx.fill();
-      }
-      ctx.restore();
+      drawSamplePoints(ctx, currentPoints);
     }
 
-    updateButtonStates();
+    updateButtonStates(currentTime, rightInitialSamples.length > 0);
   }
-
-  function updateButtonStates(): void {
-    sampleBtn.disabled = Math.abs(currentTime) >= 0.01;
-    clearBtn.disabled = rightInitialSamples.length === 0;
-  }
-
-  sampleBtn.addEventListener('click', () => {
-    if (Math.abs(currentTime) >= 0.01) {
-      return;
-    }
-
-    const samples = tf.randomNormal([NUM_SAMPLES, 2], 0, 1);
-    const flat = samples.dataSync() as Float32Array;
-
-    rightInitialSamples = [];
-    rightCurrentSamples = [];
-    for (let i = 0; i < NUM_SAMPLES; i++) {
-      const sx = flat[2 * i];
-      const sy = flat[2 * i + 1];
-      rightInitialSamples.push([sx, sy]);
-      rightCurrentSamples.push([sx, sy]);
-    }
-
-    lastPropagationTime = 0;
-    samples.dispose();
-    render();
-  });
-
-  clearBtn.addEventListener('click', () => {
-    rightInitialSamples = [];
-    rightCurrentSamples = [];
-    lastPropagationTime = 0;
-    render();
-  });
 
   render();
 
