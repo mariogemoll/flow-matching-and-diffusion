@@ -55,6 +55,7 @@ export function initMarginalProbPathView(
 
   const addComponentBtn = document.createElement('button');
   addComponentBtn.textContent = 'Add Component';
+  addComponentBtn.disabled = initialTime <= 0.99;
   controls.appendChild(addComponentBtn);
 
   // Color controls
@@ -934,6 +935,9 @@ export function initMarginalProbPathView(
     components = newComponents;
     currentTime = newTime;
     currentScheduler = newScheduler;
+
+    // Update Add Component button state
+    addComponentBtn.disabled = currentTime <= 0.99;
 
     // Sample continuously if checkbox is checked
     if (sampleContinuouslyCheckbox.checked) {
