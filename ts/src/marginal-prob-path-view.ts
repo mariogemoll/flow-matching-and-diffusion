@@ -42,6 +42,15 @@ export function initMarginalProbPathView(
   sampleBtn.style.marginLeft = '0';
   controls.appendChild(sampleBtn);
 
+  // Create sample continuously checkbox
+  const sampleContinuouslyLabel = document.createElement('label');
+  sampleContinuouslyLabel.style.marginLeft = '12px';
+  const sampleContinuouslyCheckbox = document.createElement('input');
+  sampleContinuouslyCheckbox.type = 'checkbox';
+  sampleContinuouslyLabel.appendChild(sampleContinuouslyCheckbox);
+  sampleContinuouslyLabel.appendChild(document.createTextNode(' Sample continuously'));
+  controls.appendChild(sampleContinuouslyLabel);
+
   const addComponentBtn = document.createElement('button');
   addComponentBtn.textContent = 'Add Component';
   controls.appendChild(addComponentBtn);
@@ -881,15 +890,71 @@ export function initMarginalProbPathView(
 
   render();
 
+  // Sample continuously checkbox handler
+  sampleContinuouslyCheckbox.addEventListener('change', () => {
+    if (sampleContinuouslyCheckbox.checked) {
+      // Trigger a sample when checkbox is enabled
+      const dataSamples = sampleFromGaussianMixture(NUM_SAMPLES, components);
+      const alpha = currentScheduler.getAlpha(currentTime);
+      const beta = currentScheduler.getBeta(currentTime);
+
+      sampledPoints = [];
+      for (const [dataX, dataY] of dataSamples) {
+        const conditionalMeanX = alpha * dataX;
+        const conditionalMeanY = alpha * dataY;
+        const conditionalStdDev = beta;
+
+        const z1 = tf.randomNormal([1], 0, 1).dataSync()[0];
+        const z2 = tf.randomNormal([1], 0, 1).dataSync()[0];
+
+        const sampleX = conditionalMeanX + conditionalStdDev * z1;
+        const sampleY = conditionalMeanY + conditionalStdDev * z2;
+
+        sampledPoints.push({ x: xScale(sampleX), y: yScale(sampleY) });
+      }
+
+      render();
+    }
+  });
+
   function update(
     newComponents: ExtendedGaussianComponent[],
     newTime: number,
     newScheduler: NoiseScheduler
   ): void {
+    // Clear samples if components or time changed
+    const componentsChanged = newComponents !== components;
+    const timeChanged = newTime !== currentTime;
+    if (componentsChanged || timeChanged) {
+      sampledPoints = [];
+    }
+
     components = newComponents;
     currentTime = newTime;
     currentScheduler = newScheduler;
-    sampledPoints = [];
+
+    // Sample continuously if checkbox is checked
+    if (sampleContinuouslyCheckbox.checked) {
+      const dataSamples = sampleFromGaussianMixture(NUM_SAMPLES, components);
+      const alpha = currentScheduler.getAlpha(currentTime);
+      const beta = currentScheduler.getBeta(currentTime);
+
+      sampledPoints = [];
+      for (const [dataX, dataY] of dataSamples) {
+        const conditionalMeanX = alpha * dataX;
+        const conditionalMeanY = alpha * dataY;
+        const conditionalStdDev = beta;
+
+        const z1 = tf.randomNormal([1], 0, 1).dataSync()[0];
+        const z2 = tf.randomNormal([1], 0, 1).dataSync()[0];
+
+        const sampleX = conditionalMeanX + conditionalStdDev * z1;
+        const sampleY = conditionalMeanY + conditionalStdDev * z2;
+
+        sampledPoints.push({ x: xScale(sampleX), y: yScale(sampleY) });
+      }
+    }
+
     render();
   }
 
