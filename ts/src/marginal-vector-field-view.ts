@@ -2,7 +2,7 @@ import { addFrameUsingScales, getContext } from 'web-ui-common/canvas';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
-import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
+import { SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
 import type { GaussianComponent } from './gaussian';
 import { computeGaussianPdfTfjs } from './gaussian-tf';
 import type { NoiseScheduler } from './math/noise-scheduler';
@@ -13,6 +13,7 @@ declare const tf: typeof import('@tensorflow/tfjs');
 
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 350;
+const NUM_SAMPLES = 1024;
 
 export function initMarginalVectorFieldView(
   container: HTMLElement,

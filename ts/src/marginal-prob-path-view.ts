@@ -1,7 +1,9 @@
 import { addDot, addFrameUsingScales, getContext } from 'web-ui-common/canvas';
 import { makeScale } from 'web-ui-common/util';
 
-import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
+import { SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
+
+const NUM_SAMPLES = 1024;
 import { drawGaussianContours, drawGaussianMixturePDF, type GaussianComponent } from './gaussian';
 import { computeGaussianMixtureTfjs } from './gaussian-tf';
 import type { NoiseScheduler } from './math/noise-scheduler';
