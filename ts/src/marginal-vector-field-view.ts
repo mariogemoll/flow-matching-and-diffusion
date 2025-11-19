@@ -431,6 +431,23 @@ export function initMarginalVectorFieldView(
 
   render();
 
+  // Generate initial sample if starting at t=0
+  if (Math.abs(initialTime) < 0.01) {
+    const samples = tf.randomNormal([NUM_SAMPLES, 2], 0, 1);
+    const flat = samples.dataSync() as Float32Array;
+
+    for (let i = 0; i < NUM_SAMPLES; i++) {
+      const sx = flat[2 * i];
+      const sy = flat[2 * i + 1];
+      rightInitialSamples.push([sx, sy]);
+      rightCurrentSamples.push([sx, sy]);
+    }
+
+    lastPropagationTime = 0;
+    samples.dispose();
+    render();
+  }
+
   function update(
     newComponents: GaussianComponent[],
     newTime: number,

@@ -53,6 +53,7 @@ export function initMarginalProbPathView(
   sampleContinuouslyLabel.style.marginLeft = '12px';
   const sampleContinuouslyCheckbox = document.createElement('input');
   sampleContinuouslyCheckbox.type = 'checkbox';
+  sampleContinuouslyCheckbox.checked = true;
   sampleContinuouslyLabel.appendChild(sampleContinuouslyCheckbox);
   sampleContinuouslyLabel.appendChild(document.createTextNode(' Sample continuously'));
   controls.appendChild(sampleContinuouslyLabel);
@@ -929,6 +930,10 @@ export function initMarginalProbPathView(
     render();
   });
 
+  render();
+
+  // Generate initial sample
+  resampleIfNeeded();
   render();
 
   // Sample continuously checkbox handler
