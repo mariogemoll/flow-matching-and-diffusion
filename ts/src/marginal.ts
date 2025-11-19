@@ -43,7 +43,10 @@ function buildCovarianceFromAxes(
   ];
 }
 
-export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement): void {
+export function initMarginalProbPathAndVectorFieldWidget(
+  container: HTMLElement,
+  radioGroupName?: string
+): void {
   removePlaceholder(container);
 
   // Create main layout structure
@@ -121,7 +124,7 @@ export function initMarginalProbPathAndVectorFieldWidget(container: HTMLElement)
     updateProbPathView(components, currentTime, currentScheduler);
     updateVectorFieldView(components, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-  });
+  }, radioGroupName);
 
   // Initialize probability path view
   const updateProbPathView = initMarginalProbPathView(
