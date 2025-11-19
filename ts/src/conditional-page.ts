@@ -22,8 +22,12 @@ async function run(): Promise<void> {
     updateWidgetA(newPosition);
   });
 
-  initConditionalProbPathWidget(containerB, initialPosition, initialTime);
-  initConditionalProbPathAndVectorFieldWidget(containerC, initialPosition, initialTime);
+  initConditionalProbPathWidget(
+    containerB, initialPosition, initialTime, 'conditional-prob-scheduler'
+  );
+  initConditionalProbPathAndVectorFieldWidget(
+    containerC, initialPosition, initialTime, 'conditional-vector-field-scheduler'
+  );
 }
 
 document.addEventListener('DOMContentLoaded', () => {

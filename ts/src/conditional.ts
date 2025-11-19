@@ -66,7 +66,8 @@ export function initMovableDotWidget(
 export function initConditionalProbPathWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
-  initialTime: number
+  initialTime: number,
+  radioGroupName?: string
 ): void {
   removePlaceholder(container);
   let currentPosition = initialPosition;
@@ -110,7 +111,7 @@ export function initConditionalProbPathWidget(
     }
     updateView(currentPosition, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-  });
+  }, radioGroupName);
 
   const updateView = initConditionalProbabilityPathView(
     leftSection,
@@ -136,7 +137,8 @@ export function initConditionalProbPathWidget(
 export function initConditionalProbPathAndVectorFieldWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
-  initialTime: number
+  initialTime: number,
+  radioGroupName?: string
 ): void {
   removePlaceholder(container);
   let currentPosition = initialPosition;
@@ -188,7 +190,7 @@ export function initConditionalProbPathAndVectorFieldWidget(
     updateCondProbView(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView(currentPosition, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-  });
+  }, radioGroupName);
 
   const updateCondProbView = initConditionalProbabilityPathView(
     leftContainer,

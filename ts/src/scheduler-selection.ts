@@ -1,6 +1,7 @@
 export function initSchedulerSelectionWidget(
   container: HTMLElement,
-  onChange: (schedulerType: string) => void
+  onChange: (schedulerType: string) => void,
+  radioGroupName = 'scheduler'
 ): void {
   const schedulerRadiosContainer = document.createElement('div');
   schedulerRadiosContainer.style.display = 'flex';
@@ -23,7 +24,7 @@ export function initSchedulerSelectionWidget(
     const radioLabel = document.createElement('label');
     const radio = document.createElement('input');
     radio.type = 'radio';
-    radio.name = 'marginal-scheduler';
+    radio.name = radioGroupName;
     radio.value = value;
     if (checked === true) { radio.checked = true; }
     schedulerRadios.push(radio);
