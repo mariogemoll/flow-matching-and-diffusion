@@ -2,11 +2,17 @@ import { addFrameUsingScales, getContext } from 'web-ui-common/canvas';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
+import {
+  VECTOR_FIELD_COMPRESSION_EXPONENT,
+  VECTOR_FIELD_COMPRESSION_MODE,
+  VECTOR_FIELD_MAX_ARROW_LENGTH,
+  VECTOR_FIELD_MIN_ARROW_LENGTH
+} from './constants';
 import type { GaussianComponent } from './gaussian';
 import type { NoiseScheduler } from './math/noise-scheduler';
 import {
   createSampleButtons,
-  drawArrowDataSpace,
+  drawLineDataSpace,
   drawSamplePoints,
   drawStandardNormalBackground
 } from './vector-field-view-common';
@@ -198,19 +204,25 @@ export function initMarginalVectorFieldView(
     t: number,
     scheduler: NoiseScheduler
   ): void {
-    const alpha = scheduler.getAlpha(t);
-    const beta = scheduler.getBeta(t);
+    // Clamp time to avoid the star pattern at t=1
+    const clampedTime = Math.min(t, 0.999);
 
-    const alphaDot = getAlphaDerivative(scheduler, t);
-    const betaDot = getBetaDerivative(scheduler, t);
+    const alpha = scheduler.getAlpha(clampedTime);
+    const beta = scheduler.getBeta(clampedTime);
 
-    const gridSize = 20;
+    const alphaDot = getAlphaDerivative(scheduler, clampedTime);
+    const betaDot = getBetaDerivative(scheduler, clampedTime);
+
+    const gridSize = 30;
     const [xMin, xMax] = xRange;
     const [yMin, yMax] = yRange;
     const dx = (xMax - xMin) / gridSize;
     const dy = (yMax - yMin) / gridSize;
 
+    // Compute all vectors and find max magnitude
+    const vectors: {x: number; y: number; vx: number; vy: number; length: number}[] = [];
     let maxLength = 0;
+
     for (let i = 0; i <= gridSize; i++) {
       for (let j = 0; j <= gridSize; j++) {
         const x = xMin + i * dx;
@@ -226,39 +238,49 @@ export function initMarginalVectorFieldView(
         );
         const length = Math.sqrt(vx * vx + vy * vy);
         maxLength = Math.max(maxLength, length);
+        vectors.push({ x, y, vx, vy, length });
       }
     }
 
-    const arrowScale = Math.min(dx, dy) * 0.4;
-    for (let i = 0; i <= gridSize; i++) {
-      for (let j = 0; j <= gridSize; j++) {
-        const x = xMin + i * dx;
-        const y = yMin + j * dy;
-        const [vx, vy] = computeMarginalVectorField(
-          x,
-          y,
-          components,
-          alpha,
-          beta,
-          alphaDot,
-          betaDot
-        );
+    // Compression settings
+    const lengthRange = VECTOR_FIELD_MAX_ARROW_LENGTH - VECTOR_FIELD_MIN_ARROW_LENGTH;
+    const normalizationFactor = VECTOR_FIELD_COMPRESSION_MODE === 'log'
+      ? Math.log(maxLength + 1)
+      : Math.pow(maxLength, VECTOR_FIELD_COMPRESSION_EXPONENT);
 
-        const length = Math.sqrt(vx * vx + vy * vy);
-        if (length < 1e-6) {
-          continue;
-        }
+    // Draw all vectors with compressed variable length
+    for (const { x, y, vx, vy, length } of vectors) {
+      // Normalize direction (handle zero-length case)
+      const dirX = length > 1e-10 ? vx / length : 1;
+      const dirY = length > 1e-10 ? vy / length : 0;
 
-        const normalizedLength = length / (maxLength + 1e-10);
-        const colorValue = Math.min(1, normalizedLength);
-        const color = viridis(colorValue);
-
-        const scale = arrowScale / (maxLength + 1e-10);
-        const endX = x + vx * scale;
-        const endY = y + vy * scale;
-
-        drawArrowDataSpace(ctx, xScale, yScale, x, y, endX, endY, color);
+      // Apply compression to magnitude
+      let normalized: number;
+      if (VECTOR_FIELD_COMPRESSION_MODE === 'log') {
+        const lengthLog = Math.log(length + 1);
+        normalized = normalizationFactor > 0 ? lengthLog / normalizationFactor : 0;
+      } else {
+        const lengthPowered = Math.pow(length, VECTOR_FIELD_COMPRESSION_EXPONENT);
+        normalized = normalizationFactor > 0 ? lengthPowered / normalizationFactor : 0;
       }
+
+      const clampedNormalized = Math.min(Math.max(normalized, 0), 1);
+
+      // Color based on compressed magnitude
+      const color = viridis(clampedNormalized);
+
+      // Convert target pixel length to data space
+      const targetPixelLength = VECTOR_FIELD_MIN_ARROW_LENGTH + clampedNormalized * lengthRange;
+
+      // Approximate data-space length (using average scale)
+      const dataSpacePerPixel = (xMax - xMin) / (xScale(xMax) - xScale(xMin));
+      const targetDataLength = targetPixelLength * dataSpacePerPixel;
+
+      // Draw line with compressed variable length in the direction of the vector field
+      const endX = x + dirX * targetDataLength;
+      const endY = y + dirY * targetDataLength;
+
+      drawLineDataSpace(ctx, xScale, yScale, x, y, endX, endY, color);
     }
   }
 

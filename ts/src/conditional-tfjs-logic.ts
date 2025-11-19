@@ -286,9 +286,6 @@ export function computeVectorFieldArrows({
     const dx = endX - startX;
     const dy = endY - startY;
     const length = Math.sqrt(dx * dx + dy * dy);
-    if (length < 2) {
-      continue;
-    }
 
     arrows.push({
       startX,
@@ -332,6 +329,8 @@ export function computeVectorFieldArrows({
     }
 
     const clampedNormalized = Math.min(Math.max(normalized, 0), 1);
+
+    // Variable length with compression: min + (normalized * range)
     const targetLength = VECTOR_FIELD_MIN_ARROW_LENGTH + clampedNormalized * lengthRange;
     const scaleFactor = length > 0 ? targetLength / length : 0;
 

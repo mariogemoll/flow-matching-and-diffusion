@@ -15,7 +15,7 @@ import { NUM_SAMPLES } from './constants';
 import type { NoiseScheduler } from './math/noise-scheduler';
 import {
   createSampleButtons,
-  drawArrows,
+  drawLines,
   drawSamplePoints,
   drawStandardNormalBackground
 } from './vector-field-view-common';
@@ -90,7 +90,8 @@ export function initVectorFieldView(
       dataPoint: currentPosition,
       noiseScheduler: currentScheduler,
       vectorFieldXScale: xScale,
-      vectorFieldYScale: yScale
+      vectorFieldYScale: yScale,
+      gridSpacing: 0.3
     });
   }
 
@@ -112,8 +113,8 @@ export function initVectorFieldView(
 
     addFrameUsingScales(ctx, xScale, yScale, 11);
 
-    // Update and render vector field arrows
-    const arrows = computeVectorFieldArrows({
+    // Update and render vector field lines
+    const lines = computeVectorFieldArrows({
       time: currentTime,
       xRange,
       yRange,
@@ -121,10 +122,11 @@ export function initVectorFieldView(
       noiseScheduler: currentScheduler,
       vectorFieldXScale: xScale,
       vectorFieldYScale: yScale,
-      globalMaxVectorLength
+      globalMaxVectorLength,
+      gridSpacing: 0.3
     });
 
-    drawArrows(ctx, arrows);
+    drawLines(ctx, lines);
 
     // Render data point (orange dot)
     dot.render(currentPosition);

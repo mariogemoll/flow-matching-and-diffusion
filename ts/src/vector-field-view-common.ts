@@ -1,4 +1,4 @@
-import { addDot } from 'web-ui-common/canvas';
+import { addDot, addLine } from 'web-ui-common/canvas';
 import type { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
@@ -83,6 +83,87 @@ export function drawArrows(ctx: CanvasRenderingContext2D, arrows: Arrow[]): void
     const endY = startY + dy;
     const color = viridis(normalizedLength);
     drawArrow(ctx, startX, startY, endX, endY, color);
+  }
+}
+
+/**
+ * Draw a line with outlined V-shaped arrowhead in pixel coordinates
+ */
+export function drawLineWithArrow(
+  ctx: CanvasRenderingContext2D,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  color: string,
+  lineWidth = 1.5
+): void {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+
+  // Draw the line
+  addLine(ctx, color, [startX, startY], [endX, endY]);
+
+  // Draw outlined arrowhead (V-shaped spikes)
+  const angle = Math.atan2(endY - startY, endX - startX);
+  const headLen = 4;
+  const headAngle = Math.PI / 6; // 30 degrees
+
+  ctx.beginPath();
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(
+    endX - headLen * Math.cos(angle - headAngle),
+    endY - headLen * Math.sin(angle - headAngle)
+  );
+  ctx.moveTo(endX, endY);
+  ctx.lineTo(
+    endX - headLen * Math.cos(angle + headAngle),
+    endY - headLen * Math.sin(angle + headAngle)
+  );
+  ctx.stroke();
+}
+
+/**
+ * Draw a line in data coordinates (no arrowhead)
+ */
+export function drawLineDataSpace(
+  ctx: CanvasRenderingContext2D,
+  xScale: ReturnType<typeof makeScale>,
+  yScale: ReturnType<typeof makeScale>,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  color: string,
+  lineWidth = 1.5
+): void {
+  const px1 = xScale(x1);
+  const py1 = yScale(y1);
+  const px2 = xScale(x2);
+  const py2 = yScale(y2);
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  drawLineWithArrow(ctx, px1, py1, px2, py2, color, lineWidth);
+}
+
+export interface Line {
+  startX: number;
+  startY: number;
+  dx: number;
+  dy: number;
+  normalizedLength: number;
+}
+
+/**
+ * Draw multiple lines with viridis coloring based on normalized length
+ */
+export function drawLines(ctx: CanvasRenderingContext2D, lines: Line[]): void {
+  for (const { startX, startY, dx, dy, normalizedLength } of lines) {
+    const endX = startX + dx;
+    const endY = startY + dy;
+    const color = viridis(normalizedLength);
+    drawLineWithArrow(ctx, startX, startY, endX, endY, color, 1.5);
   }
 }
 
