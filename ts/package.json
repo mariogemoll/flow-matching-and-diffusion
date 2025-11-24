@@ -3,10 +3,16 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts --bundle --outdir=dist"
+    "build": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts --bundle --outdir=dist"
+  },
+  "exports": {
+    "./conditional": "./src/conditional.ts",
+    "./marginal": "./src/marginal.ts",
+    "./flow-matching-pipeline": "./src/flow-matching-pipeline.ts"
   },
   "dependencies": {
-    "web-ui-common": "mariogemoll/web-ui-common#2a2f35ee447f04555101749f10d662ebf0e3e9f7"
+    "flow-models-common": "github:mariogemoll/flow-models-common#8aff32246ff3ee1eb495d0698e94dbc7e66830e2",
+    "web-ui-common": "mariogemoll/web-ui-common#1138fbe182f13d5cb1685c99a23d3850ed7c3514"
   },
   "devDependencies": {
     "@tensorflow/tfjs": "^4.22.0",

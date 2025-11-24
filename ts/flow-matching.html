@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Matching</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+        .widget-container {
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        h2 {
+            margin-top: 0;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.min.js"></script>
+</head>
+<body>
+    <h1>Flow Matching</h1>
+
+    <div class="widget-container" style="max-width: 400px; margin-left: auto; margin-right: auto;">
+        <h2>Moons dataset</h2>
+        <div id="moons-dataset-widget"></div>
+    </div>
+
+    <div class="widget-container" style="max-width: 600px; margin-left: auto; margin-right: auto;">
+        <h2>Training Progress</h2>
+        <div id="training-widget"></div>
+    </div>
+
+    <div class="widget-container" style="max-width: 400px; margin-left: auto; margin-right: auto;">
+        <h2>Generation via Flow Matching</h2>
+        <p style="margin-top: 0; color: #666;">Samples from a standard normal distribution are transformed through the learned flow to generate the moons dataset.</p>
+        <div id="flow-visualization-widget">
+            <div class="placeholder">Loading model...</div>
+        </div>
+    </div>
+
+    <script type="module" src="./dist/flow-matching.js"></script>
+</body>
+</html>

@@ -1,4 +1,7 @@
 .claude
 /ts/dist
+/ts/flow-matching-loss-history.bin
+/ts/flow-matching-model.json
+/ts/flow-matching-model.weights.bin
 node_modules
 package-lock.json

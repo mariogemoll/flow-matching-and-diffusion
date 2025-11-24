@@ -66,7 +66,7 @@ export function initMarginalProbPathView(
   // Color controls
   const colorControls = document.createElement('div');
   colorControls.style.marginTop = '8px';
-  colorControls.style.display = 'flex';
+  colorControls.style.display = 'none'; // Hidden for now
   colorControls.style.gap = '8px';
   colorControls.style.alignItems = 'center';
   container.appendChild(colorControls);
