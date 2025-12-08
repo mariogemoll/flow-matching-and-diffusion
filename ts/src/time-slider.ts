@@ -1,8 +1,15 @@
+export interface TimeSliderOptions {
+  loop?: boolean;
+  autostart?: boolean;
+}
+
 export function initTimeSliderWidget(
   container: HTMLElement,
   initialTime: number,
-  onChange: (time: number) => void
+  onChange: (time: number) => void,
+  options: TimeSliderOptions = {}
 ): (time: number) => void {
+  const { loop = false, autostart = false } = options;
   // Create time slider container
   const sliderDiv = document.createElement('div');
   sliderDiv.style.marginTop = '16px';
@@ -47,12 +54,16 @@ export function initTimeSliderWidget(
 
     currentTime += 0.01;
     if (currentTime >= 1) {
-      currentTime = 1;
-      isPlaying = false;
-      playPauseBtn.textContent = 'Play';
-      if (animationId !== null) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
+      if (loop) {
+        currentTime = 0; // Loop back to start
+      } else {
+        currentTime = 1;
+        isPlaying = false;
+        playPauseBtn.textContent = 'Play';
+        if (animationId !== null) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
       }
     }
 
@@ -88,6 +99,13 @@ export function initTimeSliderWidget(
     currentTime = newTime;
     timeSlider.value = newTime.toString();
     timeValue.textContent = newTime.toFixed(2);
+  }
+
+  // Autostart if requested
+  if (autostart) {
+    isPlaying = true;
+    playPauseBtn.textContent = 'Pause';
+    animate();
   }
 
   return update;
