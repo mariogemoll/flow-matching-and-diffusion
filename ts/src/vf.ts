@@ -215,8 +215,11 @@ function setUpVectorField(): void {
     }
   }
 
-  // Initialize time slider with animation controls
-  const updateSlider = initTimeSliderWidget(container, currentTime, render);
+  // Initialize time slider with looping and autostart
+  const updateSlider = initTimeSliderWidget(container, currentTime, render, {
+    loop: true,
+    autostart: true
+  });
 
   // Create movable dot
   const dot = createMovableDot(
