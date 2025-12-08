@@ -132,6 +132,34 @@ function calculateTrajectory(
 }
 
 /**
+ * Draw trajectory as a line
+ */
+function drawTrajectory(
+  ctx: CanvasRenderingContext2D,
+  xScale: Scale,
+  yScale: Scale,
+  trajectory: Pair<number>[]
+): void {
+  if (trajectory.length < 2) {return;}
+
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 2;
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+
+  const [x0, y0] = trajectory[0];
+  ctx.moveTo(xScale(x0), yScale(y0));
+
+  for (let i = 1; i < trajectory.length; i++) {
+    const [x, y] = trajectory[i];
+    ctx.lineTo(xScale(x), yScale(y));
+  }
+
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+/**
  * Draw the vector field on a grid in data space
  */
 function drawVectorField(
@@ -191,6 +219,7 @@ function setUpVectorField(): void {
   let currentTime = 0;
   let dotPosition: Pair<number> | null = null;
   let trajectory: Pair<number>[] = [];
+  let showTrajectory = false;
 
   function render(time: number): void {
     currentTime = time;
@@ -200,6 +229,11 @@ function setUpVectorField(): void {
 
     // Draw the vector field
     drawVectorField(ctx, xScale, yScale, currentTime);
+
+    // Draw trajectory if enabled
+    if (showTrajectory && dotPosition && trajectory.length > 0) {
+      drawTrajectory(ctx, xScale, yScale, trajectory);
+    }
 
     // Draw frame with axes
     addFrameUsingScales(ctx, xScale, yScale, 10);
@@ -215,10 +249,42 @@ function setUpVectorField(): void {
     }
   }
 
+  // Create flex container for controls
+  const controlsContainer = document.createElement('div');
+  controlsContainer.style.display = 'flex';
+  controlsContainer.style.alignItems = 'center';
+  controlsContainer.style.gap = '20px';
+  controlsContainer.style.marginTop = '16px';
+  container.appendChild(controlsContainer);
+
   // Initialize time slider with looping and autostart
-  const updateSlider = initTimeSliderWidget(container, currentTime, render, {
+  const updateSlider = initTimeSliderWidget(controlsContainer, currentTime, render, {
     loop: true,
     autostart: true
+  });
+
+  // Create checkbox for trajectory display
+  const checkboxContainer = document.createElement('div');
+  checkboxContainer.style.display = 'flex';
+  checkboxContainer.style.alignItems = 'center';
+  controlsContainer.appendChild(checkboxContainer);
+
+  const trajectoryCheckbox = document.createElement('input');
+  trajectoryCheckbox.type = 'checkbox';
+  trajectoryCheckbox.id = 'show-trajectory';
+  trajectoryCheckbox.checked = showTrajectory;
+  checkboxContainer.appendChild(trajectoryCheckbox);
+
+  const trajectoryLabel = document.createElement('label');
+  trajectoryLabel.htmlFor = 'show-trajectory';
+  trajectoryLabel.textContent = ' Display trajectory';
+  trajectoryLabel.style.marginLeft = '4px';
+  trajectoryLabel.style.cursor = 'pointer';
+  checkboxContainer.appendChild(trajectoryLabel);
+
+  trajectoryCheckbox.addEventListener('change', () => {
+    showTrajectory = trajectoryCheckbox.checked;
+    render(currentTime);
   });
 
   // Create movable dot
