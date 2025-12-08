@@ -122,9 +122,9 @@ function calculateTrajectory(
       y += vy * dt;
 
       // Stop if trajectory goes off canvas
-      const dataWidth = xScale.domain[1];
-      const dataHeight = yScale.domain[1];
-      if (x < 0 || x > dataWidth || y < 0 || y > dataHeight) {
+      const [xMin, xMax] = xScale.domain;
+      const [yMin, yMax] = yScale.domain;
+      if (x < xMin || x > xMax || y < yMin || y > yMax) {
         break;
       }
     }
@@ -175,13 +175,13 @@ function drawVectorField(
   const vectors: { x: number; y: number; vx: number; vy: number; length: number }[] = [];
   let maxLength = 0;
 
-  // Get data dimensions from scales
-  const dataWidth = xScale.domain[1];
-  const dataHeight = yScale.domain[1];
+  // Get data domain from scales
+  const [xMin, xMax] = xScale.domain;
+  const [yMin, yMax] = yScale.domain;
 
   // Compute all vectors and find max magnitude
-  for (let x = spacing; x < dataWidth; x += spacing) {
-    for (let y = spacing; y < dataHeight; y += spacing) {
+  for (let x = xMin; x <= xMax; x += spacing) {
+    for (let y = yMin; y <= yMax; y += spacing) {
       const [vx, vy] = vectorField(x, y, t, xScale, yScale);
       const length = Math.sqrt(vx * vx + vy * vy);
       maxLength = Math.max(maxLength, length);
@@ -219,8 +219,8 @@ function setUpVectorField(canvas: HTMLCanvasElement, options: VectorFieldOptions
     throw new Error('Canvas must have a parent element');
   }
 
-  const xRange = [0, 800] as [number, number];
-  const yRange = [0, 600] as [number, number];
+  const xRange = [0, 400] as [number, number];
+  const yRange = [0, 300] as [number, number];
   const margins = { top: 20, right: 20, bottom: 40, left: 40 };
   const xScale = makeScale(xRange, [margins.left, canvas.width - margins.right]);
   const yScale = makeScale(yRange, [canvas.height - margins.bottom, margins.top]);
@@ -438,7 +438,7 @@ function setUpVectorField(canvas: HTMLCanvasElement, options: VectorFieldOptions
     ctx,
     xScale,
     yScale,
-    [400, 300], // Initial position (center)
+    [0, 0], // Initial position (center)
     {
       radius: 6,
       fill: '#FF5722',
@@ -458,7 +458,7 @@ function setUpVectorField(canvas: HTMLCanvasElement, options: VectorFieldOptions
   );
 
   // Set initial dot position
-  dotPosition = [400, 300];
+  dotPosition = [90, 90];
   trajectory = calculateTrajectory(dotPosition, xScale, yScale);
 
   if (showEulerSteps) {
