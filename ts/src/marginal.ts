@@ -146,12 +146,11 @@ export function initMarginalProbPathAndVectorFieldWidget(
   );
 
   // Initialize time slider
-  const updateTimeSlider = initTimeSliderWidget(container, currentTime, (newTime: number) => {
+  void initTimeSliderWidget(container, currentTime, (newTime: number) => {
     currentTime = newTime;
     updateProbPathView(components, currentTime, currentScheduler);
     updateVectorFieldView(components, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-    updateTimeSlider(currentTime);
   });
 
   // Initial render

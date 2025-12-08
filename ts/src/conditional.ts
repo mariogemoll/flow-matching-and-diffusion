@@ -123,11 +123,10 @@ export function initConditionalProbPathWidget(
       updateView(currentPosition, currentTime, currentScheduler);
     }
   );
-  const updateSlider = initTimeSliderWidget(container, initialTime, (newTime: number) => {
+  void initTimeSliderWidget(container, initialTime, (newTime: number) => {
     currentTime = newTime;
     updateView(currentPosition, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-    updateSlider(currentTime);
   });
 
   // Initial render
@@ -214,12 +213,11 @@ export function initConditionalProbPathAndVectorFieldWidget(
       updateVectorFieldView(currentPosition, currentTime, currentScheduler);
     }
   );
-  const updateSlider = initTimeSliderWidget(container, initialTime, (newTime: number) => {
+  void initTimeSliderWidget(container, initialTime, (newTime: number) => {
     currentTime = newTime;
     updateCondProbView(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView(currentPosition, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-    updateSlider(currentTime);
   });
 
   // Initial render

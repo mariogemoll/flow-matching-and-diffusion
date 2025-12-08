@@ -110,21 +110,23 @@ function calculateTrajectory(
 ): Pair<number>[] {
   const trajectory: Pair<number>[] = [];
   let [x, y] = startPos;
-  const dt = 0.01;
-  const timeStep = 1.0 / steps;
+  const dt = 1.0 / steps; // Time step depends on number of steps
 
-  for (let i = 0; i < steps; i++) {
+  for (let i = 0; i <= steps; i++) {
     trajectory.push([x, y]);
-    const t = i * timeStep;
-    const [vx, vy] = vectorField(x, y, t, xScale, yScale);
-    x += vx * dt;
-    y += vy * dt;
 
-    // Stop if trajectory goes off canvas
-    const dataWidth = xScale.domain[1];
-    const dataHeight = yScale.domain[1];
-    if (x < 0 || x > dataWidth || y < 0 || y > dataHeight) {
-      break;
+    if (i < steps) {
+      const t = i * dt;
+      const [vx, vy] = vectorField(x, y, t, xScale, yScale);
+      x += vx * dt;
+      y += vy * dt;
+
+      // Stop if trajectory goes off canvas
+      const dataWidth = xScale.domain[1];
+      const dataHeight = yScale.domain[1];
+      if (x < 0 || x > dataWidth || y < 0 || y > dataHeight) {
+        break;
+      }
     }
   }
 
@@ -205,9 +207,17 @@ function drawVectorField(
   }
 }
 
-function setUpVectorField(canvas: HTMLCanvasElement): void {
+interface VectorFieldOptions {
+  showEulerSteps?: boolean;
+}
+
+function setUpVectorField(canvas: HTMLCanvasElement, options: VectorFieldOptions = {}): void {
+  const { showEulerSteps = false } = options;
   const ctx = getContext(canvas);
-  const container = canvas.parentElement as HTMLElement;
+  const container = canvas.parentElement;
+  if (!container) {
+    throw new Error('Canvas must have a parent element');
+  }
 
   const xRange = [0, 800] as [number, number];
   const yRange = [0, 600] as [number, number];
@@ -218,7 +228,10 @@ function setUpVectorField(canvas: HTMLCanvasElement): void {
   let currentTime = 0;
   let dotPosition: Pair<number> | null = null;
   let trajectory: Pair<number>[] = [];
-  let showTrajectory = false;
+  let showTrajectory = showEulerSteps; // Show trajectory by default in Euler mode
+  let eulerSteps = 4; // For Euler demonstration
+  let discreteTrajectory: Pair<number>[] = []; // Coarse trajectory for Euler demo
+  let showEulerStepsPoints = showEulerSteps; // Show Euler approximation by default in Euler mode
 
   function render(time: number): void {
     currentTime = time;
@@ -234,57 +247,190 @@ function setUpVectorField(canvas: HTMLCanvasElement): void {
       drawTrajectory(ctx, xScale, yScale, trajectory);
     }
 
+    // Draw Euler step line if enabled
+    if (showEulerSteps && showEulerStepsPoints && discreteTrajectory.length > 0) {
+      ctx.strokeStyle = '#2196F3';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+
+      const [x0, y0] = discreteTrajectory[0];
+      ctx.moveTo(xScale(x0), yScale(y0));
+
+      for (let i = 1; i < discreteTrajectory.length; i++) {
+        const [x, y] = discreteTrajectory[i];
+        ctx.lineTo(xScale(x), yScale(y));
+      }
+
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
     // Draw frame with axes
     addFrameUsingScales(ctx, xScale, yScale, 10);
 
     // Draw dot at current position along trajectory
-    if (dotPosition && trajectory.length > 0) {
-      const trajectoryIndex = Math.min(
-        Math.floor(currentTime * (trajectory.length - 1)),
-        trajectory.length - 1
-      );
-      const currentPos = trajectory[trajectoryIndex];
+    if (dotPosition) {
+      let currentPos: Pair<number>;
+
+      if (showEulerSteps && discreteTrajectory.length > 0) {
+        // Use discrete trajectory for Euler demonstration
+        const stepIndex = Math.min(
+          Math.floor(currentTime * eulerSteps),
+          discreteTrajectory.length - 1
+        );
+        currentPos = discreteTrajectory[stepIndex];
+      } else if (trajectory.length > 0) {
+        // Use smooth trajectory
+        const trajectoryIndex = Math.min(
+          Math.floor(currentTime * (trajectory.length - 1)),
+          trajectory.length - 1
+        );
+        currentPos = trajectory[trajectoryIndex];
+      } else {
+        currentPos = dotPosition;
+      }
+
       dot.render(currentPos);
     }
   }
 
-  // Create flex container for controls
+  // Create flex container for controls (two columns)
   const controlsContainer = document.createElement('div');
   controlsContainer.style.display = 'flex';
-  controlsContainer.style.alignItems = 'center';
-  controlsContainer.style.gap = '20px';
+  controlsContainer.style.gap = '40px';
   controlsContainer.style.marginTop = '16px';
   container.appendChild(controlsContainer);
 
+  // Left column: sliders
+  const slidersColumn = document.createElement('div');
+  controlsContainer.appendChild(slidersColumn);
+
+  // Right column: checkboxes
+  const checkboxesColumn = document.createElement('div');
+  checkboxesColumn.style.display = 'flex';
+  checkboxesColumn.style.flexDirection = 'column';
+  checkboxesColumn.style.gap = '8px';
+  controlsContainer.appendChild(checkboxesColumn);
+
   // Initialize time slider with looping and autostart
-  const updateSlider = initTimeSliderWidget(controlsContainer, currentTime, render, {
+  const sliderControls = initTimeSliderWidget(slidersColumn, currentTime, render, {
     loop: true,
-    autostart: true
+    autostart: true,
+    steps: showEulerSteps ? eulerSteps : undefined
   });
 
   // Create checkbox for trajectory display
-  const checkboxContainer = document.createElement('div');
-  checkboxContainer.style.display = 'flex';
-  checkboxContainer.style.alignItems = 'center';
-  controlsContainer.appendChild(checkboxContainer);
+  const trajectoryCheckboxContainer = document.createElement('div');
+  trajectoryCheckboxContainer.style.display = 'flex';
+  trajectoryCheckboxContainer.style.alignItems = 'center';
+  checkboxesColumn.appendChild(trajectoryCheckboxContainer);
 
   const trajectoryCheckbox = document.createElement('input');
   trajectoryCheckbox.type = 'checkbox';
   trajectoryCheckbox.id = 'show-trajectory';
   trajectoryCheckbox.checked = showTrajectory;
-  checkboxContainer.appendChild(trajectoryCheckbox);
+  trajectoryCheckboxContainer.appendChild(trajectoryCheckbox);
 
   const trajectoryLabel = document.createElement('label');
   trajectoryLabel.htmlFor = 'show-trajectory';
   trajectoryLabel.textContent = ' Display trajectory';
   trajectoryLabel.style.marginLeft = '4px';
   trajectoryLabel.style.cursor = 'pointer';
-  checkboxContainer.appendChild(trajectoryLabel);
+  trajectoryCheckboxContainer.appendChild(trajectoryLabel);
 
   trajectoryCheckbox.addEventListener('change', () => {
     showTrajectory = trajectoryCheckbox.checked;
     render(currentTime);
   });
+
+  // Add Euler steps slider if in demonstration mode
+  if (showEulerSteps) {
+    const eulerStepsContainer = document.createElement('div');
+    eulerStepsContainer.style.marginTop = '16px';
+    slidersColumn.appendChild(eulerStepsContainer);
+
+    const eulerStepsLabel = document.createElement('label');
+    eulerStepsLabel.textContent = 'Euler steps: ';
+    eulerStepsContainer.appendChild(eulerStepsLabel);
+
+    const eulerStepsSlider = document.createElement('input');
+    eulerStepsSlider.type = 'range';
+    eulerStepsSlider.min = '2';
+    eulerStepsSlider.max = '100';
+    eulerStepsSlider.step = '1';
+    eulerStepsSlider.value = eulerSteps.toString();
+    eulerStepsSlider.style.width = '320px';
+    eulerStepsSlider.style.marginLeft = '8px';
+    eulerStepsContainer.appendChild(eulerStepsSlider);
+
+    const eulerStepsValue = document.createElement('span');
+    eulerStepsValue.textContent = eulerSteps.toString();
+    eulerStepsValue.style.marginLeft = '8px';
+    eulerStepsContainer.appendChild(eulerStepsValue);
+
+    let wasPlaying = false;
+
+    eulerStepsSlider.addEventListener('mousedown', () => {
+      // Store playing state and pause
+      const playPauseBtn = controlsContainer.querySelector('button');
+      wasPlaying = playPauseBtn?.textContent === 'Pause';
+      if (wasPlaying && playPauseBtn) {
+        playPauseBtn.click();
+      }
+    });
+
+    eulerStepsSlider.addEventListener('input', () => {
+      eulerSteps = parseInt(eulerStepsSlider.value);
+      eulerStepsValue.textContent = eulerSteps.toString();
+
+      // Update slider steps
+      sliderControls.setSteps(eulerSteps);
+
+      // Recalculate discrete trajectory
+      if (dotPosition) {
+        discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, eulerSteps);
+      }
+
+      currentTime = 0;
+      sliderControls.update(0);
+      render(0);
+    });
+
+    eulerStepsSlider.addEventListener('mouseup', () => {
+      // Resume if it was playing
+      if (wasPlaying) {
+        const playPauseBtn = controlsContainer.querySelector('button');
+        if (playPauseBtn?.textContent === 'Play') {
+          playPauseBtn.click();
+        }
+      }
+    });
+
+    // Add checkbox to show Euler approximation
+    const eulerApproxCheckboxContainer = document.createElement('div');
+    eulerApproxCheckboxContainer.style.display = 'flex';
+    eulerApproxCheckboxContainer.style.alignItems = 'center';
+    checkboxesColumn.appendChild(eulerApproxCheckboxContainer);
+
+    const eulerStepsPointsCheckbox = document.createElement('input');
+    eulerStepsPointsCheckbox.type = 'checkbox';
+    eulerStepsPointsCheckbox.id = 'show-euler-steps-points';
+    eulerStepsPointsCheckbox.checked = showEulerStepsPoints;
+    eulerApproxCheckboxContainer.appendChild(eulerStepsPointsCheckbox);
+
+    const eulerStepsPointsLabel = document.createElement('label');
+    eulerStepsPointsLabel.htmlFor = 'show-euler-steps-points';
+    eulerStepsPointsLabel.textContent = ' Display Euler approximation';
+    eulerStepsPointsLabel.style.marginLeft = '4px';
+    eulerStepsPointsLabel.style.cursor = 'pointer';
+    eulerApproxCheckboxContainer.appendChild(eulerStepsPointsLabel);
+
+    eulerStepsPointsCheckbox.addEventListener('change', () => {
+      showEulerStepsPoints = eulerStepsPointsCheckbox.checked;
+      render(currentTime);
+    });
+  }
 
   // Create movable dot
   const dot = createMovableDot(
@@ -299,8 +445,13 @@ function setUpVectorField(canvas: HTMLCanvasElement): void {
       onChange: (newPosition: Pair<number>) => {
         dotPosition = newPosition;
         trajectory = calculateTrajectory(dotPosition, xScale, yScale);
+
+        if (showEulerSteps) {
+          discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, eulerSteps);
+        }
+
         currentTime = 0;
-        updateSlider(0); // Reset time to 0
+        sliderControls.update(0); // Reset time to 0
         render(0);
       }
     }
@@ -309,6 +460,10 @@ function setUpVectorField(canvas: HTMLCanvasElement): void {
   // Set initial dot position
   dotPosition = [400, 300];
   trajectory = calculateTrajectory(dotPosition, xScale, yScale);
+
+  if (showEulerSteps) {
+    discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, eulerSteps);
+  }
 
   // Initial render
   render(0);
@@ -319,7 +474,7 @@ function run(): void {
   const canvas2 = el(document, '#vf-canvas2') as HTMLCanvasElement;
 
   setUpVectorField(canvas1);
-  setUpVectorField(canvas2);
+  setUpVectorField(canvas2, { showEulerSteps: true });
 }
 
 run();
