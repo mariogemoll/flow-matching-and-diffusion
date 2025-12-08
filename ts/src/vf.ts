@@ -1,6 +1,6 @@
-import { addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { addFrameUsingScales, createMovableDot, getContext } from 'web-ui-common/canvas';
 import { el } from 'web-ui-common/dom';
-import type { Scale } from 'web-ui-common/types';
+import type { Pair, Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
@@ -100,6 +100,38 @@ function vectorField(
 }
 
 /**
+ * Calculate trajectory using Euler integration
+ */
+function calculateTrajectory(
+  startPos: Pair<number>,
+  xScale: Scale,
+  yScale: Scale,
+  steps = 500
+): Pair<number>[] {
+  const trajectory: Pair<number>[] = [];
+  let [x, y] = startPos;
+  const dt = 0.01;
+  const timeStep = 1.0 / steps;
+
+  for (let i = 0; i < steps; i++) {
+    trajectory.push([x, y]);
+    const t = i * timeStep;
+    const [vx, vy] = vectorField(x, y, t, xScale, yScale);
+    x += vx * dt;
+    y += vy * dt;
+
+    // Stop if trajectory goes off canvas
+    const dataWidth = xScale.domain[1];
+    const dataHeight = yScale.domain[1];
+    if (x < 0 || x > dataWidth || y < 0 || y > dataHeight) {
+      break;
+    }
+  }
+
+  return trajectory;
+}
+
+/**
  * Draw the vector field on a grid in data space
  */
 function drawVectorField(
@@ -157,6 +189,8 @@ function setUpVectorField(): void {
   const yScale = makeScale(yRange, [canvas.height - margins.bottom, margins.top]);
 
   let currentTime = 0;
+  let dotPosition: Pair<number> | null = null;
+  let trajectory: Pair<number>[] = [];
 
   function render(time: number): void {
     currentTime = time;
@@ -169,10 +203,44 @@ function setUpVectorField(): void {
 
     // Draw frame with axes
     addFrameUsingScales(ctx, xScale, yScale, 10);
+
+    // Draw dot at current position along trajectory
+    if (dotPosition && trajectory.length > 0) {
+      const trajectoryIndex = Math.min(
+        Math.floor(currentTime * (trajectory.length - 1)),
+        trajectory.length - 1
+      );
+      const currentPos = trajectory[trajectoryIndex];
+      dot.render(currentPos);
+    }
   }
 
   // Initialize time slider with animation controls
-  initTimeSliderWidget(container, currentTime, render);
+  const updateSlider = initTimeSliderWidget(container, currentTime, render);
+
+  // Create movable dot
+  const dot = createMovableDot(
+    canvas,
+    ctx,
+    xScale,
+    yScale,
+    [400, 300], // Initial position (center)
+    {
+      radius: 6,
+      fill: '#FF5722',
+      onChange: (newPosition: Pair<number>) => {
+        dotPosition = newPosition;
+        trajectory = calculateTrajectory(dotPosition, xScale, yScale);
+        currentTime = 0;
+        updateSlider(0); // Reset time to 0
+        render(0);
+      }
+    }
+  );
+
+  // Set initial dot position
+  dotPosition = [400, 300];
+  trajectory = calculateTrajectory(dotPosition, xScale, yScale);
 
   // Initial render
   render(0);
