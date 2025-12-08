@@ -1,22 +1,23 @@
-import { addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import { addFrameUsingScales, createMovableDot, getContext } from 'web-ui-common/canvas';
 import { el } from 'web-ui-common/dom';
+import type { Pair, Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
+import { viridis } from './color-maps';
 import { initTimeSliderWidget } from './time-slider';
+import { drawLineDataSpace } from './vector-field-view-common';
 
 // Declare tf as global from TensorFlow.js CDN
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const tf: any;
 
 /**
- * Generate Brownian motion paths using TensorFlow.js
- * Returns a 2D tensor of shape [numPaths, numSteps, 2] where each path has (x, y) coordinates
+ * Generate base noise for Brownian motion (without sigma scaling)
  */
-function generateBrownianMotion(
+function generateBrownianNoise(
   numPaths: number,
   numSteps: number,
-  dt: number,
-  sigma: number
+  dt: number
 ): number[][][] {
   /* eslint-disable @typescript-eslint/no-unsafe-return */
   /* eslint-disable @typescript-eslint/no-unsafe-call */
@@ -25,11 +26,35 @@ function generateBrownianMotion(
   return tf.tidy(() => {
     // Generate random increments for x and y coordinates
     // Shape: [numPaths, numSteps, 2]
-    const dW = tf.randomNormal([numPaths, numSteps, 2], 0, Math.sqrt(dt) * sigma);
+    const dW = tf.randomNormal([numPaths, numSteps, 2], 0, Math.sqrt(dt));
+
+    // Convert to array and return
+    return dW.arraySync() as number[][][];
+  });
+  /* eslint-enable @typescript-eslint/no-unsafe-return */
+  /* eslint-enable @typescript-eslint/no-unsafe-call */
+  /* eslint-enable @typescript-eslint/no-unsafe-member-access */
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
+}
+
+/**
+ * Generate Brownian motion paths from pre-generated noise
+ */
+function computeBrownianMotion(
+  noise: number[][][],
+  sigma: number
+): number[][][] {
+  /* eslint-disable @typescript-eslint/no-unsafe-return */
+  /* eslint-disable @typescript-eslint/no-unsafe-call */
+  /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+  return tf.tidy(() => {
+    // Convert noise to tensor and scale by sigma
+    const noiseTensor = tf.tensor(noise);
+    const scaledNoise = tf.mul(noiseTensor, sigma);
 
     // Compute cumulative sum to get Brownian motion paths
-    // Start all paths at origin [0, 0]
-    const cumulativeSum = tf.cumsum(dW, 1);
+    const cumulativeSum = tf.cumsum(scaledNoise, 1);
 
     // Convert to array and return
     return cumulativeSum.arraySync() as number[][][];
@@ -48,7 +73,8 @@ function drawBrownianPaths(
   paths: number[][][],
   xScale: (x: number) => number,
   yScale: (y: number) => number,
-  currentTime: number
+  currentTime: number,
+  showFullTrajectory: boolean
 ): void {
   const numSteps = paths[0].length;
   const currentStep = Math.floor(currentTime * numSteps);
@@ -63,15 +89,16 @@ function drawBrownianPaths(
     const [x0, y0] = path[0];
     ctx.moveTo(xScale(x0), yScale(y0));
 
-    // Draw up to current time step
-    for (let i = 1; i <= Math.min(currentStep, path.length - 1); i++) {
+    // Draw up to current time step, or full path if showFullTrajectory is true
+    const endStep = showFullTrajectory ? path.length - 1 : currentStep;
+    for (let i = 1; i <= Math.min(endStep, path.length - 1); i++) {
       const [x, y] = path[i];
       ctx.lineTo(xScale(x), yScale(y));
     }
 
     ctx.stroke();
 
-    // Draw endpoint as a dot
+    // Draw endpoint as a dot at current position
     if (currentStep < path.length) {
       const [x, y] = path[currentStep];
       ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
@@ -103,9 +130,10 @@ function setUpBrownianMotion(canvas: HTMLCanvasElement): void {
   const numPaths = 1;
   const numSteps = 200;
   const dt = 0.01;
-  const sigma = 1.0;
 
-  let paths = generateBrownianMotion(numPaths, numSteps, dt, sigma);
+  // Standard Brownian motion (no sigma parameter)
+  let brownianNoise = generateBrownianNoise(numPaths, numSteps, dt);
+  let paths = computeBrownianMotion(brownianNoise, 1.0);
   let currentTime = 0;
 
   function render(time: number): void {
@@ -114,26 +142,22 @@ function setUpBrownianMotion(canvas: HTMLCanvasElement): void {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw Brownian paths
-    drawBrownianPaths(ctx, paths, xScale, yScale, currentTime);
+    // Draw Brownian paths - always show full trajectory for standard Brownian motion
+    drawBrownianPaths(ctx, paths, xScale, yScale, currentTime, true);
 
     // Draw frame with axes
     addFrameUsingScales(ctx, xScale, yScale, 10);
   }
 
-  // Create controls container
-  const controlsContainer = document.createElement('div');
-  controlsContainer.style.marginTop = '16px';
-  container.appendChild(controlsContainer);
-
   // Initialize time slider with looping, autostart, and pause at end
-  initTimeSliderWidget(controlsContainer, currentTime, render, {
+  initTimeSliderWidget(container, currentTime, render, {
     loop: true,
     autostart: true,
     pauseAtEnd: 1000, // Pause for 1 second at the end
     onLoopStart: () => {
-      // Regenerate new path when loop restarts
-      paths = generateBrownianMotion(numPaths, numSteps, dt, sigma);
+      // Regenerate noise on each loop for standard Brownian motion
+      brownianNoise = generateBrownianNoise(numPaths, numSteps, dt);
+      paths = computeBrownianMotion(brownianNoise, 1.0);
     }
   });
 
@@ -141,9 +165,549 @@ function setUpBrownianMotion(canvas: HTMLCanvasElement): void {
   render(0);
 }
 
+/**
+ * Vector field for SDE: dx = drift(x, y, t) * dt + sigma * dW
+ * This is the same vector field as in vf.html
+ */
+function vectorField(
+  x: number,
+  y: number,
+  t: number,
+  xScale: Scale,
+  yScale: Scale
+): [number, number] {
+  const phase = t * Math.PI * 2;
+  const dataWidth = xScale.domain[1];
+  const dataHeight = yScale.domain[1];
+
+  // Strong left-to-right base flow
+  const baseFlowX = 1.0 + 0.3 * Math.sin(phase * 0.4);
+  const baseFlowY = 0.2 * Math.sin(y / 100 + phase * 0.3);
+
+  // Partial vortices - more like eddies that deflect the main flow
+  const eddies = [
+    { x: dataWidth * 0.25, y: dataHeight * 0.3, strength: 0.6, rotation: 1 },
+    { x: dataWidth * 0.6, y: dataHeight * 0.7, strength: 0.5, rotation: -1 },
+    { x: dataWidth * 0.8, y: dataHeight * 0.2, strength: 0.4, rotation: 1 }
+  ];
+
+  // One strong singular whirl
+  const whirlX = dataWidth * 0.45;
+  const whirlY = dataHeight * 0.55;
+  const whirlStrength = 1.4;
+
+  let eddyX = 0;
+  let eddyY = 0;
+
+  // Add eddy contributions (weaker than full vortices)
+  for (const eddy of eddies) {
+    const dx = x - eddy.x;
+    const dy = y - eddy.y;
+    const r = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+
+    if (r > 5) {
+      const strength = eddy.strength * Math.exp(-r / 80) * (1 + 0.4 * Math.sin(phase + angle * 2));
+      eddyX += -strength * Math.sin(angle) * eddy.rotation;
+      eddyY += strength * Math.cos(angle) * eddy.rotation;
+    }
+  }
+
+  // Add the strong singular whirl
+  const whirlDx = x - whirlX;
+  const whirlDy = y - whirlY;
+  const whirlR = Math.sqrt(whirlDx * whirlDx + whirlDy * whirlDy);
+  const whirlAngle = Math.atan2(whirlDy, whirlDx);
+  let whirlVx = 0;
+  let whirlVy = 0;
+
+  if (whirlR > 8) {
+    const whirlForce = whirlStrength * Math.exp(-whirlR / 70) *
+      (1 + 0.6 * Math.sin(phase * 1.1 + whirlAngle));
+    whirlVx = -whirlForce * Math.sin(whirlAngle);
+    whirlVy = whirlForce * Math.cos(whirlAngle);
+  }
+
+  // Wavy perturbations that follow the main flow direction
+  const waveX = 0.8 * Math.sin(y / 70 + phase * 0.6) * Math.cos(x / 90);
+  const waveY = 0.6 * Math.cos(x / 80 + phase * 0.5) * Math.sin(y / 110);
+
+  // Vertical up-down currents at specific x positions
+  let verticalY = 0;
+
+  // First vertical current around x = 30% of data width
+  const current1X = dataWidth * 0.3;
+  const dist1 = Math.abs(x - current1X);
+  if (dist1 < 120) {
+    const strength1 = Math.exp(-dist1 / 60) * (1 + 0.5 * Math.sin(phase * 0.8));
+    verticalY += 1.2 * strength1 * Math.sin(y / 50 + phase);
+  }
+
+  // Second vertical current around x = 70% of data width
+  const current2X = dataWidth * 0.7;
+  const dist2 = Math.abs(x - current2X);
+  if (dist2 < 100) {
+    const strength2 = Math.exp(-dist2 / 50) * (1 + 0.3 * Math.cos(phase * 1.2));
+    verticalY += -0.9 * strength2 * Math.cos(y / 60 + phase * 1.5);
+  }
+
+  return [
+    (baseFlowX + eddyX + whirlVx + waveX) * 90,
+    (baseFlowY + eddyY + whirlVy + waveY + verticalY) * 90
+  ];
+}
+
+/**
+ * Draw the vector field (same as vf.html)
+ */
+function drawVectorField(
+  ctx: CanvasRenderingContext2D,
+  xScale: Scale,
+  yScale: Scale,
+  t: number
+): void {
+  const spacing = 40; // Spacing in data space
+  const displayScale = 0.15;
+  const vectors: { x: number; y: number; vx: number; vy: number; length: number }[] = [];
+  let maxLength = 0;
+
+  // Get data domain from scales
+  const [xMin, xMax] = xScale.domain;
+  const [yMin, yMax] = yScale.domain;
+
+  // Compute all vectors and find max magnitude
+  for (let x = xMin; x <= xMax; x += spacing) {
+    for (let y = yMin; y <= yMax; y += spacing) {
+      const [vx, vy] = vectorField(x, y, t, xScale, yScale);
+      const length = Math.sqrt(vx * vx + vy * vy);
+      maxLength = Math.max(maxLength, length);
+      vectors.push({ x, y, vx, vy, length });
+    }
+  }
+
+  // Draw all vectors with viridis coloring in data space
+  for (const { x, y, vx, vy, length } of vectors) {
+    // Scale velocity for display
+    const displayVx = vx * displayScale;
+    const displayVy = vy * displayScale;
+
+    // Color based on magnitude (normalized by max)
+    const normalized = maxLength > 0 ? length / maxLength : 0;
+    const color = viridis(normalized);
+
+    // Draw arrow in data space
+    const endX = x + displayVx;
+    const endY = y + displayVy;
+
+    drawLineDataSpace(ctx, xScale, yScale, x, y, endX, endY, color, 1.5);
+  }
+}
+
+/**
+ * Calculate deterministic trajectory (no noise)
+ * dx = vectorField(x, y, t) * dt
+ */
+function calculateDeterministicTrajectory(
+  startPos: Pair<number>,
+  xScale: Scale,
+  yScale: Scale,
+  numSteps: number
+): Pair<number>[] {
+  const trajectory: Pair<number>[] = [];
+  let [x, y] = startPos;
+  const dt = 1.0 / numSteps;
+
+  for (let i = 0; i <= numSteps; i++) {
+    trajectory.push([x, y]);
+
+    if (i < numSteps) {
+      const t = i * dt;
+      const [vx, vy] = vectorField(x, y, t, xScale, yScale);
+      x += vx * dt;
+      y += vy * dt;
+
+      // Stop if trajectory goes off canvas
+      const [xMin, xMax] = xScale.domain;
+      const [yMin, yMax] = yScale.domain;
+      if (x < xMin || x > xMax || y < yMin || y > yMax) {
+        break;
+      }
+    }
+  }
+
+  return trajectory;
+}
+
+/**
+ * Generate noise for SDE simulation
+ */
+function generateNoise(numSteps: number, dt: number): Pair<number>[] {
+  /* eslint-disable @typescript-eslint/no-unsafe-call */
+  /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+  /* eslint-disable @typescript-eslint/no-unsafe-argument */
+  const noise: Pair<number>[] = [];
+
+  for (let i = 0; i < numSteps; i++) {
+    const dWx = tf.randomNormal([1], 0, Math.sqrt(dt)).arraySync()[0];
+    const dWy = tf.randomNormal([1], 0, Math.sqrt(dt)).arraySync()[0];
+    noise.push([dWx, dWy]);
+  }
+  /* eslint-enable @typescript-eslint/no-unsafe-call */
+  /* eslint-enable @typescript-eslint/no-unsafe-member-access */
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
+  /* eslint-enable @typescript-eslint/no-unsafe-argument */
+
+  return noise;
+}
+
+/**
+ * Solve SDE using Euler-Maruyama method with pre-generated noise
+ * dx = vectorField(x, y, t) * dt + sigma * dW
+ */
+function solveSDE(
+  startPos: Pair<number>,
+  xScale: Scale,
+  yScale: Scale,
+  numSteps: number,
+  sigma: number,
+  noise: Pair<number>[]
+): Pair<number>[] {
+  const path: Pair<number>[] = [startPos];
+  let [x, y] = startPos;
+  const dt = 1.0 / numSteps;
+
+  for (let i = 0; i < numSteps; i++) {
+    const t = i * dt;
+    const [vx, vy] = vectorField(x, y, t, xScale, yScale);
+
+    // Use pre-generated noise scaled by sigma
+    const [dWx, dWy] = noise[i];
+
+    // Euler-Maruyama step: x_{t+dt} = x_t + drift * dt + sigma * dW
+    x = x + vx * dt + sigma * dWx;
+    y = y + vy * dt + sigma * dWy;
+
+    path.push([x, y]);
+
+    // Stop if trajectory goes off canvas
+    const [xMin, xMax] = xScale.domain;
+    const [yMin, yMax] = yScale.domain;
+    if (x < xMin || x > xMax || y < yMin || y > yMax) {
+      break;
+    }
+  }
+
+  return path;
+}
+
+/**
+ * Draw a trajectory
+ */
+function drawTrajectory(
+  ctx: CanvasRenderingContext2D,
+  path: Pair<number>[],
+  xScale: (x: number) => number,
+  yScale: (y: number) => number,
+  color: string,
+  lineWidth: number
+): void {
+  if (path.length < 2) {return;}
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+
+  const [x0, y0] = path[0];
+  ctx.moveTo(xScale(x0), yScale(y0));
+
+  for (let i = 1; i < path.length; i++) {
+    const [x, y] = path[i];
+    ctx.lineTo(xScale(x), yScale(y));
+  }
+
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * Set up SDE visualization with drift field
+ */
+function setUpSDEVisualization(canvas: HTMLCanvasElement): void {
+  const ctx = getContext(canvas);
+  const container = canvas.parentElement;
+  if (!container) {
+    throw new Error('Canvas must have a parent element');
+  }
+
+  // Define coordinate system (same as vf.html)
+  const xRange = [0, 400] as [number, number];
+  const yRange = [0, 300] as [number, number];
+  const margins = { top: 20, right: 20, bottom: 40, left: 40 };
+  const xScale = makeScale(xRange, [margins.left, canvas.width - margins.right]);
+  const yScale = makeScale(yRange, [canvas.height - margins.bottom, margins.top]);
+
+  // Parameters
+  const numSteps = 500;
+  const dt = 1.0 / numSteps;
+  let sigma = 5.0;
+
+  let dotPosition: Pair<number> | null = null;
+  let deterministicTrajectory: Pair<number>[] = [];
+  let stochasticTrajectory: Pair<number>[] = [];
+  let storedNoise: Pair<number>[] = generateNoise(numSteps, dt);
+  let currentTime = 0;
+  let showDeterministic = true;
+  let showStochastic = true;
+
+  function render(time: number): void {
+    currentTime = time;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw vector field
+    drawVectorField(ctx, xScale, yScale, currentTime);
+
+    // Draw deterministic trajectory if enabled
+    if (showDeterministic && dotPosition && deterministicTrajectory.length > 0) {
+      drawTrajectory(ctx, deterministicTrajectory, xScale, yScale, '#888', 2);
+    }
+
+    // Draw stochastic trajectory if enabled
+    if (showStochastic && dotPosition && stochasticTrajectory.length > 0) {
+      drawTrajectory(ctx, stochasticTrajectory, xScale, yScale, '#2196F3', 2);
+    }
+
+    // Draw frame with axes
+    addFrameUsingScales(ctx, xScale, yScale, 10);
+
+    // Draw dot at current position along trajectory
+    if (dotPosition) {
+      let currentPos: Pair<number>;
+
+      if (showStochastic && stochasticTrajectory.length > 0) {
+        const trajectoryIndex = Math.min(
+          Math.floor(currentTime * (stochasticTrajectory.length - 1)),
+          stochasticTrajectory.length - 1
+        );
+        currentPos = stochasticTrajectory[trajectoryIndex];
+      } else if (showDeterministic && deterministicTrajectory.length > 0) {
+        const trajectoryIndex = Math.min(
+          Math.floor(currentTime * (deterministicTrajectory.length - 1)),
+          deterministicTrajectory.length - 1
+        );
+        currentPos = deterministicTrajectory[trajectoryIndex];
+      } else {
+        currentPos = dotPosition;
+      }
+
+      dot.render(currentPos);
+    }
+  }
+
+  // Create controls container
+  const controlsContainer = document.createElement('div');
+  controlsContainer.style.display = 'flex';
+  controlsContainer.style.gap = '40px';
+  controlsContainer.style.marginTop = '16px';
+  container.appendChild(controlsContainer);
+
+  // Left column: sliders
+  const slidersColumn = document.createElement('div');
+  controlsContainer.appendChild(slidersColumn);
+
+  // Right column: checkboxes
+  const checkboxesColumn = document.createElement('div');
+  checkboxesColumn.style.display = 'flex';
+  checkboxesColumn.style.flexDirection = 'column';
+  checkboxesColumn.style.gap = '8px';
+  controlsContainer.appendChild(checkboxesColumn);
+
+  // Initialize time slider
+  const sliderControls = initTimeSliderWidget(slidersColumn, currentTime, render, {
+    loop: true,
+    autostart: true,
+    pauseAtEnd: 1000,
+    onLoopStart: () => {
+      // Just loop, don't regenerate noise automatically
+    }
+  });
+
+  // Add sigma slider
+  const sigmaSliderContainer = document.createElement('div');
+  sigmaSliderContainer.style.marginTop = '16px';
+  slidersColumn.appendChild(sigmaSliderContainer);
+
+  const sigmaLabel = document.createElement('label');
+  sigmaLabel.textContent = 'Diffusion coefficient σ(t): ';
+  sigmaSliderContainer.appendChild(sigmaLabel);
+
+  const sigmaSlider = document.createElement('input');
+  sigmaSlider.type = 'range';
+  sigmaSlider.min = '0';
+  sigmaSlider.max = '20';
+  sigmaSlider.step = '0.5';
+  sigmaSlider.value = sigma.toString();
+  sigmaSlider.style.width = '320px';
+  sigmaSlider.style.marginLeft = '8px';
+  sigmaSliderContainer.appendChild(sigmaSlider);
+
+  const sigmaValue = document.createElement('span');
+  sigmaValue.textContent = sigma.toFixed(1);
+  sigmaValue.style.marginLeft = '8px';
+  sigmaSliderContainer.appendChild(sigmaValue);
+
+  let wasPlaying = false;
+
+  sigmaSlider.addEventListener('mousedown', () => {
+    // Store playing state and pause
+    const playPauseBtn = controlsContainer.querySelector('button');
+    wasPlaying = playPauseBtn?.textContent === 'Pause';
+    if (wasPlaying && playPauseBtn) {
+      playPauseBtn.click();
+    }
+  });
+
+  sigmaSlider.addEventListener('input', () => {
+    sigma = parseFloat(sigmaSlider.value);
+    sigmaValue.textContent = sigma.toFixed(1);
+
+    // Recalculate trajectory with same noise, different sigma
+    if (dotPosition) {
+      stochasticTrajectory = solveSDE(dotPosition, xScale, yScale, numSteps, sigma, storedNoise);
+    }
+
+    currentTime = 0;
+    sliderControls.update(0);
+    render(0);
+  });
+
+  sigmaSlider.addEventListener('mouseup', () => {
+    // Resume if it was playing
+    if (wasPlaying) {
+      const playPauseBtn = controlsContainer.querySelector('button');
+      if (playPauseBtn?.textContent === 'Play') {
+        playPauseBtn.click();
+      }
+    }
+  });
+
+  // Add regenerate noise button
+  const regenerateButtonContainer = document.createElement('div');
+  regenerateButtonContainer.style.marginTop = '16px';
+  slidersColumn.appendChild(regenerateButtonContainer);
+
+  const regenerateButton = document.createElement('button');
+  regenerateButton.textContent = 'Regenerate noise';
+  regenerateButton.style.padding = '4px 12px';
+  regenerateButtonContainer.appendChild(regenerateButton);
+
+  regenerateButton.addEventListener('click', () => {
+    // Generate new noise
+    storedNoise = generateNoise(numSteps, dt);
+
+    // Recalculate stochastic trajectory with new noise
+    if (dotPosition) {
+      stochasticTrajectory = solveSDE(dotPosition, xScale, yScale, numSteps, sigma, storedNoise);
+    }
+
+    currentTime = 0;
+    sliderControls.update(0);
+    render(0);
+  });
+
+  // Add checkbox for deterministic trajectory
+  const detCheckboxContainer = document.createElement('div');
+  detCheckboxContainer.style.display = 'flex';
+  detCheckboxContainer.style.alignItems = 'center';
+  checkboxesColumn.appendChild(detCheckboxContainer);
+
+  const detCheckbox = document.createElement('input');
+  detCheckbox.type = 'checkbox';
+  detCheckbox.id = 'show-deterministic';
+  detCheckbox.checked = showDeterministic;
+  detCheckboxContainer.appendChild(detCheckbox);
+
+  const detLabel = document.createElement('label');
+  detLabel.htmlFor = 'show-deterministic';
+  detLabel.textContent = ' Deterministic trajectory';
+  detLabel.style.marginLeft = '4px';
+  detLabel.style.cursor = 'pointer';
+  detCheckboxContainer.appendChild(detLabel);
+
+  detCheckbox.addEventListener('change', () => {
+    showDeterministic = detCheckbox.checked;
+    render(currentTime);
+  });
+
+  // Add checkbox for stochastic trajectory
+  const stochCheckboxContainer = document.createElement('div');
+  stochCheckboxContainer.style.display = 'flex';
+  stochCheckboxContainer.style.alignItems = 'center';
+  checkboxesColumn.appendChild(stochCheckboxContainer);
+
+  const stochCheckbox = document.createElement('input');
+  stochCheckbox.type = 'checkbox';
+  stochCheckbox.id = 'show-stochastic';
+  stochCheckbox.checked = showStochastic;
+  stochCheckboxContainer.appendChild(stochCheckbox);
+
+  const stochLabel = document.createElement('label');
+  stochLabel.htmlFor = 'show-stochastic';
+  stochLabel.textContent = ' Stochastic trajectory (with Brownian motion)';
+  stochLabel.style.marginLeft = '4px';
+  stochLabel.style.cursor = 'pointer';
+  stochCheckboxContainer.appendChild(stochLabel);
+
+  stochCheckbox.addEventListener('change', () => {
+    showStochastic = stochCheckbox.checked;
+    render(currentTime);
+  });
+
+  // Create movable dot
+  const dot = createMovableDot(
+    canvas,
+    ctx,
+    xScale,
+    yScale,
+    [0, 0],
+    {
+      radius: 6,
+      fill: '#FF5722',
+      onChange: (newPosition: Pair<number>) => {
+        dotPosition = newPosition;
+        deterministicTrajectory = calculateDeterministicTrajectory(
+          dotPosition,
+          xScale,
+          yScale,
+          numSteps
+        );
+        stochasticTrajectory = solveSDE(dotPosition, xScale, yScale, numSteps, sigma, storedNoise);
+
+        currentTime = 0;
+        sliderControls.update(0);
+        render(0);
+      }
+    }
+  );
+
+  // Set initial dot position
+  dotPosition = [90, 90];
+  deterministicTrajectory = calculateDeterministicTrajectory(dotPosition, xScale, yScale, numSteps);
+  stochasticTrajectory = solveSDE(dotPosition, xScale, yScale, numSteps, sigma, storedNoise);
+
+  // Initial render
+  render(0);
+}
+
 function run(): void {
-  const canvas = el(document, '#wiener-canvas') as HTMLCanvasElement;
-  setUpBrownianMotion(canvas);
+  const brownianCanvas = el(document, '#brownian-canvas') as HTMLCanvasElement;
+  const sdeCanvas = el(document, '#sde-canvas') as HTMLCanvasElement;
+
+  setUpBrownianMotion(brownianCanvas);
+  setUpSDEVisualization(sdeCanvas);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

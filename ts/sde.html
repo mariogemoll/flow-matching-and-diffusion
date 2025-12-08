@@ -1,14 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Brownian Motion / Wiener Process</title>
+    <title>Stochastic Differential Equations</title>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 </head>
 <body>
-    <h1>Brownian Motion / Wiener Process</h1>
+    <h1>Stochastic Differential Equations (SDEs)</h1>
     <section>
-        <canvas id="wiener-canvas" width="800" height="600" style="width: 800px; height: 600px;"></canvas>
+        <h2>Brownian Motion (Pure Diffusion)</h2>
+        <canvas id="brownian-canvas" width="800" height="600" style="width: 800px; height: 600px;"></canvas>
     </section>
-    <script type="module" src="dist/wiener.js"></script>
+    <section style="margin-top: 40px;">
+        <h2>SDE with Drift and Diffusion</h2>
+        <canvas id="sde-canvas" width="800" height="600" style="width: 800px; height: 600px;"></canvas>
+    </section>
+    <script type="module" src="dist/sde.js"></script>
 </body>
 </html>
