@@ -2,6 +2,8 @@ export interface TimeSliderOptions {
   loop?: boolean;
   autostart?: boolean;
   steps?: number; // Number of discrete steps (undefined = continuous)
+  pauseAtEnd?: number; // Pause duration in milliseconds before looping
+  onLoopStart?: () => void | Promise<void>; // Callback when loop restarts
 }
 
 export interface TimeSliderControls {
@@ -15,7 +17,13 @@ export function initTimeSliderWidget(
   onChange: (time: number) => void,
   options: TimeSliderOptions = {}
 ): TimeSliderControls {
-  const { loop = false, autostart = false, steps: initialSteps } = options;
+  const {
+    loop = false,
+    autostart = false,
+    steps: initialSteps,
+    pauseAtEnd = 0,
+    onLoopStart
+  } = options;
   let steps = initialSteps;
   // Create time slider container
   const sliderDiv = document.createElement('div');
@@ -53,6 +61,7 @@ export function initTimeSliderWidget(
   let currentTime = initialTime;
   let isPlaying = false;
   let animationId: number | null = null;
+  let isPaused = false;
 
   // Time slider event handler
   timeSlider.addEventListener('input', () => {
@@ -69,8 +78,34 @@ export function initTimeSliderWidget(
   let lastStepTime = 0;
   const totalAnimationDuration = 1667; // ~1.67 seconds to match continuous mode (100 frames @60fps)
 
+  async function handleLoopRestart(): Promise<void> {
+    if (pauseAtEnd > 0) {
+      isPaused = true;
+      await new Promise(resolve => setTimeout(resolve, pauseAtEnd));
+      isPaused = false;
+    }
+
+    if (onLoopStart) {
+      await onLoopStart();
+    }
+
+    currentTime = 0;
+    if (steps !== undefined) {
+      timeSlider.value = '0';
+    } else {
+      timeSlider.value = '0';
+    }
+    timeValue.textContent = '0.00';
+    onChange(currentTime);
+  }
+
   function animate(timestamp: number): void {
-    if (!isPlaying) {return;}
+    if (!isPlaying || isPaused) {
+      if (isPlaying && !isPaused) {
+        animationId = requestAnimationFrame(animate);
+      }
+      return;
+    }
 
     if (steps !== undefined) {
       // Discrete mode: advance by one step with timing control
@@ -90,7 +125,12 @@ export function initTimeSliderWidget(
 
         if (nextStep > steps) {
           if (loop) {
-            currentTime = 0;
+            void handleLoopRestart().then(() => {
+              if (isPlaying) {
+                animationId = requestAnimationFrame(animate);
+              }
+            });
+            return;
           } else {
             currentTime = 1;
             isPlaying = false;
@@ -114,10 +154,19 @@ export function initTimeSliderWidget(
       // Continuous mode
       currentTime += 0.01;
       if (currentTime >= 1) {
+        currentTime = 1;
+        timeSlider.value = currentTime.toString();
+        timeValue.textContent = currentTime.toFixed(2);
+        onChange(currentTime);
+
         if (loop) {
-          currentTime = 0; // Loop back to start
+          void handleLoopRestart().then(() => {
+            if (isPlaying) {
+              animationId = requestAnimationFrame(animate);
+            }
+          });
+          return;
         } else {
-          currentTime = 1;
           isPlaying = false;
           playPauseBtn.textContent = 'Play';
           if (animationId !== null) {
@@ -125,6 +174,7 @@ export function initTimeSliderWidget(
             animationId = null;
           }
         }
+        return;
       }
 
       timeSlider.value = currentTime.toString();
@@ -132,9 +182,7 @@ export function initTimeSliderWidget(
       onChange(currentTime);
     }
 
-    if (isPlaying) {
-      animationId = requestAnimationFrame(animate);
-    }
+    animationId = requestAnimationFrame(animate);
   }
 
   playPauseBtn.addEventListener('click', () => {
