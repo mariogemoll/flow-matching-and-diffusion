@@ -205,10 +205,9 @@ function drawVectorField(
   }
 }
 
-function setUpVectorField(): void {
-  const canvas = el(document, '#vf-canvas') as HTMLCanvasElement;
+function setUpVectorField(canvas: HTMLCanvasElement): void {
   const ctx = getContext(canvas);
-  const container = el(document, 'body') as HTMLElement;
+  const container = canvas.parentElement as HTMLElement;
 
   const xRange = [0, 800] as [number, number];
   const yRange = [0, 600] as [number, number];
@@ -316,7 +315,11 @@ function setUpVectorField(): void {
 }
 
 function run(): void {
-  setUpVectorField();
+  const canvas1 = el(document, '#vf-canvas') as HTMLCanvasElement;
+  const canvas2 = el(document, '#vf-canvas2') as HTMLCanvasElement;
+
+  setUpVectorField(canvas1);
+  setUpVectorField(canvas2);
 }
 
 run();
