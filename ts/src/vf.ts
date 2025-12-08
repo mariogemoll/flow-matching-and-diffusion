@@ -4,6 +4,7 @@ import type { Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
+import { initTimeSliderWidget } from './time-slider';
 import { drawLineDataSpace } from './vector-field-view-common';
 
 /**
@@ -147,6 +148,7 @@ function drawVectorField(
 function setUpVectorField(): void {
   const canvas = el(document, '#vf-canvas') as HTMLCanvasElement;
   const ctx = getContext(canvas);
+  const container = el(document, 'body') as HTMLElement;
 
   const xRange = [0, 800] as [number, number];
   const yRange = [0, 600] as [number, number];
@@ -154,14 +156,26 @@ function setUpVectorField(): void {
   const xScale = makeScale(xRange, [margins.left, canvas.width - margins.right]);
   const yScale = makeScale(yRange, [canvas.height - margins.bottom, margins.top]);
 
-  // Clear canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let currentTime = 0;
 
-  // Draw the vector field at t=0
-  drawVectorField(ctx, xScale, yScale, 0);
+  function render(time: number): void {
+    currentTime = time;
 
-  // Draw frame with axes
-  addFrameUsingScales(ctx, xScale, yScale, 10);
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw the vector field
+    drawVectorField(ctx, xScale, yScale, currentTime);
+
+    // Draw frame with axes
+    addFrameUsingScales(ctx, xScale, yScale, 10);
+  }
+
+  // Initialize time slider with animation controls
+  initTimeSliderWidget(container, currentTime, render);
+
+  // Initial render
+  render(0);
 }
 
 function run(): void {
