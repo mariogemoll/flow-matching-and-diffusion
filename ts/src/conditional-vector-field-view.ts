@@ -73,16 +73,14 @@ export function initVectorFieldView(
   const { updateButtonStates } = createSampleButtons({
     container,
     onSample: () => {
-      if (Math.abs(currentTime) < 0.01) {
-        const { initialSamples, pixelSamples } = sampleStandardNormalPoints({
-          count: NUM_SAMPLES,
-          xScale,
-          yScale
-        });
-        vectorFieldInitialSamples = initialSamples;
-        vectorFieldSampledPoints = pixelSamples;
-        update(currentPosition, currentTime, currentScheduler);
-      }
+      const { initialSamples, pixelSamples } = sampleStandardNormalPoints({
+        count: NUM_SAMPLES,
+        xScale,
+        yScale
+      });
+      vectorFieldInitialSamples = initialSamples;
+      vectorFieldSampledPoints = pixelSamples;
+      update(currentPosition, currentTime, currentScheduler);
     },
     onClear: () => {
       vectorFieldSampledPoints = [];
