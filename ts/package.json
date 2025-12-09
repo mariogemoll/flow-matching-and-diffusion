@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/vf.ts src/sde.ts src/score.ts --bundle --outdir=dist"
+    "build": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/vf.ts src/sde.ts src/score.ts src/framework.ts --bundle --outdir=dist"
   },
   "exports": {
     "./conditional": "./src/conditional.ts",
