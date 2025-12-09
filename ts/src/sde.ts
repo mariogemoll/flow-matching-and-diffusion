@@ -4,6 +4,7 @@ import type { Pair, Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
+import { generateBrownianNoise as generateNoiseForSDE } from './conditional-trajectory-logic';
 import { initTimeSliderWidget } from './time-slider';
 import { drawLineDataSpace } from './vector-field-view-common';
 
@@ -338,28 +339,6 @@ function calculateDeterministicTrajectory(
   return trajectory;
 }
 
-/**
- * Generate noise for SDE simulation
- */
-function generateNoise(numSteps: number, dt: number): Pair<number>[] {
-  /* eslint-disable @typescript-eslint/no-unsafe-call */
-  /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-  /* eslint-disable @typescript-eslint/no-unsafe-argument */
-  const noise: Pair<number>[] = [];
-
-  for (let i = 0; i < numSteps; i++) {
-    const dWx = tf.randomNormal([1], 0, Math.sqrt(dt)).arraySync()[0];
-    const dWy = tf.randomNormal([1], 0, Math.sqrt(dt)).arraySync()[0];
-    noise.push([dWx, dWy]);
-  }
-  /* eslint-enable @typescript-eslint/no-unsafe-call */
-  /* eslint-enable @typescript-eslint/no-unsafe-member-access */
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment */
-  /* eslint-enable @typescript-eslint/no-unsafe-argument */
-
-  return noise;
-}
 
 /**
  * Solve SDE using Euler-Maruyama method with pre-generated noise
@@ -456,7 +435,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement): void {
   let dotPosition: Pair<number> | null = null;
   let deterministicTrajectory: Pair<number>[] = [];
   let stochasticTrajectory: Pair<number>[] = [];
-  let storedNoise: Pair<number>[] = generateNoise(numSteps, dt);
+  let storedNoise: Pair<number>[] = generateNoiseForSDE(numSteps, dt);
   let currentTime = 0;
   let showDeterministic = true;
   let showStochastic = true;
@@ -606,7 +585,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement): void {
 
   regenerateButton.addEventListener('click', () => {
     // Generate new noise
-    storedNoise = generateNoise(numSteps, dt);
+    storedNoise = generateNoiseForSDE(numSteps, dt);
 
     // Recalculate stochastic trajectory with new noise
     if (dotPosition) {
