@@ -1,5 +1,8 @@
 import { el } from 'web-ui-common/dom';
+import type { Pair } from 'web-ui-common/types';
 
+import { initConditionalProbabilityPathView } from './conditional-probability-path-view';
+import { makeConstantVarianceScheduler } from './math/noise-scheduler';
 import { initTimeSliderWidget } from './time-slider';
 
 interface NumberWidgetControls {
@@ -44,15 +47,39 @@ function run(): void {
   widgetRow.className = 'widget-container';
   widgetsContainer.appendChild(widgetRow);
 
-  // Initialize three number widgets
-  const widget1 = initNumberWidget(widgetRow, 'Widget 1', 0);
+  // Initialize conditional probability path view (first widget)
+  const initialPosition: Pair<number> = [0, 0];
+  const initialTime = 0;
+  const scheduler = makeConstantVarianceScheduler();
+
+  const condProbContainer = document.createElement('div');
+  widgetRow.appendChild(condProbContainer);
+
+  let currentPosition = initialPosition;
+  const updateCondProbView = initConditionalProbabilityPathView(
+    condProbContainer,
+    initialPosition,
+    initialTime,
+    scheduler,
+    (newPosition: Pair<number>) => {
+      currentPosition = newPosition;
+      // Re-render with current time when position changes
+      updateCondProbView(currentPosition, currentTime, scheduler);
+    }
+  );
+
+  // Initialize two number widgets
   const widget2 = initNumberWidget(widgetRow, 'Widget 2', 0);
   const widget3 = initNumberWidget(widgetRow, 'Widget 3', 0);
 
+  let currentTime = initialTime;
+
   // Update function that will be called when time changes
   function updateWidgets(time: number): void {
-    // Widget 1: displays the time value
-    widget1.update(time);
+    currentTime = time;
+
+    // Update conditional probability path view
+    updateCondProbView(currentPosition, currentTime, scheduler);
 
     // Widget 2: displays a sine wave based on time
     const value2 = Math.sin(time * Math.PI * 2);
