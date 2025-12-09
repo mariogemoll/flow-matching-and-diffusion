@@ -29,8 +29,14 @@ export function initVectorFieldView(
   initialPosition: Pair<number>,
   initialTime: number,
   initialScheduler: NoiseScheduler,
-  onChange: (position: Pair<number>) => void
+  onChange: (position: Pair<number>) => void,
+  options?: {
+    autoSample?: boolean;
+    showTrajectories?: boolean;
+  }
 ): (position: Pair<number>, time: number, scheduler: NoiseScheduler) => void {
+  const opts = options ?? {};
+
   // Add a canvas element to the container
   const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
   const ctx = getContext(canvas);
@@ -47,7 +53,7 @@ export function initVectorFieldView(
   let vectorFieldInitialSamples: [number, number][] = [];
   let precomputedTrajectories: Pair<number>[][] = [];
   let globalMaxVectorLength = 0;
-  let showTrajectories = false;
+  let showTrajectories = opts.showTrajectories ?? false;
 
   // Create movable dot for the data point
   const dot = createMovableDot(
@@ -229,6 +235,15 @@ export function initVectorFieldView(
 
   // Initial computation
   recomputeGlobalMaxVectorLength();
+  if (opts.autoSample === true) {
+    const { initialSamples, pixelSamples } = sampleStandardNormalPoints({
+      count: NUM_SAMPLES,
+      xScale,
+      yScale
+    });
+    vectorFieldInitialSamples = initialSamples;
+    vectorFieldSampledPoints = pixelSamples;
+  }
   update(initialPosition, initialTime, initialScheduler);
   updateButtonStates(currentTime, vectorFieldInitialSamples.length > 0);
 

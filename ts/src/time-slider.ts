@@ -76,7 +76,8 @@ export function initTimeSliderWidget(
   });
 
   let lastStepTime = 0;
-  const totalAnimationDuration = 1667; // ~1.67 seconds to match continuous mode (100 frames @60fps)
+  let animationStartTime = 0;
+  const totalAnimationDuration = 4000; // 4 seconds for full animation (0 to 1)
 
   async function handleLoopRestart(): Promise<void> {
     if (pauseAtEnd > 0) {
@@ -153,8 +154,15 @@ export function initTimeSliderWidget(
         onChange(currentTime);
       }
     } else {
-      // Continuous mode
-      currentTime += 0.01;
+      // Continuous mode: wall-time based
+      if (animationStartTime === 0) {
+        animationStartTime = timestamp;
+      }
+
+      const elapsed = timestamp - animationStartTime;
+      const progress = elapsed / totalAnimationDuration;
+      currentTime = Math.min(progress, 1);
+
       if (currentTime >= 1) {
         currentTime = 1;
         timeSlider.value = currentTime.toString();
@@ -164,6 +172,7 @@ export function initTimeSliderWidget(
         if (loop) {
           void handleLoopRestart().then(() => {
             if (isPlaying) {
+              animationStartTime = 0; // Reset for next loop
               animationId = requestAnimationFrame(animate);
             }
           });
@@ -175,6 +184,7 @@ export function initTimeSliderWidget(
             cancelAnimationFrame(animationId);
             animationId = null;
           }
+          animationStartTime = 0;
         }
         return;
       }
@@ -204,11 +214,13 @@ export function initTimeSliderWidget(
         onChange(currentTime);
       }
       lastStepTime = 0; // Reset timing
+      animationStartTime = 0; // Reset wall-time start
       animationId = requestAnimationFrame(animate);
     } else if (animationId !== null) {
       cancelAnimationFrame(animationId);
       animationId = null;
       lastStepTime = 0;
+      animationStartTime = 0;
     }
   });
 

@@ -1,171 +1,89 @@
-import {
-  addDot, addFrameUsingScales, defaultMargins, getContext
-} from 'web-ui-common/canvas';
-import { addCanvas, el } from 'web-ui-common/dom';
+import { el } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
-import { makeScale } from 'web-ui-common/util';
 
-import { initConditionalProbabilityPathView } from './conditional-probability-path-view';
-import { sampleStandardNormalPoints } from './conditional-tfjs-logic';
-import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
-import { makeConstantVarianceScheduler, type NoiseScheduler } from './math/noise-scheduler';
+import { initConditionalProbabilityPath } from './conditional-probability-path';
+import { initVectorFieldView } from './conditional-vector-field-view';
+import { createFrameworkController } from './framework-controller';
+import {
+  makeCircularCircularScheduler,
+  makeConstantVarianceScheduler,
+  makeInverseSqrtNoiseScheduler,
+  makeLinearNoiseScheduler,
+  makeSqrtNoiseScheduler,
+  makeSqrtSqrtScheduler,
+  type NoiseScheduler
+} from './math/noise-scheduler';
+import { initSchedulerSelectionWidget } from './scheduler-selection';
+import { initSchedulerVisualizationWidget } from './scheduler-visualization';
 import { initTimeSliderWidget } from './time-slider';
 
-const CANVAS_WIDTH = 480;
-const CANVAS_HEIGHT = 360;
-const ORANGE = '#ff6200ff';
-const NUM_TIME_STEPS = 100;
-
-interface PrecomputedVectorFieldControls {
-  updatePosition: (position: Pair<number>) => void;
-  updateTime: (time: number) => void;
+interface ScoreParamState extends Record<string, unknown> {
+  time: number;
+  position: Pair<number>;
+  scheduler: NoiseScheduler;
+  schedulerType: string;
 }
 
-function initPrecomputedVectorFieldView(
-  container: HTMLElement,
-  initialPosition: Pair<number>,
-  scheduler: NoiseScheduler
-): PrecomputedVectorFieldControls {
-  // Add a canvas element to the container
-  const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
-  const ctx = getContext(canvas);
-
-  const xRange = [-4, 4] as [number, number];
-  const yRange = [-3, 3] as [number, number];
-  const xScale = makeScale(xRange, [defaultMargins.left, CANVAS_WIDTH - defaultMargins.right]);
-  const yScale = makeScale(yRange, [CANVAS_HEIGHT - defaultMargins.bottom, defaultMargins.top]);
-
-  let currentPosition = initialPosition;
-  let currentTime = 0;
-  let initialSamples: [number, number][] = [];
-  let showTrajectories = false;
-  // Store precomputed trajectories: [sampleIndex][timeStep] -> [x, y]
-  let precomputedTrajectories: Pair<number>[][] = [];
-
-  // Sample initial points from standard normal
-  const { initialSamples: samples } = sampleStandardNormalPoints({
-    count: NUM_SAMPLES,
-    xScale,
-    yScale
-  });
-  initialSamples = samples;
-
-  function precomputeTrajectories(dataPoint: Pair<number>): void {
-    // Precompute trajectories for all time steps
-    precomputedTrajectories = initialSamples.map(sample => {
-      const trajectory: Pair<number>[] = [];
-
-      for (let step = 0; step <= NUM_TIME_STEPS; step++) {
-        const t = step / NUM_TIME_STEPS;
-        const beta0 = scheduler.getBeta(0);
-        const betaT = scheduler.getBeta(Math.max(t, 0.001));
-
-        if (beta0 === 0) {
-          trajectory.push([dataPoint[0], dataPoint[1]]);
-        } else {
-          const ratio = betaT / beta0;
-          const current: Pair<number> = [
-            dataPoint[0] + (sample[0] - dataPoint[0]) * ratio,
-            dataPoint[1] + (sample[1] - dataPoint[1]) * ratio
-          ];
-          trajectory.push(current);
-        }
-      }
-
-      return trajectory;
-    });
+function getScheduler(schedulerType: string): NoiseScheduler {
+  if (schedulerType === 'linear') {
+    return makeLinearNoiseScheduler();
+  } else if (schedulerType === 'sqrt') {
+    return makeSqrtNoiseScheduler();
+  } else if (schedulerType === 'inverse-sqrt') {
+    return makeInverseSqrtNoiseScheduler();
+  } else if (schedulerType === 'constant') {
+    return makeConstantVarianceScheduler();
+  } else if (schedulerType === 'sqrt-sqrt') {
+    return makeSqrtSqrtScheduler();
+  } else if (schedulerType === 'circular-circular') {
+    return makeCircularCircularScheduler();
   }
-
-  function render(): void {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    addFrameUsingScales(ctx, xScale, yScale, 11);
-
-    // Draw trajectories if enabled
-    if (showTrajectories) {
-      ctx.strokeStyle = 'rgba(128, 128, 128, 0.3)';
-      ctx.lineWidth = 1;
-
-      for (const trajectory of precomputedTrajectories) {
-        if (trajectory.length < 2) {continue;}
-
-        ctx.beginPath();
-        const [x0, y0] = trajectory[0];
-        ctx.moveTo(xScale(x0), yScale(y0));
-
-        for (let i = 1; i < trajectory.length; i++) {
-          const [x, y] = trajectory[i];
-          ctx.lineTo(xScale(x), yScale(y));
-        }
-
-        ctx.stroke();
-      }
-    }
-
-    // Draw the data point
-    const pixelX = xScale(currentPosition[0]);
-    const pixelY = yScale(currentPosition[1]);
-    addDot(ctx, pixelX, pixelY, 5, ORANGE);
-
-    // Draw sampled points at current time
-    const timeStep = Math.round(currentTime * NUM_TIME_STEPS);
-    for (const trajectory of precomputedTrajectories) {
-      const position = trajectory[timeStep];
-      const px = xScale(position[0]);
-      const py = yScale(position[1]);
-      addDot(ctx, px, py, SAMPLED_POINT_RADIUS, SAMPLED_POINT_COLOR);
-    }
-  }
-
-  function updatePosition(position: Pair<number>): void {
-    currentPosition = position;
-    precomputeTrajectories(position);
-    render();
-  }
-
-  function updateTime(time: number): void {
-    currentTime = time;
-    render();
-  }
-
-  // Create controls container
-  const controlsDiv = document.createElement('div');
-  controlsDiv.style.marginTop = '8px';
-  container.appendChild(controlsDiv);
-
-  // Create checkbox for trajectory display
-  const trajectoryCheckboxLabel = document.createElement('label');
-  const trajectoryCheckbox = document.createElement('input');
-  trajectoryCheckbox.type = 'checkbox';
-  trajectoryCheckbox.checked = showTrajectories;
-  trajectoryCheckboxLabel.appendChild(trajectoryCheckbox);
-  trajectoryCheckboxLabel.appendChild(document.createTextNode(' Show trajectories'));
-  controlsDiv.appendChild(trajectoryCheckboxLabel);
-
-  trajectoryCheckbox.addEventListener('change', () => {
-    showTrajectories = trajectoryCheckbox.checked;
-    render();
-  });
-
-  // Initial precomputation
-  precomputeTrajectories(initialPosition);
-  render();
-
-  return { updatePosition, updateTime };
+  return makeConstantVarianceScheduler();
 }
 
 function run(): void {
   const widgetsContainer = el(document, '#widgets-container') as HTMLElement;
   const sliderContainer = el(document, '#slider-container') as HTMLElement;
 
+  // Create main layout container
+  const mainLayout = document.createElement('div');
+  mainLayout.style.display = 'flex';
+  mainLayout.style.gap = '20px';
+  widgetsContainer.appendChild(mainLayout);
+
+  // Create left side for widgets
+  const leftSide = document.createElement('div');
+  leftSide.style.flex = '1';
+  mainLayout.appendChild(leftSide);
+
+  // Create right side for scheduler controls
+  const rightSide = document.createElement('div');
+  rightSide.style.width = '200px';
+  rightSide.style.display = 'flex';
+  rightSide.style.flexDirection = 'column';
+  rightSide.style.gap = '16px';
+  mainLayout.appendChild(rightSide);
+
   // Create container for widgets row
   const widgetRow = document.createElement('div');
   widgetRow.className = 'widget-container';
-  widgetsContainer.appendChild(widgetRow);
+  leftSide.appendChild(widgetRow);
 
-  // Initialize widgets
-  const initialPosition: Pair<number> = [0, 0];
+  // Initialize state with a random starting point in the visible range
+  const initialPosition: Pair<number> = [
+    (Math.random() * 8) - 4,
+    (Math.random() * 6) - 3
+  ];
   const initialTime = 0;
-  const scheduler = makeConstantVarianceScheduler();
+  const initialSchedulerType = 'constant';
+  const scheduler = getScheduler(initialSchedulerType);
+
+  const controller = createFrameworkController<ScoreParamState>({
+    time: initialTime,
+    position: initialPosition,
+    scheduler,
+    schedulerType: initialSchedulerType
+  });
 
   // Create containers for all three widgets
   const condProbContainer = document.createElement('div');
@@ -181,52 +99,120 @@ function run(): void {
   dotView3Container.style.flexDirection = 'column';
   widgetRow.appendChild(dotView3Container);
 
-  // Initialize the two precomputed vector field views
-  const vectorField2 = initPrecomputedVectorFieldView(
-    dotView2Container, initialPosition, scheduler
-  );
-  const vectorField3 = initPrecomputedVectorFieldView(
-    dotView3Container, initialPosition, scheduler
-  );
+  // Initialize the two interactive vector field views (lighter, no full precompute)
+  const makeVectorFieldView = (container: HTMLElement): void => {
+    const updateVectorField = initVectorFieldView(
+      container,
+      initialPosition,
+      initialTime,
+      scheduler,
+      (newPosition: Pair<number>) => {
+        void controller.update({ position: newPosition });
+      },
+      {
+        autoSample: true,
+        showTrajectories: true
+      }
+    );
 
-  // Initialize conditional probability path view with onChange handler
-  let currentPosition = initialPosition;
-  const updateCondProbView = initConditionalProbabilityPathView(
+    controller.registerView({
+      render: (params: ScoreParamState): void => {
+        updateVectorField(params.position, params.time, params.scheduler);
+      }
+    });
+  };
+
+  makeVectorFieldView(dotView2Container);
+  makeVectorFieldView(dotView3Container);
+
+  // Initialize conditional probability path view
+  controller.registerView(initConditionalProbabilityPath(
     condProbContainer,
     initialPosition,
     initialTime,
     scheduler,
     (newPosition: Pair<number>) => {
-      currentPosition = newPosition;
-      // Re-render all views when position changes
-      updateCondProbView(currentPosition, currentTime, scheduler);
-      vectorField2.updatePosition(currentPosition);
-      vectorField3.updatePosition(currentPosition);
+      void controller.update({ position: newPosition });
     }
-  );
-
-  let currentTime = initialTime;
-
-  // Update function that will be called when time changes
-  function updateWidgets(time: number): void {
-    currentTime = time;
-
-    // Update conditional probability path view
-    updateCondProbView(currentPosition, currentTime, scheduler);
-
-    // Update the vector field views to show dots at current time
-    vectorField2.updateTime(currentTime);
-    vectorField3.updateTime(currentTime);
-  }
+  ));
 
   // Initialize time slider
-  initTimeSliderWidget(sliderContainer, 0, updateWidgets, {
+  initTimeSliderWidget(sliderContainer, 0, (time: number) => {
+    void controller.update({ time });
+  }, {
     loop: true,
     autostart: false
   });
 
-  // Initial update
-  updateWidgets(0);
+  // Add early exit counter display
+  const counterContainer = document.createElement('div');
+  counterContainer.style.marginTop = '12px';
+  counterContainer.style.fontSize = '14px';
+  counterContainer.style.color = '#666';
+  sliderContainer.appendChild(counterContainer);
+
+  const counterLabel = document.createElement('span');
+  counterLabel.textContent = 'Early exits: ';
+  counterContainer.appendChild(counterLabel);
+
+  const counterValue = document.createElement('span');
+  counterValue.textContent = '0';
+  counterValue.style.fontWeight = 'bold';
+  counterValue.style.color = '#ff6200';
+  counterContainer.appendChild(counterValue);
+
+  const resetButton = document.createElement('button');
+  resetButton.textContent = 'Reset';
+  resetButton.style.marginLeft = '8px';
+  resetButton.style.fontSize = '12px';
+  resetButton.addEventListener('click', () => {
+    controller.resetEarlyExitCount();
+    counterValue.textContent = '0';
+  });
+  counterContainer.appendChild(resetButton);
+
+  // Update counter display periodically
+  setInterval(() => {
+    counterValue.textContent = controller.getEarlyExitCount().toString();
+  }, 100);
+
+  // Add scheduler visualization (top of right column)
+  const schedulerVizContainer = document.createElement('div');
+  const schedulerVizTitle = document.createElement('h3');
+  schedulerVizTitle.textContent = 'Scheduler';
+  schedulerVizTitle.style.marginTop = '0';
+  schedulerVizTitle.style.marginBottom = '8px';
+  schedulerVizContainer.appendChild(schedulerVizTitle);
+  rightSide.appendChild(schedulerVizContainer);
+
+  const updateSchedulerViz = initSchedulerVisualizationWidget(schedulerVizContainer);
+
+  // Register scheduler viz as a view
+  controller.registerView({
+    render: (params: ScoreParamState) => {
+      updateSchedulerViz(params.scheduler, params.time);
+    }
+  });
+
+  // Add scheduler selection (bottom of right column)
+  const schedulerSelectionContainer = document.createElement('div');
+  const schedulerSelectionTitle = document.createElement('h3');
+  schedulerSelectionTitle.textContent = 'Type';
+  schedulerSelectionTitle.style.marginTop = '0';
+  schedulerSelectionTitle.style.marginBottom = '8px';
+  schedulerSelectionContainer.appendChild(schedulerSelectionTitle);
+  rightSide.appendChild(schedulerSelectionContainer);
+
+  initSchedulerSelectionWidget(
+    schedulerSelectionContainer,
+    (schedulerType: string) => {
+      const newScheduler = getScheduler(schedulerType);
+      void controller.update({ schedulerType, scheduler: newScheduler });
+    }
+  );
+
+  // Initial render
+  void controller.update({});
 }
 
 run();
