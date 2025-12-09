@@ -223,3 +223,112 @@ export function initConditionalProbPathAndVectorFieldWidget(
   // Initial render
   updateSchedulerVisualization(currentScheduler, currentTime);
 }
+
+export function initConditionalProbPathAndTwoVectorFieldsWidget(
+  container: HTMLElement,
+  initialPosition: Pair<number>,
+  initialTime: number,
+  radioGroupName?: string
+): void {
+  removePlaceholder(container);
+  let currentPosition = initialPosition;
+  let currentTime = initialTime;
+  let currentScheduler: NoiseScheduler = makeConstantVarianceScheduler();
+
+  // Create main layout structure
+  const mainDiv = document.createElement('div');
+  mainDiv.style.display = 'flex';
+  mainDiv.style.gap = '20px';
+  container.appendChild(mainDiv);
+
+  // Create a container for three side-by-side views
+  const viewsContainer = document.createElement('div');
+  viewsContainer.style.display = 'flex';
+  viewsContainer.style.gap = '16px';
+  mainDiv.appendChild(viewsContainer);
+
+  const leftContainer = document.createElement('div');
+  const middleContainer = document.createElement('div');
+  const rightContainer = document.createElement('div');
+  viewsContainer.appendChild(leftContainer);
+  viewsContainer.appendChild(middleContainer);
+  viewsContainer.appendChild(rightContainer);
+
+  // Right section (scheduler visualization and selection)
+  const schedulerSection = document.createElement('div');
+  schedulerSection.style.display = 'flex';
+  schedulerSection.style.flexDirection = 'column';
+  schedulerSection.style.gap = '10px';
+  mainDiv.appendChild(schedulerSection);
+
+  // Initialize scheduler visualization
+  const updateSchedulerVisualization = initSchedulerVisualizationWidget(schedulerSection);
+
+  // Initialize scheduler selection
+  initSchedulerSelectionWidget(schedulerSection, (schedulerType: string) => {
+    if (schedulerType === 'linear') {
+      currentScheduler = makeLinearNoiseScheduler();
+    } else if (schedulerType === 'sqrt') {
+      currentScheduler = makeSqrtNoiseScheduler();
+    } else if (schedulerType === 'inverse-sqrt') {
+      currentScheduler = makeInverseSqrtNoiseScheduler();
+    } else if (schedulerType === 'constant') {
+      currentScheduler = makeConstantVarianceScheduler();
+    } else if (schedulerType === 'sqrt-sqrt') {
+      currentScheduler = makeSqrtSqrtScheduler();
+    } else if (schedulerType === 'circular-circular') {
+      currentScheduler = makeCircularCircularScheduler();
+    }
+    updateCondProbView(currentPosition, currentTime, currentScheduler);
+    updateVectorFieldView1(currentPosition, currentTime, currentScheduler);
+    updateVectorFieldView2(currentPosition, currentTime, currentScheduler);
+    updateSchedulerVisualization(currentScheduler, currentTime);
+  }, radioGroupName);
+
+  const updateCondProbView = initConditionalProbabilityPathView(
+    leftContainer,
+    initialPosition,
+    initialTime,
+    currentScheduler,
+    (newPosition: Pair<number>) => {
+      currentPosition = newPosition;
+      updateCondProbView(currentPosition, currentTime, currentScheduler);
+      updateVectorFieldView1(currentPosition, currentTime, currentScheduler);
+      updateVectorFieldView2(currentPosition, currentTime, currentScheduler);
+    }
+  );
+  const updateVectorFieldView1 = initVectorFieldView(
+    middleContainer,
+    initialPosition,
+    initialTime,
+    currentScheduler,
+    (newPosition: Pair<number>) => {
+      currentPosition = newPosition;
+      updateCondProbView(currentPosition, currentTime, currentScheduler);
+      updateVectorFieldView1(currentPosition, currentTime, currentScheduler);
+      updateVectorFieldView2(currentPosition, currentTime, currentScheduler);
+    }
+  );
+  const updateVectorFieldView2 = initVectorFieldView(
+    rightContainer,
+    initialPosition,
+    initialTime,
+    currentScheduler,
+    (newPosition: Pair<number>) => {
+      currentPosition = newPosition;
+      updateCondProbView(currentPosition, currentTime, currentScheduler);
+      updateVectorFieldView1(currentPosition, currentTime, currentScheduler);
+      updateVectorFieldView2(currentPosition, currentTime, currentScheduler);
+    }
+  );
+  void initTimeSliderWidget(container, initialTime, (newTime: number) => {
+    currentTime = newTime;
+    updateCondProbView(currentPosition, currentTime, currentScheduler);
+    updateVectorFieldView1(currentPosition, currentTime, currentScheduler);
+    updateVectorFieldView2(currentPosition, currentTime, currentScheduler);
+    updateSchedulerVisualization(currentScheduler, currentTime);
+  });
+
+  // Initial render
+  updateSchedulerVisualization(currentScheduler, currentTime);
+}

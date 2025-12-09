@@ -8,7 +8,6 @@ import { makeScale } from 'web-ui-common/util';
 import {
   computeGlobalMaxVectorLength,
   computeVectorFieldArrows,
-  propagateVectorFieldSamples,
   sampleStandardNormalPoints
 } from './conditional-tfjs-logic';
 import { NUM_SAMPLES } from './constants';
@@ -23,6 +22,7 @@ import {
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 360;
 const ORANGE = '#ff6200ff';
+const NUM_TRAJECTORY_STEPS = 50;
 
 export function initVectorFieldView(
   container: HTMLElement,
@@ -45,7 +45,9 @@ export function initVectorFieldView(
   let currentScheduler = initialScheduler;
   let vectorFieldSampledPoints: { x: number; y: number }[] = [];
   let vectorFieldInitialSamples: [number, number][] = [];
+  let precomputedTrajectories: Pair<number>[][] = [];
   let globalMaxVectorLength = 0;
+  let showTrajectories = false;
 
   // Create movable dot for the data point
   const dot = createMovableDot(
@@ -79,8 +81,24 @@ export function initVectorFieldView(
     onClear: () => {
       vectorFieldSampledPoints = [];
       vectorFieldInitialSamples = [];
+      precomputedTrajectories = [];
       update(currentPosition, currentTime, currentScheduler);
     }
+  });
+
+  // Create checkbox for trajectory display
+  const trajectoryCheckboxLabel = document.createElement('label');
+  trajectoryCheckboxLabel.style.marginLeft = '12px';
+  const trajectoryCheckbox = document.createElement('input');
+  trajectoryCheckbox.type = 'checkbox';
+  trajectoryCheckbox.checked = showTrajectories;
+  trajectoryCheckboxLabel.appendChild(trajectoryCheckbox);
+  trajectoryCheckboxLabel.appendChild(document.createTextNode(' Show trajectories'));
+  container.appendChild(trajectoryCheckboxLabel);
+
+  trajectoryCheckbox.addEventListener('change', () => {
+    showTrajectories = trajectoryCheckbox.checked;
+    update(currentPosition, currentTime, currentScheduler);
   });
 
   function recomputeGlobalMaxVectorLength(): void {
@@ -93,6 +111,55 @@ export function initVectorFieldView(
       vectorFieldYScale: yScale,
       gridSpacing: 0.3
     });
+  }
+
+  function computeTrajectories(
+    samples: [number, number][],
+    dataPoint: Pair<number>,
+    scheduler: NoiseScheduler
+  ): Pair<number>[][] {
+    const trajectories: Pair<number>[][] = [];
+
+    for (const sample of samples) {
+      const trajectory: Pair<number>[] = [];
+
+      for (let step = 0; step <= NUM_TRAJECTORY_STEPS; step++) {
+        const t = step / NUM_TRAJECTORY_STEPS;
+        const alphaT = scheduler.getAlpha(t);
+        const betaT = scheduler.getBeta(t);
+
+        const x = alphaT * dataPoint[0] + betaT * sample[0];
+        const y = alphaT * dataPoint[1] + betaT * sample[1];
+
+        trajectory.push([x, y]);
+      }
+
+      trajectories.push(trajectory);
+    }
+
+    return trajectories;
+  }
+
+  function drawTrajectories(trajectories: Pair<number>[][]): void {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(128, 128, 128, 0.4)';
+    ctx.lineWidth = 1;
+
+    for (const trajectory of trajectories) {
+      if (trajectory.length < 2) {continue;}
+
+      ctx.beginPath();
+      const [x0, y0] = trajectory[0];
+      ctx.moveTo(xScale(x0), yScale(y0));
+
+      for (let i = 1; i < trajectory.length; i++) {
+        const [x, y] = trajectory[i];
+        ctx.lineTo(xScale(x), yScale(y));
+      }
+
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function update(newPosition: Pair<number>, newTime: number, newScheduler: NoiseScheduler): void {
@@ -128,18 +195,32 @@ export function initVectorFieldView(
 
     drawLines(ctx, lines);
 
+    // Compute trajectories if we have samples
+    if (vectorFieldInitialSamples.length > 0) {
+      precomputedTrajectories = computeTrajectories(
+        vectorFieldInitialSamples,
+        currentPosition,
+        currentScheduler
+      );
+
+      // Draw trajectories if enabled
+      if (showTrajectories) {
+        drawTrajectories(precomputedTrajectories);
+      }
+    }
+
     // Render data point (orange dot)
     dot.render(currentPosition);
 
-    // Update and render sampled points
-    if (vectorFieldInitialSamples.length > 0) {
-      vectorFieldSampledPoints = propagateVectorFieldSamples({
-        initialSamples: vectorFieldInitialSamples,
-        time: currentTime,
-        dataPoint: currentPosition,
-        noiseScheduler: currentScheduler,
-        vectorFieldXScale: xScale,
-        vectorFieldYScale: yScale
+    // Update and render sampled points using trajectory data
+    if (precomputedTrajectories.length > 0) {
+      const timeStep = Math.round(currentTime * NUM_TRAJECTORY_STEPS);
+      vectorFieldSampledPoints = precomputedTrajectories.map(trajectory => {
+        const position = trajectory[Math.min(timeStep, trajectory.length - 1)];
+        return {
+          x: xScale(position[0]),
+          y: yScale(position[1])
+        };
       });
 
       drawSamplePoints(ctx, vectorFieldSampledPoints);
