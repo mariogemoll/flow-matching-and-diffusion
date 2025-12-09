@@ -108,7 +108,7 @@ export function initTimeSliderWidget(
     }
 
     if (steps !== undefined) {
-      // Discrete mode: advance by one step with timing control
+      // Discrete mode: advance by steps with timing control
       const stepDuration = totalAnimationDuration / steps; // ms per step
 
       if (lastStepTime === 0) {
@@ -118,10 +118,12 @@ export function initTimeSliderWidget(
       const elapsed = timestamp - lastStepTime;
 
       if (elapsed >= stepDuration) {
-        lastStepTime = timestamp;
+        // Advance multiple steps if needed to maintain timing
+        const stepsToAdvance = Math.floor(elapsed / stepDuration);
+        lastStepTime = lastStepTime + (stepsToAdvance * stepDuration);
 
         const currentStep = Math.round(currentTime * steps);
-        const nextStep = currentStep + 1;
+        const nextStep = currentStep + stepsToAdvance;
 
         if (nextStep > steps) {
           if (loop) {
