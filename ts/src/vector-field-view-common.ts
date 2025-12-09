@@ -238,7 +238,7 @@ export function createSampleButtons(config: SampleButtonConfig): {
   clearBtn.addEventListener('click', config.onClear);
 
   function updateButtonStates(time: number, hasSamples: boolean): void {
-    sampleBtn.disabled = Math.abs(time) >= 0.01;
+    sampleBtn.disabled = false;
     clearBtn.disabled = !hasSamples;
   }
 
