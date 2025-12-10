@@ -1,12 +1,14 @@
 import { el } from 'web-ui-common/dom';
 
 import { initOrbitWidget } from './orbit-widget';
+import { initVectorFieldWidget } from './vector-field-widget';
 
 function run(): void {
-  const container = el(document, '#container') as HTMLElement;
-  console.log(container);
+  const orbitContainer = el(document, '#container') as HTMLElement;
+  initOrbitWidget(orbitContainer, '/dist/orbit-widget-worker.js');
 
-  initOrbitWidget(container, './orbit-widget-worker.js');
+  const vectorFieldContainer = el(document, '#vector-field-container') as HTMLElement;
+  initVectorFieldWidget(vectorFieldContainer, '/dist/vector-field-widget-worker.js');
 }
 
 document.addEventListener('DOMContentLoaded', () => {

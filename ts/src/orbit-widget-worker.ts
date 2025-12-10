@@ -2,6 +2,11 @@ import { addDot } from 'web-ui-common/canvas';
 import type { Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
+import {
+  type AnimationControlMessage,
+  createWorkerAnimationLoop,
+  TOTAL_FRAMES } from './animation-common';
+
 interface LabState {
   dotX: number;
   dotY: number;
@@ -30,13 +35,8 @@ let currentState: LabState = {
   isDragging: false
 };
 
-// Animation state
-let animationFrame = 0;
-const TOTAL_FRAMES = 100;
-let isPaused = false;
-
 // View 1: Circular orbit (clockwise)
-function renderView1(): void {
+function renderView1(frame: number): void {
   if (!ctx1 || !canvas1 || !xScale1 || !yScale1) {
     return;
   }
@@ -55,7 +55,7 @@ function renderView1(): void {
   const centerX = currentState.dotX;
   const centerY = currentState.dotY;
   const radius = 50;
-  const angle = (animationFrame / TOTAL_FRAMES) * Math.PI * 2;
+  const angle = (frame / TOTAL_FRAMES) * Math.PI * 2;
   const animDotX = centerX + Math.cos(angle) * radius;
   const animDotY = centerY + Math.sin(angle) * radius;
 
@@ -68,7 +68,7 @@ function renderView1(): void {
 }
 
 // View 2: Elliptical orbit (counter-clockwise)
-function renderView2(): void {
+function renderView2(frame: number): void {
   if (!ctx2 || !canvas2 || !xScale2 || !yScale2) {
     return;
   }
@@ -88,7 +88,7 @@ function renderView2(): void {
   const centerY = currentState.dotY;
   const radiusX = 75;  // Horizontal radius (wider)
   const radiusY = 40;  // Vertical radius (narrower)
-  const angle = -(animationFrame / TOTAL_FRAMES) * Math.PI * 2; // Negative for counter-clockwise
+  const angle = -(frame / TOTAL_FRAMES) * Math.PI * 2; // Negative for counter-clockwise
   const animDotX = centerX + Math.cos(angle) * radiusX;
   const animDotY = centerY + Math.sin(angle) * radiusY;
 
@@ -101,29 +101,20 @@ function renderView2(): void {
 }
 
 // Main render function - calls all views
-function render(): void {
-  renderView1();
-  renderView2();
+function render(frame: number): void {
+  renderView1(frame);
+  renderView2(frame);
+}
 
-  // Increment animation frame only if not paused
-  if (!isPaused) {
-    animationFrame = (animationFrame + 1) % TOTAL_FRAMES;
+const animation = createWorkerAnimationLoop({
+  render,
+  onFrame: (frame: number) => {
     self.postMessage({
       type: 'frame-update',
-      frame: animationFrame
+      frame
     });
   }
-}
-
-// Render loop
-function renderLoop(): void {
-  render();
-  setTimeout(() => { renderLoop(); }, 1000 / 60); // ~60fps
-}
-
-function startRenderLoop(): void {
-  renderLoop();
-}
+});
 
 interface InitMessage {
   type: 'init';
@@ -138,25 +129,10 @@ interface StateUpdateMessage {
   state: LabState;
 }
 
-interface SetFrameMessage {
-  type: 'set-frame';
-  frame: number;
-}
-
-interface PauseAnimationMessage {
-  type: 'pause-animation';
-}
-
-interface ResumeAnimationMessage {
-  type: 'resume-animation';
-}
-
 type WorkerMessage =
   | InitMessage
   | StateUpdateMessage
-  | SetFrameMessage
-  | PauseAnimationMessage
-  | ResumeAnimationMessage;
+  | AnimationControlMessage;
 
 self.addEventListener('message', (e: MessageEvent<WorkerMessage>) => {
   const { type } = e.data;
@@ -196,21 +172,30 @@ self.addEventListener('message', (e: MessageEvent<WorkerMessage>) => {
     xScale2 = makeScale(xRange, [margins.left, width - margins.right]);
     yScale2 = makeScale(yRange, [height - margins.bottom, margins.top]);
 
-    // Start render loop
-    startRenderLoop();
+    animation.start();
 
     // Notify main thread that we're ready
     self.postMessage({ type: 'ready' });
-  } else if (type === 'state-update') {
-    // Just update state, the render loop will pick it up
+    return;
+  }
+
+  if (type === 'state-update') {
     currentState = e.data.state;
-  } else if (type === 'set-frame') {
-    // Set animation frame from slider
-    animationFrame = e.data.frame;
-  } else if (type === 'pause-animation') {
-    isPaused = true;
-  } else {
-    // type === 'resume-animation'
-    isPaused = false;
+    render(animation.getFrame());
+    return;
+  }
+
+  switch (type) {
+  case 'set-frame':
+    animation.setFrame(e.data.frame);
+    return;
+  case 'pause-animation':
+    animation.pause();
+    return;
+  case 'resume-animation':
+    animation.resume();
+    return;
+  default:
+    throw new Error(`Unknown message type received in orbit worker: ${String(type)}`);
   }
 });
