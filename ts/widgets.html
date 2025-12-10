@@ -7,7 +7,24 @@
 <body>
     <h1>Widgets</h1>
 
-    <div id="container"></div>
+    <div id="container">
+        <h2>Orbit Widget Demo</h2>
+        <div style="display: flex; gap: 20px;">
+            <div>
+                <h3>View 1: Circular Orbit</h3>
+                <canvas id="orbit-canvas" width="400" height="300"></canvas>
+            </div>
+            <div>
+                <h3>View 2: Elliptical Orbit (Reverse)</h3>
+                <canvas id="orbit-canvas-2" width="400" height="300"></canvas>
+            </div>
+        </div>
+        <div style="margin-top: 16px;">
+            <button id="play-pause-button">Pause</button>
+            <span id="frame-display" style="margin-left: 16px;">Frame: 0</span>
+            <input type="range" id="animation-slider" min="0" max="99" value="0" style="width: 400px; margin-left: 16px;">
+        </div>
+    </div>
 
     <script type="module" src="dist/widgets-page.js"></script>
 </body>
