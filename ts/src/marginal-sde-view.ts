@@ -12,6 +12,7 @@ import { sampleStandardNormalPoints } from './conditional-tfjs-logic';
 import { generateBrownianNoise } from './conditional-trajectory-logic';
 import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
 import type { GaussianComponent } from './gaussian';
+import type { DiffusionCoefficientScheduler } from './math/diffusion-coefficient-scheduler';
 import type { NoiseScheduler } from './math/noise-scheduler';
 import { drawStandardNormalBackground } from './vector-field-view-common';
 
@@ -231,7 +232,7 @@ function calculateMarginalSDETrajectory(
   components: GaussianComponent[],
   scheduler: NoiseScheduler,
   frameTimes: number[],
-  diffusionCoeff: number,
+  diffusionScheduler: DiffusionCoefficientScheduler,
   brownianNoise: Pair<number>[]
 ): Pair<number>[] {
   const trajectory: Pair<number>[] = [];
@@ -248,18 +249,19 @@ function calculateMarginalSDETrajectory(
       const beta = scheduler.getBeta(t);
       const alphaDot = getAlphaDerivative(scheduler, t);
       const betaDot = getBetaDerivative(scheduler, t);
+      const diffusion = diffusionScheduler.getDiffusion(t);
 
       // Compute drift: u_t(x) + (σ²/2) ∇log pt(x)
       const [ux, uy] = computeMarginalVectorField(x, y, components, alpha, beta, alphaDot, betaDot);
       const [scoreX, scoreY] = computeMarginalScore(x, y, components, alpha, beta);
 
-      const driftX = ux + (diffusionCoeff * diffusionCoeff * scoreX) / 2;
-      const driftY = uy + (diffusionCoeff * diffusionCoeff * scoreY) / 2;
+      const driftX = ux + (diffusion * diffusion * scoreX) / 2;
+      const driftY = uy + (diffusion * diffusion * scoreY) / 2;
 
       // Add diffusion term
       const [dWx, dWy] = brownianNoise[i];
-      x += driftX * dt + diffusionCoeff * dWx;
-      y += driftY * dt + diffusionCoeff * dWy;
+      x += driftX * dt + diffusion * dWx;
+      y += driftY * dt + diffusion * dWy;
     }
   }
 
@@ -279,20 +281,17 @@ export interface MarginalSDEViewControls {
   updateTime: (time: number) => void;
   updateStepCount: (stepCount: number) => void;
   updateScheduler: (scheduler: NoiseScheduler) => void;
-  updateDiffusion: (diffusion: number) => void;
+  updateDiffusionScheduler: (diffusionScheduler: DiffusionCoefficientScheduler) => void;
 }
 
 const MIN_STEP_COUNT = 10;
 const MAX_STEP_COUNT = 2000;
-const MIN_DIFFUSION = 0;
-const MAX_DIFFUSION = 3;
-
 export function initMarginalSDEView(
   container: HTMLElement,
   initialComponents: GaussianComponent[],
   initialScheduler: NoiseScheduler,
   initialStepCount: number,
-  initialDiffusion: number
+  initialDiffusionScheduler: DiffusionCoefficientScheduler
 ): MarginalSDEViewControls {
   const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
   const ctx = getContext(canvas);
@@ -309,7 +308,7 @@ export function initMarginalSDEView(
   let showTrajectories = true;
   let precomputedTrajectories: Pair<number>[][] = [];
   let stepCount = initialStepCount;
-  let diffusionCoeff = initialDiffusion;
+  let diffusionScheduler = initialDiffusionScheduler;
   let precomputedNoises: Pair<number>[][] = [];
 
   const { initialSamples: samples } = sampleStandardNormalPoints({
@@ -333,7 +332,7 @@ export function initMarginalSDEView(
         currentComponents,
         currentScheduler,
         frameTimes,
-        diffusionCoeff,
+        diffusionScheduler,
         precomputedNoises[idx]
       )
     );
@@ -403,11 +402,10 @@ export function initMarginalSDEView(
     render();
   }
 
-  function updateDiffusion(newDiffusion: number): void {
-    diffusionCoeff = Math.max(
-      MIN_DIFFUSION,
-      Math.min(MAX_DIFFUSION, parseFloat(newDiffusion.toFixed(3)))
-    );
+  function updateDiffusionScheduler(
+    newDiffusionScheduler: DiffusionCoefficientScheduler
+  ): void {
+    diffusionScheduler = newDiffusionScheduler;
     precomputeStochasticTrajectories();
     render();
   }
@@ -478,5 +476,11 @@ export function initMarginalSDEView(
   precomputeStochasticTrajectories();
   render();
 
-  return { updateComponents, updateTime, updateStepCount, updateDiffusion, updateScheduler };
+  return {
+    updateComponents,
+    updateTime,
+    updateStepCount,
+    updateDiffusionScheduler,
+    updateScheduler
+  };
 }

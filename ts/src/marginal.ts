@@ -1,10 +1,20 @@
 import { removePlaceholder } from 'web-ui-common/dom';
 
+import { initDiffusionCoefficientSelectionWidget } from './diffusion-coefficient-selection';
+import { initDiffusionCoefficientVisualizationWidget } from './diffusion-coefficient-visualization';
 import { createFrameworkController } from './framework-controller';
 import type { GaussianComponent } from './gaussian';
 import { initMarginalProbPathView } from './marginal-prob-path-view';
 import { initMarginalSDEView } from './marginal-sde-view';
 import { initMarginalVectorFieldView } from './marginal-vector-field-view';
+import {
+  type DiffusionCoefficientScheduler,
+  makeConstantDiffusionCoefficientScheduler,
+  makeCosineDiffusionCoefficientScheduler,
+  makeLinearDiffusionCoefficientScheduler,
+  makeLinearReverseDiffusionCoefficientScheduler,
+  makeQuadraticDiffusionCoefficientScheduler,
+  makeSqrtDiffusionCoefficientScheduler } from './math/diffusion-coefficient-scheduler';
 import {
   makeCircularCircularScheduler,
   makeConstantVarianceScheduler,
@@ -27,6 +37,8 @@ interface MarginalState extends Record<string, unknown> {
   time: number;
   scheduler: NoiseScheduler;
   schedulerType: string;
+  diffusionScheduler: DiffusionCoefficientScheduler;
+  diffusionType: string;
   components: ExtendedGaussianComponent[];
 }
 
@@ -50,6 +62,43 @@ function buildCovarianceFromAxes(
     [majorVar * cos * cos + minorVar * sin * sin, (majorVar - minorVar) * cos * sin],
     [(majorVar - minorVar) * cos * sin, majorVar * sin * sin + minorVar * cos * cos]
   ];
+}
+
+function getScheduler(schedulerType: string): NoiseScheduler {
+  if (schedulerType === 'linear') {
+    return makeLinearNoiseScheduler();
+  } else if (schedulerType === 'sqrt') {
+    return makeSqrtNoiseScheduler();
+  } else if (schedulerType === 'inverse-sqrt') {
+    return makeInverseSqrtNoiseScheduler();
+  } else if (schedulerType === 'constant') {
+    return makeConstantVarianceScheduler();
+  } else if (schedulerType === 'sqrt-sqrt') {
+    return makeSqrtSqrtScheduler();
+  } else if (schedulerType === 'circular-circular') {
+    return makeCircularCircularScheduler();
+  }
+  return makeConstantVarianceScheduler();
+}
+
+function getDiffusionScheduler(
+  diffusionType: string,
+  maxDiffusion: number
+): DiffusionCoefficientScheduler {
+  if (diffusionType === 'constant') {
+    return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'linear') {
+    return makeLinearDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'linear-reverse') {
+    return makeLinearReverseDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'quadratic') {
+    return makeQuadraticDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'sqrt') {
+    return makeSqrtDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'cosine') {
+    return makeCosineDiffusionCoefficientScheduler(maxDiffusion);
+  }
+  return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
 }
 
 export function initMarginalProbPathAndVectorFieldWidget(
@@ -112,32 +161,22 @@ export function initMarginalProbPathAndVectorFieldWidget(
   const initialTime = 0;
   const initialSchedulerType = 'constant';
   const initialScheduler = makeConstantVarianceScheduler();
+  const initialDiffusionType = 'constant';
+  const initialMaxDiffusion = DEFAULT_DIFFUSION;
+  const initialDiffusionScheduler = getDiffusionScheduler(
+    initialDiffusionType,
+    initialMaxDiffusion
+  );
 
   // Create controller
   const controller = createFrameworkController<MarginalState>({
     time: initialTime,
     scheduler: initialScheduler,
     schedulerType: initialSchedulerType,
+    diffusionScheduler: initialDiffusionScheduler,
+    diffusionType: initialDiffusionType,
     components
   });
-
-  // Helper function to get scheduler from type
-  function getScheduler(schedulerType: string): NoiseScheduler {
-    if (schedulerType === 'linear') {
-      return makeLinearNoiseScheduler();
-    } else if (schedulerType === 'sqrt') {
-      return makeSqrtNoiseScheduler();
-    } else if (schedulerType === 'inverse-sqrt') {
-      return makeInverseSqrtNoiseScheduler();
-    } else if (schedulerType === 'constant') {
-      return makeConstantVarianceScheduler();
-    } else if (schedulerType === 'sqrt-sqrt') {
-      return makeSqrtSqrtScheduler();
-    } else if (schedulerType === 'circular-circular') {
-      return makeCircularCircularScheduler();
-    }
-    return makeConstantVarianceScheduler();
-  }
 
   // Initialize scheduler visualization
   const updateSchedulerVisualization = initSchedulerVisualizationWidget(plotSection);
@@ -195,9 +234,6 @@ export function initMarginalProbPathAndVectorFieldWidget(
 
 const STEP_COUNT = 100;
 const DEFAULT_DIFFUSION = 0.8;
-const MIN_DIFFUSION = 0;
-const MAX_DIFFUSION = 3;
-const DIFFUSION_STEP = 0.05;
 
 export function initMarginalOdeSdeWidget(
   container: HTMLElement,
@@ -282,30 +318,18 @@ export function initMarginalOdeSdeWidget(
   const initialTime = 0;
   const initialSchedulerType = 'constant';
   const initialScheduler = makeConstantVarianceScheduler();
+  const initialDiffusionType = 'constant';
+  const initialMaxDiffusion = DEFAULT_DIFFUSION;
+  const initialDiffusionScheduler = makeConstantDiffusionCoefficientScheduler(initialMaxDiffusion);
 
   const controller = createFrameworkController<MarginalState>({
     time: initialTime,
     scheduler: initialScheduler,
     schedulerType: initialSchedulerType,
+    diffusionScheduler: initialDiffusionScheduler,
+    diffusionType: initialDiffusionType,
     components
   });
-
-  function getScheduler(schedulerType: string): NoiseScheduler {
-    if (schedulerType === 'linear') {
-      return makeLinearNoiseScheduler();
-    } else if (schedulerType === 'sqrt') {
-      return makeSqrtNoiseScheduler();
-    } else if (schedulerType === 'inverse-sqrt') {
-      return makeInverseSqrtNoiseScheduler();
-    } else if (schedulerType === 'constant') {
-      return makeConstantVarianceScheduler();
-    } else if (schedulerType === 'sqrt-sqrt') {
-      return makeSqrtSqrtScheduler();
-    } else if (schedulerType === 'circular-circular') {
-      return makeCircularCircularScheduler();
-    }
-    return makeConstantVarianceScheduler();
-  }
 
   // Initialize probability path view
   const updateProbPathView = initMarginalProbPathView(
@@ -338,20 +362,21 @@ export function initMarginalOdeSdeWidget(
 
   // Initialize SDE view
   const stepCount = STEP_COUNT;
-  let diffusionCoeff = DEFAULT_DIFFUSION;
+  const diffusionScheduler = initialDiffusionScheduler;
 
   const sdeView = initMarginalSDEView(
     sdeContainer,
     components,
     initialScheduler,
     stepCount,
-    diffusionCoeff
+    diffusionScheduler
   );
 
   controller.registerView({
     render: (state: MarginalState) => {
       sdeView.updateScheduler(state.scheduler);
       sdeView.updateComponents(state.components);
+      sdeView.updateDiffusionScheduler(state.diffusionScheduler);
       sdeView.updateTime(state.time);
     }
   });
@@ -363,30 +388,6 @@ export function initMarginalOdeSdeWidget(
   controlsSection.style.marginTop = '8px';
   leftSide.appendChild(controlsSection);
 
-  const diffusionControls = document.createElement('div');
-  diffusionControls.style.display = 'flex';
-  diffusionControls.style.alignItems = 'center';
-  diffusionControls.style.gap = '12px';
-  controlsSection.appendChild(diffusionControls);
-
-  const diffusionLabel = document.createElement('label');
-  diffusionLabel.style.display = 'flex';
-  diffusionLabel.style.alignItems = 'center';
-  diffusionLabel.style.gap = '6px';
-  diffusionLabel.textContent = 'Diffusion:';
-  const diffusionInput = document.createElement('input');
-  diffusionInput.type = 'range';
-  diffusionInput.min = MIN_DIFFUSION.toString();
-  diffusionInput.max = MAX_DIFFUSION.toString();
-  diffusionInput.step = DIFFUSION_STEP.toString();
-  diffusionInput.value = diffusionCoeff.toString();
-  diffusionInput.style.width = '180px';
-  const diffusionValue = document.createElement('span');
-  diffusionValue.textContent = diffusionCoeff.toFixed(2);
-  diffusionLabel.appendChild(diffusionInput);
-  diffusionLabel.appendChild(diffusionValue);
-  diffusionControls.appendChild(diffusionLabel);
-
   const updateWidgets = (time: number): void => {
     void controller.update({ time });
   };
@@ -395,22 +396,6 @@ export function initMarginalOdeSdeWidget(
     loop: true,
     autostart: false,
     steps: stepCount
-  });
-
-  function applyDiffusion(newDiffusion: number): void {
-    const clamped = Math.max(MIN_DIFFUSION, Math.min(MAX_DIFFUSION, newDiffusion));
-    diffusionCoeff = clamped;
-    diffusionInput.value = clamped.toString();
-    diffusionValue.textContent = clamped.toFixed(2);
-    sdeView.updateDiffusion(diffusionCoeff);
-    updateWidgets(controller.getState().time);
-  }
-
-  diffusionInput.addEventListener('input', () => {
-    const parsed = parseFloat(diffusionInput.value);
-    if (Number.isFinite(parsed)) {
-      applyDiffusion(parsed);
-    }
   });
 
   // Add scheduler visualization (top of right column)
@@ -446,6 +431,41 @@ export function initMarginalOdeSdeWidget(
       void controller.update({ schedulerType, scheduler: newScheduler });
     },
     radioGroupName
+  );
+
+  // Add diffusion visualization
+  const diffusionVizContainer = document.createElement('div');
+  const diffusionVizTitle = document.createElement('h3');
+  diffusionVizTitle.textContent = 'Diffusion';
+  diffusionVizTitle.style.marginTop = '0';
+  diffusionVizTitle.style.marginBottom = '8px';
+  diffusionVizContainer.appendChild(diffusionVizTitle);
+  rightSide.appendChild(diffusionVizContainer);
+
+  const updateDiffusionViz = initDiffusionCoefficientVisualizationWidget(diffusionVizContainer);
+
+  controller.registerView({
+    render: (params: MarginalState) => {
+      updateDiffusionViz(params.diffusionScheduler, params.time);
+    }
+  });
+
+  // Add diffusion selection
+  const diffusionSelectionContainer = document.createElement('div');
+  const diffusionSelectionTitle = document.createElement('h3');
+  diffusionSelectionTitle.textContent = 'Type';
+  diffusionSelectionTitle.style.marginTop = '0';
+  diffusionSelectionTitle.style.marginBottom = '8px';
+  diffusionSelectionContainer.appendChild(diffusionSelectionTitle);
+  rightSide.appendChild(diffusionSelectionContainer);
+
+  initDiffusionCoefficientSelectionWidget(
+    diffusionSelectionContainer,
+    (diffusionType: string, maxDiffusion: number) => {
+      const newDiffusionScheduler = getDiffusionScheduler(diffusionType, maxDiffusion);
+      void controller.update({ diffusionType, diffusionScheduler: newDiffusionScheduler });
+    },
+    `diffusion-marginal-${radioGroupName ?? 'odesde'}`
   );
 
   // Initial render

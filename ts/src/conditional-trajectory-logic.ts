@@ -41,12 +41,14 @@ export function calculateConditionalODETrajectory(
  * Uses Euler-Maruyama method with time-dependent diffusion
  * At t=1, all trajectories should converge to the data point
  */
+import type { DiffusionCoefficientScheduler } from './math/diffusion-coefficient-scheduler';
+
 export function calculateConditionalSDETrajectory(
   initialSample: Pair<number>,
   dataPoint: Pair<number>,
   scheduler: NoiseScheduler,
   frameTimes: number[],
-  diffusionCoeff: number,
+  diffusionScheduler: DiffusionCoefficientScheduler,
   noise: Pair<number>[]
 ): Pair<number>[] {
   const trajectory: Pair<number>[] = [];
@@ -73,6 +75,7 @@ export function calculateConditionalSDETrajectory(
     const alphaT = scheduler.getAlpha(t);
     const betaT = clampBeta(scheduler.getBeta(t));
     const betaDot = scheduler.getBetaDerivative(t);
+    const diffusionCoeff = diffusionScheduler.getDiffusion(t);
 
     // OU-like dynamics for the residual r_t = x_t - alpha(t)·x1
     const a = (betaDot / betaT) - (diffusionCoeff * diffusionCoeff) / (2 * betaT * betaT);

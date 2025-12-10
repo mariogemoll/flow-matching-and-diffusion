@@ -16,7 +16,18 @@ import {
 } from './conditional-trajectory-logic';
 import { initVectorFieldView } from './conditional-vector-field-view';
 import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
+import { initDiffusionCoefficientSelectionWidget } from './diffusion-coefficient-selection';
+import { initDiffusionCoefficientVisualizationWidget } from './diffusion-coefficient-visualization';
 import { createFrameworkController } from './framework-controller';
+import {
+  type DiffusionCoefficientScheduler,
+  makeConstantDiffusionCoefficientScheduler,
+  makeCosineDiffusionCoefficientScheduler,
+  makeLinearDiffusionCoefficientScheduler,
+  makeLinearReverseDiffusionCoefficientScheduler,
+  makeQuadraticDiffusionCoefficientScheduler,
+  makeSqrtDiffusionCoefficientScheduler
+} from './math/diffusion-coefficient-scheduler';
 import {
   makeCircularCircularScheduler,
   makeConstantVarianceScheduler,
@@ -36,6 +47,8 @@ interface DoubleConditionalState extends Record<string, unknown> {
   position: Pair<number>;
   scheduler: NoiseScheduler;
   schedulerType: string;
+  diffusionScheduler: DiffusionCoefficientScheduler;
+  diffusionType: string;
 }
 
 function getScheduler(schedulerType: string): NoiseScheduler {
@@ -55,6 +68,26 @@ function getScheduler(schedulerType: string): NoiseScheduler {
   return makeConstantVarianceScheduler();
 }
 
+function getDiffusionScheduler(
+  diffusionType: string,
+  maxDiffusion: number
+): DiffusionCoefficientScheduler {
+  if (diffusionType === 'constant') {
+    return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'linear') {
+    return makeLinearDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'linear-reverse') {
+    return makeLinearReverseDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'quadratic') {
+    return makeQuadraticDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'sqrt') {
+    return makeSqrtDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'cosine') {
+    return makeCosineDiffusionCoefficientScheduler(maxDiffusion);
+  }
+  return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
+}
+
 const CANVAS_WIDTH = 480;
 const CANVAS_HEIGHT = 360;
 const ORANGE = '#ff6200ff';
@@ -62,16 +95,13 @@ const STEP_COUNT = 100;
 const MIN_STEP_COUNT = 10;
 const MAX_STEP_COUNT = 2000;
 const DEFAULT_DIFFUSION = 0.8;
-const MIN_DIFFUSION = 0;
-const MAX_DIFFUSION = 3;
-const DIFFUSION_STEP = 0.05;
 
 interface PrecomputedVectorFieldControls {
   updatePosition: (position: Pair<number>) => void;
   updateTime: (time: number) => void;
   updateStepCount: (stepCount: number) => void;
   updateScheduler: (scheduler: NoiseScheduler) => void;
-  updateDiffusion: (diffusion: number) => void;
+  updateDiffusionScheduler: (diffusionScheduler: DiffusionCoefficientScheduler) => void;
 }
 
 function createFrameTimes(stepCount: number): number[] {
@@ -87,7 +117,7 @@ function initPrecomputedSDEView(
   initialPosition: Pair<number>,
   initialScheduler: NoiseScheduler,
   initialStepCount: number,
-  initialDiffusion: number,
+  initialDiffusionScheduler: DiffusionCoefficientScheduler,
   onPositionChange: (position: Pair<number>) => void
 ): PrecomputedVectorFieldControls {
   const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
@@ -105,7 +135,7 @@ function initPrecomputedSDEView(
   let showTrajectories = true;
   let precomputedTrajectories: Pair<number>[][] = [];
   let stepCount = initialStepCount;
-  let diffusionCoeff = initialDiffusion;
+  let diffusionScheduler = initialDiffusionScheduler;
   let precomputedNoises: Pair<number>[][] = [];
 
   const { initialSamples: samples } = sampleStandardNormalPoints({
@@ -129,7 +159,7 @@ function initPrecomputedSDEView(
         dataPoint,
         currentScheduler,
         frameTimes,
-        diffusionCoeff,
+        diffusionScheduler,
         precomputedNoises[idx]
       )
     );
@@ -201,11 +231,10 @@ function initPrecomputedSDEView(
     render();
   }
 
-  function updateDiffusion(newDiffusion: number): void {
-    diffusionCoeff = Math.max(
-      MIN_DIFFUSION,
-      Math.min(MAX_DIFFUSION, parseFloat(newDiffusion.toFixed(3)))
-    );
+  function updateDiffusionScheduler(
+    newDiffusionScheduler: DiffusionCoefficientScheduler
+  ): void {
+    diffusionScheduler = newDiffusionScheduler;
     precomputeStochasticTrajectories(currentPosition);
     render();
   }
@@ -309,7 +338,7 @@ function initPrecomputedSDEView(
   precomputeStochasticTrajectories(initialPosition);
   render();
 
-  return { updatePosition, updateTime, updateStepCount, updateDiffusion, updateScheduler };
+  return { updatePosition, updateTime, updateStepCount, updateDiffusionScheduler, updateScheduler };
 }
 
 function initDoubleConditionalVectorFieldWidget(
@@ -359,12 +388,17 @@ function initDoubleConditionalVectorFieldWidget(
   const initialTime = 0;
   const initialSchedulerType = 'constant';
   const scheduler = getScheduler(initialSchedulerType);
+  const initialDiffusionType = 'constant';
+  const initialMaxDiffusion = DEFAULT_DIFFUSION;
+  const diffusionScheduler = getDiffusionScheduler(initialDiffusionType, initialMaxDiffusion);
 
   const controller = createFrameworkController<DoubleConditionalState>({
     time: initialTime,
     position: initialPosition,
     scheduler,
-    schedulerType: initialSchedulerType
+    schedulerType: initialSchedulerType,
+    diffusionScheduler,
+    diffusionType: initialDiffusionType
   });
 
   // Create containers for all three widgets
@@ -562,12 +596,17 @@ function initOdeSdeWidget(
   const initialTime = 0;
   const initialSchedulerType = 'constant';
   const scheduler = getScheduler(initialSchedulerType);
+  const initialDiffusionType = 'constant';
+  const initialMaxDiffusion = DEFAULT_DIFFUSION;
+  const diffusionScheduler = getDiffusionScheduler(initialDiffusionType, initialMaxDiffusion);
 
   const controller = createFrameworkController<DoubleConditionalState>({
     time: initialTime,
     position: initialPosition,
     scheduler,
-    schedulerType: initialSchedulerType
+    schedulerType: initialSchedulerType,
+    diffusionScheduler,
+    diffusionType: initialDiffusionType
   });
 
   // Conditional probability path view (same as first widget)
@@ -604,14 +643,13 @@ function initOdeSdeWidget(
 
   // SDE view (precomputed)
   const stepCount = STEP_COUNT;
-  let diffusionCoeff = DEFAULT_DIFFUSION;
 
   const sdeView = initPrecomputedSDEView(
     sdeContainer,
     initialPosition,
     scheduler,
     stepCount,
-    diffusionCoeff,
+    diffusionScheduler,
     (newPosition: Pair<number>) => {
       void controller.update({ position: newPosition });
     }
@@ -620,6 +658,7 @@ function initOdeSdeWidget(
   controller.registerView({
     render: (params: DoubleConditionalState) => {
       sdeView.updateScheduler(params.scheduler);
+      sdeView.updateDiffusionScheduler(params.diffusionScheduler);
       sdeView.updatePosition(params.position);
       sdeView.updateTime(params.time);
     }
@@ -632,30 +671,6 @@ function initOdeSdeWidget(
   controlsSection.style.marginTop = '8px';
   leftSide.appendChild(controlsSection);
 
-  const diffusionControls = document.createElement('div');
-  diffusionControls.style.display = 'flex';
-  diffusionControls.style.alignItems = 'center';
-  diffusionControls.style.gap = '12px';
-  controlsSection.appendChild(diffusionControls);
-
-  const diffusionLabel = document.createElement('label');
-  diffusionLabel.style.display = 'flex';
-  diffusionLabel.style.alignItems = 'center';
-  diffusionLabel.style.gap = '6px';
-  diffusionLabel.textContent = 'Diffusion:';
-  const diffusionInput = document.createElement('input');
-  diffusionInput.type = 'range';
-  diffusionInput.min = MIN_DIFFUSION.toString();
-  diffusionInput.max = MAX_DIFFUSION.toString();
-  diffusionInput.step = DIFFUSION_STEP.toString();
-  diffusionInput.value = diffusionCoeff.toString();
-  diffusionInput.style.width = '180px';
-  const diffusionValue = document.createElement('span');
-  diffusionValue.textContent = diffusionCoeff.toFixed(2);
-  diffusionLabel.appendChild(diffusionInput);
-  diffusionLabel.appendChild(diffusionValue);
-  diffusionControls.appendChild(diffusionLabel);
-
   const updateWidgets = (time: number): void => {
     void controller.update({ time });
   };
@@ -664,22 +679,6 @@ function initOdeSdeWidget(
     loop: true,
     autostart: false,
     steps: stepCount
-  });
-
-  function applyDiffusion(newDiffusion: number): void {
-    const clamped = Math.max(MIN_DIFFUSION, Math.min(MAX_DIFFUSION, newDiffusion));
-    diffusionCoeff = clamped;
-    diffusionInput.value = clamped.toString();
-    diffusionValue.textContent = clamped.toFixed(2);
-    sdeView.updateDiffusion(diffusionCoeff);
-    updateWidgets(controller.getState().time);
-  }
-
-  diffusionInput.addEventListener('input', () => {
-    const parsed = parseFloat(diffusionInput.value);
-    if (Number.isFinite(parsed)) {
-      applyDiffusion(parsed);
-    }
   });
 
   const schedulerVizContainer = document.createElement('div');
@@ -714,6 +713,41 @@ function initOdeSdeWidget(
       updateSchedulerViz(params.scheduler, params.time);
     }
   });
+
+  // Add diffusion visualization
+  const diffusionVizContainer = document.createElement('div');
+  const diffusionVizTitle = document.createElement('h3');
+  diffusionVizTitle.textContent = 'Diffusion';
+  diffusionVizTitle.style.marginTop = '0';
+  diffusionVizTitle.style.marginBottom = '8px';
+  diffusionVizContainer.appendChild(diffusionVizTitle);
+  rightSide.appendChild(diffusionVizContainer);
+
+  const updateDiffusionViz = initDiffusionCoefficientVisualizationWidget(diffusionVizContainer);
+
+  controller.registerView({
+    render: (params: DoubleConditionalState) => {
+      updateDiffusionViz(params.diffusionScheduler, params.time);
+    }
+  });
+
+  // Add diffusion selection
+  const diffusionSelectionContainer = document.createElement('div');
+  const diffusionSelectionTitle = document.createElement('h3');
+  diffusionSelectionTitle.textContent = 'Type';
+  diffusionSelectionTitle.style.marginTop = '0';
+  diffusionSelectionTitle.style.marginBottom = '8px';
+  diffusionSelectionContainer.appendChild(diffusionSelectionTitle);
+  rightSide.appendChild(diffusionSelectionContainer);
+
+  initDiffusionCoefficientSelectionWidget(
+    diffusionSelectionContainer,
+    (diffusionType: string, maxDiffusion: number) => {
+      const newDiffusionScheduler = getDiffusionScheduler(diffusionType, maxDiffusion);
+      void controller.update({ diffusionType, diffusionScheduler: newDiffusionScheduler });
+    },
+    `diffusion-odesde-${instanceIndex}`
+  );
 
   void controller.update({});
 }

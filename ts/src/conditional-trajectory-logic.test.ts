@@ -7,6 +7,7 @@ import {
   generateBrownianNoise,
   generateBrownianNoiseForTimes
 } from './conditional-trajectory-logic';
+import { makeConstantDiffusionCoefficientScheduler } from './math/diffusion-coefficient-scheduler';
 import { makeConstantVarianceScheduler } from './math/noise-scheduler';
 
 describe('Conditional Trajectory Logic', () => {
@@ -94,7 +95,7 @@ describe('Conditional Trajectory Logic', () => {
       const initialSample: Pair<number> = [2.0, 1.5];
       const dataPoint: Pair<number> = [0.0, 0.0];
       const frameTimes = [0, 0.5, 1.0];
-      const diffusionCoeff = 0.3;
+      const diffusionScheduler = makeConstantDiffusionCoefficientScheduler(0.3);
       const noise = generateBrownianNoise(frameTimes.length - 1, 0.01);
 
       const trajectory = calculateConditionalSDETrajectory(
@@ -102,7 +103,7 @@ describe('Conditional Trajectory Logic', () => {
         dataPoint,
         scheduler,
         frameTimes,
-        diffusionCoeff,
+        diffusionScheduler,
         noise
       );
 
@@ -119,7 +120,7 @@ describe('Conditional Trajectory Logic', () => {
       for (let i = 0; i <= numFrames; i++) {
         frameTimes.push(i / numFrames);
       }
-      const diffusionCoeff = 0.3;
+      const diffusionScheduler = makeConstantDiffusionCoefficientScheduler(0.3);
       const noise = generateBrownianNoise(numFrames, 1.0 / numFrames);
 
       const trajectory = calculateConditionalSDETrajectory(
@@ -127,7 +128,7 @@ describe('Conditional Trajectory Logic', () => {
         dataPoint,
         scheduler,
         frameTimes,
-        diffusionCoeff,
+        diffusionScheduler,
         noise
       );
 
@@ -149,7 +150,7 @@ describe('Conditional Trajectory Logic', () => {
       for (let i = 0; i <= numFrames; i++) {
         frameTimes.push(i / numFrames);
       }
-      const diffusionCoeff = 0.3;
+      const diffusionScheduler = makeConstantDiffusionCoefficientScheduler(0.3);
 
       // Test with 10 different initial samples
       const initialSamples: Pair<number>[] = [
@@ -172,7 +173,7 @@ describe('Conditional Trajectory Logic', () => {
           dataPoint,
           scheduler,
           frameTimes,
-          diffusionCoeff,
+          diffusionScheduler,
           noise
         );
 
@@ -204,7 +205,7 @@ describe('Conditional Trajectory Logic', () => {
           dataPoint,
           scheduler,
           frameTimes,
-          diffusionCoeff,
+          makeConstantDiffusionCoefficientScheduler(diffusionCoeff),
           noise
         );
 
@@ -226,7 +227,7 @@ describe('Conditional Trajectory Logic', () => {
       for (let i = 0; i <= numFrames; i++) {
         frameTimes.push(i / numFrames);
       }
-      const diffusionCoeff = 0.3;
+      const diffusionScheduler = makeConstantDiffusionCoefficientScheduler(0.3);
       const noise = generateBrownianNoise(numFrames, 1.0 / numFrames);
 
       const trajectory = calculateConditionalSDETrajectory(
@@ -234,7 +235,7 @@ describe('Conditional Trajectory Logic', () => {
         dataPoint,
         scheduler,
         frameTimes,
-        diffusionCoeff,
+        diffusionScheduler,
         noise
       );
 
@@ -268,14 +269,14 @@ describe('Conditional Trajectory Logic', () => {
       );
 
       // Calculate SDE trajectory
-      const diffusionCoeff = 0.3;
+      const diffusionScheduler = makeConstantDiffusionCoefficientScheduler(0.3);
       const noise = generateBrownianNoise(numFrames, 1.0 / numFrames);
       const sdeTrajectory = calculateConditionalSDETrajectory(
         initialSample,
         dataPoint,
         scheduler,
         frameTimes,
-        diffusionCoeff,
+        diffusionScheduler,
         noise
       );
 
@@ -317,7 +318,7 @@ describe('Conditional Trajectory Logic', () => {
       const initialSample: Pair<number> = [1.5, -0.5];
       const dataPoint: Pair<number> = [0.0, 0.0];
       const scheduler = makeConstantVarianceScheduler();
-      const diffusionCoeff = 0.3;
+      const diffusionScheduler = makeConstantDiffusionCoefficientScheduler(0.3);
       const stepCounts = [20, 50, 120, 300];
       const distances: number[] = [];
 
@@ -334,7 +335,7 @@ describe('Conditional Trajectory Logic', () => {
           dataPoint,
           scheduler,
           frameTimes,
-          diffusionCoeff,
+          diffusionScheduler,
           noise
         );
 
