@@ -1,5 +1,6 @@
 import { removePlaceholder } from 'web-ui-common/dom';
 
+import { createFrameworkController } from './framework-controller';
 import type { GaussianComponent } from './gaussian';
 import { initMarginalProbPathView } from './marginal-prob-path-view';
 import { initMarginalVectorFieldView } from './marginal-vector-field-view';
@@ -19,6 +20,13 @@ import { initTimeSliderWidget } from './time-slider';
 interface ExtendedGaussianComponent extends GaussianComponent {
   majorAxis: [number, number]; // In data space
   minorAxis: [number, number]; // In data space
+}
+
+interface MarginalState extends Record<string, unknown> {
+  time: number;
+  scheduler: NoiseScheduler;
+  schedulerType: string;
+  components: ExtendedGaussianComponent[];
 }
 
 function buildCovarianceFromAxes(
@@ -100,61 +108,86 @@ export function initMarginalProbPathAndVectorFieldWidget(
   });
 
   // Initialize state
-  let currentTime = 0;
-  let currentScheduler: NoiseScheduler = makeConstantVarianceScheduler();
+  const initialTime = 0;
+  const initialSchedulerType = 'constant';
+  const initialScheduler = makeConstantVarianceScheduler();
+
+  // Create controller
+  const controller = createFrameworkController<MarginalState>({
+    time: initialTime,
+    scheduler: initialScheduler,
+    schedulerType: initialSchedulerType,
+    components
+  });
+
+  // Helper function to get scheduler from type
+  function getScheduler(schedulerType: string): NoiseScheduler {
+    if (schedulerType === 'linear') {
+      return makeLinearNoiseScheduler();
+    } else if (schedulerType === 'sqrt') {
+      return makeSqrtNoiseScheduler();
+    } else if (schedulerType === 'inverse-sqrt') {
+      return makeInverseSqrtNoiseScheduler();
+    } else if (schedulerType === 'constant') {
+      return makeConstantVarianceScheduler();
+    } else if (schedulerType === 'sqrt-sqrt') {
+      return makeSqrtSqrtScheduler();
+    } else if (schedulerType === 'circular-circular') {
+      return makeCircularCircularScheduler();
+    }
+    return makeConstantVarianceScheduler();
+  }
 
   // Initialize scheduler visualization
   const updateSchedulerVisualization = initSchedulerVisualizationWidget(plotSection);
+  controller.registerView({
+    render: (state: MarginalState) => {
+      updateSchedulerVisualization(state.scheduler, state.time);
+    }
+  });
 
   // Initialize scheduler selection
   initSchedulerSelectionWidget(plotSection, (schedulerType: string) => {
-    if (schedulerType === 'linear') {
-      currentScheduler = makeLinearNoiseScheduler();
-    } else if (schedulerType === 'sqrt') {
-      currentScheduler = makeSqrtNoiseScheduler();
-    } else if (schedulerType === 'inverse-sqrt') {
-      currentScheduler = makeInverseSqrtNoiseScheduler();
-    } else if (schedulerType === 'constant') {
-      currentScheduler = makeConstantVarianceScheduler();
-    } else if (schedulerType === 'sqrt-sqrt') {
-      currentScheduler = makeSqrtSqrtScheduler();
-    } else if (schedulerType === 'circular-circular') {
-      currentScheduler = makeCircularCircularScheduler();
-    }
-    updateProbPathView(components, currentTime, currentScheduler);
-    updateVectorFieldView(components, currentTime, currentScheduler);
-    updateSchedulerVisualization(currentScheduler, currentTime);
+    const newScheduler = getScheduler(schedulerType);
+    void controller.update({ schedulerType, scheduler: newScheduler });
   }, radioGroupName);
 
   // Initialize probability path view
   const updateProbPathView = initMarginalProbPathView(
     leftSection,
     components,
-    currentTime,
-    currentScheduler,
+    initialTime,
+    initialScheduler,
     (newComponents: ExtendedGaussianComponent[]) => {
-      updateVectorFieldView(newComponents, currentTime, currentScheduler);
+      void controller.update({ components: newComponents });
     }
   );
+  controller.registerView({
+    render: (state: MarginalState) => {
+      updateProbPathView(state.components, state.time, state.scheduler);
+    }
+  });
 
   // Initialize vector field view
   const updateVectorFieldView = initMarginalVectorFieldView(
     rightSection,
     components,
-    currentTime,
-    currentScheduler
+    initialTime,
+    initialScheduler
   );
+  controller.registerView({
+    render: (state: MarginalState) => {
+      updateVectorFieldView(state.components, state.time, state.scheduler);
+    }
+  });
 
   // Initialize time slider
-  void initTimeSliderWidget(container, currentTime, (newTime: number) => {
-    currentTime = newTime;
-    updateProbPathView(components, currentTime, currentScheduler);
-    updateVectorFieldView(components, currentTime, currentScheduler);
-    updateSchedulerVisualization(currentScheduler, currentTime);
+  void initTimeSliderWidget(container, initialTime, (newTime: number) => {
+    void controller.update({ time: newTime });
   });
 
   // Initial render
-  updateSchedulerVisualization(currentScheduler, currentTime);
+  void controller.update({});
 
-  console.log('Marginal probability path initialized with TF.js');
+  console.log('Marginal probability path initialized with TF.js and framework controller');
 }
