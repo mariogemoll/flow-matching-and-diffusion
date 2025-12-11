@@ -493,8 +493,10 @@ function setUpVectorField(
     }
   );
 
-  // Set initial dot position
-  dotPosition = [90, 90];
+  // Set initial dot position (randomly in leftmost third, middle 80% vertically)
+  const initialX = Math.random() * (xRange[1] / 3);
+  const initialY = yRange[0] + 0.1 * yRange[1] + Math.random() * 0.8 * yRange[1];
+  dotPosition = [initialX, initialY];
   trajectory = calculateTrajectory(dotPosition, xScale, yScale);
 
   if (showEulerSteps) {
