@@ -312,25 +312,30 @@ function setUpVectorField(
   }
 
   // Create checkbox for trajectory display
-  const trajectorySwitch = addDiv(container, { class: 'trajectory-switch' });
-  const trajectoryLabel = addEl(trajectorySwitch, 'label', {}) as HTMLLabelElement;
-  const trajectoryCheckbox = addEl(trajectoryLabel, 'input', {
-    type: 'checkbox',
-    checked: showTrajectory.toString()
-  }) as HTMLInputElement;
-  trajectoryCheckbox.checked = showTrajectory;
-  trajectoryLabel.appendChild(document.createTextNode(' Display trajectory'));
-
-  trajectoryCheckbox.addEventListener('change', () => {
-    showTrajectory = trajectoryCheckbox.checked;
-    render(currentTime);
-  });
-
-  // Add checkbox to show Euler approximation trajectory if in Euler method mode
   if (eulerMethod) {
+    // Add header for Euler method mode
+    const header = addEl(container, 'h3', {}) as HTMLHeadingElement;
+    header.textContent = 'Trajectories:';
+
+    // Real trajectory checkbox
+    const realTrajectorySwitch = addDiv(container, { class: 'real-trajectory-switch' });
+    const trajectoryLabel = addEl(realTrajectorySwitch, 'label', {}) as HTMLLabelElement;
+    const trajectoryCheckbox = addEl(trajectoryLabel, 'input', {
+      type: 'checkbox',
+      checked: showTrajectory.toString()
+    }) as HTMLInputElement;
+    trajectoryCheckbox.checked = showTrajectory;
+    trajectoryLabel.appendChild(document.createTextNode(' Real'));
+
+    trajectoryCheckbox.addEventListener('change', () => {
+      showTrajectory = trajectoryCheckbox.checked;
+      render(currentTime);
+    });
+
+    // Euler approximation trajectory checkbox
     const eulerApproximationTrajectorySwitch = addDiv(
       container,
-      { class: 'euler-approximation-switch' }
+      { class: 'euler-approximation-trajectory-switch' }
     );
     const eulerApproximationTrajectoryLabel = addEl(
       eulerApproximationTrajectorySwitch,
@@ -347,11 +352,26 @@ function setUpVectorField(
     ) as HTMLInputElement;
     eulerApproximationTrajectoryCheckbox.checked = showEulerApproximationTrajectory;
     eulerApproximationTrajectoryLabel.appendChild(
-      document.createTextNode(' Display Euler approximation trajectory')
+      document.createTextNode(' Euler approximation')
     );
 
     eulerApproximationTrajectoryCheckbox.addEventListener('change', () => {
       showEulerApproximationTrajectory = eulerApproximationTrajectoryCheckbox.checked;
+      render(currentTime);
+    });
+  } else {
+    // Standard trajectory checkbox for non-Euler mode
+    const trajectorySwitch = addDiv(container, { class: 'trajectory-switch' });
+    const trajectoryLabel = addEl(trajectorySwitch, 'label', {}) as HTMLLabelElement;
+    const trajectoryCheckbox = addEl(trajectoryLabel, 'input', {
+      type: 'checkbox',
+      checked: showTrajectory.toString()
+    }) as HTMLInputElement;
+    trajectoryCheckbox.checked = showTrajectory;
+    trajectoryLabel.appendChild(document.createTextNode(' Display trajectory'));
+
+    trajectoryCheckbox.addEventListener('change', () => {
+      showTrajectory = trajectoryCheckbox.checked;
       render(currentTime);
     });
   }
