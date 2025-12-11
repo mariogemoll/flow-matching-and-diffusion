@@ -10,7 +10,8 @@
   "exports": {
     "./conditional": "./src/conditional.ts",
     "./marginal": "./src/marginal.ts",
-    "./flow-matching-pipeline": "./src/flow-matching-pipeline.ts"
+    "./flow-matching-pipeline": "./src/flow-matching-pipeline.ts",
+    "./vf": "./src/vf.ts"
   },
   "dependencies": {
     "flow-models-common": "mariogemoll/flow-models-common#8aff32246ff3ee1eb495d0698e94dbc7e66830e2",
