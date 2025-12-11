@@ -1,10 +1,13 @@
+import { addDiv, addEl, addSpan } from 'web-ui-common/dom';
+
 export interface TimeSliderOptions {
   loop?: boolean;
   autostart?: boolean;
   steps?: number; // Number of discrete steps (undefined = continuous)
   pauseAtEnd?: number; // Pause duration in milliseconds before looping
   onLoopStart?: () => void | Promise<void>; // Callback when loop restarts
-  duration?: number; // Total animation duration in milliseconds (default: 3000, set to 0 for maximum speed)
+  // Total animation duration in milliseconds (default: 3000, set to 0 for maximum speed)
+  duration?: number;
 }
 
 export interface TimeSliderControls {
@@ -28,33 +31,24 @@ export function initTimeSliderWidget(
   } = options;
   let steps = initialSteps;
   // Create time slider container
-  const sliderDiv = document.createElement('div');
-  container.appendChild(sliderDiv);
+  const sliderDiv = addDiv(container, {});
 
   // Create play/pause button
-  const playPauseBtn = document.createElement('button');
+  const playPauseBtn = addEl(sliderDiv, 'button', {}) as HTMLButtonElement;
   playPauseBtn.textContent = 'Play';
-  sliderDiv.appendChild(playPauseBtn);
 
   // Create time slider
-  const timeSlider = document.createElement('input');
-  timeSlider.type = 'range';
-  timeSlider.min = '0';
-  if (steps !== undefined) {
-    timeSlider.max = steps.toString();
-    timeSlider.step = '1';
-    timeSlider.value = Math.round(initialTime * steps).toString();
-  } else {
-    timeSlider.max = '1';
-    timeSlider.step = '0.01';
-    timeSlider.value = initialTime.toString();
-  }
-  sliderDiv.appendChild(timeSlider);
+  const timeSlider = addEl(sliderDiv, 'input', {
+    type: 'range',
+    min: '0',
+    max: steps !== undefined ? steps.toString() : '1',
+    step: steps !== undefined ? '1' : '0.01',
+    value: steps !== undefined ? Math.round(initialTime * steps).toString() : initialTime.toString()
+  }) as HTMLInputElement;
 
   // Create time value display
-  const timeValue = document.createElement('span');
+  const timeValue = addSpan(sliderDiv, {});
   timeValue.textContent = initialTime.toFixed(2);
-  sliderDiv.appendChild(timeValue);
 
   let currentTime = initialTime;
   let isPlaying = false;
@@ -133,8 +127,11 @@ export function initTimeSliderWidget(
     }
 
     if (steps !== undefined) {
-      // Discrete mode: advance by one step, but throttle to match duration (unless duration is 0)
-      const framesPerStep = duration === 0 ? 1 : Math.max(1, Math.round((duration / 1000) * targetFPS / steps));
+      // Discrete mode: advance by one step, but throttle to match duration
+      // (unless duration is 0)
+      const framesPerStep = duration === 0
+        ? 1
+        : Math.max(1, Math.round((duration / 1000) * targetFPS / steps));
 
       frameCount++;
 
