@@ -180,8 +180,22 @@ function drawVectorField(
   const [yMin, yMax] = yScale.domain;
 
   // Compute all vectors and find max magnitude
-  for (let x = xMin; x <= xMax; x += spacing) {
-    for (let y = yMin; y <= yMax; y += spacing) {
+  // Center the grid with equal margins on all sides
+  const width = xMax - xMin;
+  const height = yMax - yMin;
+  const numArrowsX = Math.floor(width / spacing);
+  const numArrowsY = Math.floor(height / spacing);
+  const spanX = (numArrowsX - 1) * spacing;
+  const spanY = (numArrowsY - 1) * spacing;
+  const marginX = (width - spanX) / 2;
+  const marginY = (height - spanY) / 2;
+  const startX = xMin + marginX;
+  const startY = yMin + marginY;
+
+  for (let i = 0; i < numArrowsX; i++) {
+    for (let j = 0; j < numArrowsY; j++) {
+      const x = startX + i * spacing;
+      const y = startY + j * spacing;
       const [vx, vy] = vectorField(x, y, t, xScale, yScale);
       const length = Math.sqrt(vx * vx + vy * vy);
       maxLength = Math.max(maxLength, length);
