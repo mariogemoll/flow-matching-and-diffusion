@@ -243,7 +243,7 @@ function setUpVectorField(
   let dotPosition: Pair<number> | null = null;
   let trajectory: Pair<number>[] = [];
   let showTrajectory = showEulerSteps; // Show trajectory by default in Euler mode
-  let eulerSteps = 4; // For Euler demonstration
+  let eulerSteps = 8; // For Euler method demonstration
   let discreteTrajectory: Pair<number>[] = []; // Coarse trajectory for Euler demo
   let showEulerStepsPoints = showEulerSteps; // Show Euler approximation by default in Euler mode
 
