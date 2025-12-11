@@ -170,8 +170,8 @@ function drawVectorField(
   yScale: Scale,
   t: number
 ): void {
-  const spacing = 40; // Spacing in data space
-  const displayScale = 0.15;
+  const spacing = 20; // Spacing in data space
+  const displayScale = 0.08;
   const vectors: { x: number; y: number; vx: number; vy: number; length: number }[] = [];
   let maxLength = 0;
 
@@ -219,8 +219,8 @@ function setUpVectorField(canvas: HTMLCanvasElement, options: VectorFieldOptions
     throw new Error('Canvas must have a parent element');
   }
 
-  const xRange = [0, 400] as [number, number];
-  const yRange = [0, 300] as [number, number];
+  const xRange = [0, 200] as [number, number];
+  const yRange = [0, 150] as [number, number];
   const margins = { top: 20, right: 20, bottom: 40, left: 40 };
   const xScale = makeScale(xRange, [margins.left, canvas.width - margins.right]);
   const yScale = makeScale(yRange, [canvas.height - margins.bottom, margins.top]);
