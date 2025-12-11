@@ -246,7 +246,8 @@ function setUpVectorField(
   let showTrajectory = options.showTrajectory ?? false;
   let steps = 8; // For Euler method demonstration
   let discreteTrajectory: Pair<number>[] = []; // Coarse trajectory for Euler demo
-  let showEulerApproximation = eulerMethod; // Show Euler approximation by default in Euler mode
+  // Show Euler approximation trajectory by default in Euler mode
+  let showEulerApproximationTrajectory = eulerMethod;
 
   function render(time: number): void {
     currentTime = time;
@@ -263,7 +264,7 @@ function setUpVectorField(
     }
 
     // Draw Euler step line if enabled
-    if (eulerMethod && showEulerApproximation && discreteTrajectory.length > 0) {
+    if (eulerMethod && showEulerApproximationTrajectory && discreteTrajectory.length > 0) {
       ctx.strokeStyle = '#2196F3';
       ctx.lineWidth = 2;
       ctx.globalAlpha = 0.8;
@@ -325,32 +326,45 @@ function setUpVectorField(
     render(currentTime);
   });
 
-  // Add checkbox to show Euler approximation if in Euler method mode
+  // Add checkbox to show Euler approximation trajectory if in Euler method mode
   if (eulerMethod) {
-    const eulerApproximationSwitch = addDiv(container, { class: 'euler-approximation-switch' });
-    const eulerApproximationLabel = addEl(eulerApproximationSwitch, 'label', {}) as HTMLLabelElement;
-    const eulerApproximationCheckbox = addEl(eulerApproximationLabel, 'input', {
-      type: 'checkbox',
-      checked: showEulerApproximation.toString()
-    }) as HTMLInputElement;
-    eulerApproximationCheckbox.checked = showEulerApproximation;
-    eulerApproximationLabel.appendChild(document.createTextNode(' Display Euler approximation'));
+    const eulerApproximationTrajectorySwitch = addDiv(
+      container,
+      { class: 'euler-approximation-switch' }
+    );
+    const eulerApproximationTrajectoryLabel = addEl(
+      eulerApproximationTrajectorySwitch,
+      'label',
+      {}
+    ) as HTMLLabelElement;
+    const eulerApproximationTrajectoryCheckbox = addEl(
+      eulerApproximationTrajectoryLabel,
+      'input',
+      {
+        type: 'checkbox',
+        checked: showEulerApproximationTrajectory.toString()
+      }
+    ) as HTMLInputElement;
+    eulerApproximationTrajectoryCheckbox.checked = showEulerApproximationTrajectory;
+    eulerApproximationTrajectoryLabel.appendChild(
+      document.createTextNode(' Display Euler approximation trajectory')
+    );
 
-    eulerApproximationCheckbox.addEventListener('change', () => {
-      showEulerApproximation = eulerApproximationCheckbox.checked;
+    eulerApproximationTrajectoryCheckbox.addEventListener('change', () => {
+      showEulerApproximationTrajectory = eulerApproximationTrajectoryCheckbox.checked;
       render(currentTime);
     });
   }
 
   // Add Euler steps slider if in Euler method mode
-  let sliderControls: ReturnType<typeof initTimeSliderWidget>;
+  let stepsSlider: HTMLInputElement | undefined;
   if (eulerMethod) {
     const stepsSliderDiv = addDiv(container, { class: 'steps-slider' });
 
     const stepsSliderLabel = addEl(stepsSliderDiv, 'label', {}) as HTMLLabelElement;
     stepsSliderLabel.textContent = 'Steps: ';
 
-    const stepsSlider = addEl(stepsSliderDiv, 'input', {
+    stepsSlider = addEl(stepsSliderDiv, 'input', {
       type: 'range',
       min: '2',
       max: '100',
@@ -360,7 +374,17 @@ function setUpVectorField(
 
     const stepsValue = addEl(stepsSliderDiv, 'span', {}) as HTMLSpanElement;
     stepsValue.textContent = steps.toString();
+  }
 
+  // Initialize time slider with looping and autostart
+  const sliderControls = initTimeSliderWidget(container, currentTime, render, {
+    loop: true,
+    autostart: true,
+    steps: eulerMethod ? steps : undefined
+  });
+
+  // Add Euler steps slider event handlers after sliderControls is available
+  if (eulerMethod && stepsSlider) {
     let wasPlaying = false;
 
     stepsSlider.addEventListener('mousedown', () => {
@@ -373,6 +397,7 @@ function setUpVectorField(
 
     stepsSlider.addEventListener('input', () => {
       steps = parseInt(stepsSlider.value);
+      const stepsValue = stepsSlider.nextElementSibling as HTMLSpanElement;
       stepsValue.textContent = steps.toString();
 
       // Update slider steps
@@ -395,13 +420,6 @@ function setUpVectorField(
       }
     });
   }
-
-  // Initialize time slider with looping and autostart
-  sliderControls = initTimeSliderWidget(container, currentTime, render, {
-    loop: true,
-    autostart: true,
-    steps: eulerMethod ? steps : undefined
-  });
 
   // Track whether animation was playing before dragging
   let wasPlayingBeforeDrag = false;
