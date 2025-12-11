@@ -488,7 +488,7 @@ export function initVectorFieldWidget(container: HTMLElement): void {
   setUpVectorField(canvas, container, { showTrajectory: true });
 }
 
-export function initVectorFieldEulerWidget(container: HTMLElement): void {
+export function initEulerMethodWidget(container: HTMLElement): void {
   removePlaceholder(container);
   const canvas = addCanvas(container, { width: '400', height: '300' });
   setUpVectorField(canvas, container, { showEulerSteps: true, showTrajectory: true });
