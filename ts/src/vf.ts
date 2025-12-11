@@ -223,6 +223,7 @@ function drawVectorField(
 
 interface VectorFieldOptions {
   showEulerSteps?: boolean;
+  showTrajectory?: boolean;
 }
 
 function setUpVectorField(
@@ -242,7 +243,7 @@ function setUpVectorField(
   let currentTime = 0;
   let dotPosition: Pair<number> | null = null;
   let trajectory: Pair<number>[] = [];
-  let showTrajectory = showEulerSteps; // Show trajectory by default in Euler mode
+  let showTrajectory = options.showTrajectory ?? false;
   let eulerSteps = 8; // For Euler method demonstration
   let discreteTrajectory: Pair<number>[] = []; // Coarse trajectory for Euler demo
   let showEulerStepsPoints = showEulerSteps; // Show Euler approximation by default in Euler mode
@@ -510,11 +511,11 @@ function setUpVectorField(
 export function initVectorFieldWidget(container: HTMLElement): void {
   removePlaceholder(container);
   const canvas = addCanvas(container, { width: '400', height: '300' });
-  setUpVectorField(canvas, container);
+  setUpVectorField(canvas, container, { showTrajectory: true });
 }
 
 export function initVectorFieldEulerWidget(container: HTMLElement): void {
   removePlaceholder(container);
   const canvas = addCanvas(container, { width: '400', height: '300' });
-  setUpVectorField(canvas, container, { showEulerSteps: true });
+  setUpVectorField(canvas, container, { showEulerSteps: true, showTrajectory: true });
 }
