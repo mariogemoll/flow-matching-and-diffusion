@@ -1,5 +1,5 @@
 import { addFrameUsingScales, createMovableDot, getContext } from 'web-ui-common/canvas';
-import { addCanvas, removePlaceholder } from 'web-ui-common/dom';
+import { addCanvas, addDiv, addEl, removePlaceholder } from 'web-ui-common/dom';
 import type { Pair, Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
@@ -310,70 +310,38 @@ function setUpVectorField(
     }
   }
 
-  // Create flex container for controls (two columns)
-  const controlsContainer = document.createElement('div');
-  container.appendChild(controlsContainer);
-
-  // Left column: sliders
-  const slidersColumn = document.createElement('div');
-  controlsContainer.appendChild(slidersColumn);
-
-  // Right column: checkboxes
-  const checkboxesColumn = document.createElement('div');
-  controlsContainer.appendChild(checkboxesColumn);
-
   // Initialize time slider with looping and autostart
-  const sliderControls = initTimeSliderWidget(slidersColumn, currentTime, render, {
+  const sliderControls = initTimeSliderWidget(container, currentTime, render, {
     loop: true,
     autostart: true,
     steps: showEulerSteps ? eulerSteps : undefined
   });
 
-  // Create checkbox for trajectory display
-  const trajectoryLabel = document.createElement('label');
-  checkboxesColumn.appendChild(trajectoryLabel);
-
-  const trajectoryCheckbox = document.createElement('input');
-  trajectoryCheckbox.type = 'checkbox';
-  trajectoryCheckbox.checked = showTrajectory;
-  trajectoryLabel.appendChild(trajectoryCheckbox);
-
-  trajectoryLabel.appendChild(document.createTextNode(' Display trajectory'));
-
-  trajectoryCheckbox.addEventListener('change', () => {
-    showTrajectory = trajectoryCheckbox.checked;
-    render(currentTime);
-  });
-
   // Add Euler steps slider if in demonstration mode
   if (showEulerSteps) {
-    const eulerStepsContainer = document.createElement('div');
-    slidersColumn.appendChild(eulerStepsContainer);
+    const eulerStepsDiv = addDiv(container, { class: 'euler-steps' });
 
-    const eulerStepsLabel = document.createElement('label');
+    const eulerStepsLabel = addEl(eulerStepsDiv, 'label', {}) as HTMLLabelElement;
     eulerStepsLabel.textContent = 'Steps: ';
-    eulerStepsContainer.appendChild(eulerStepsLabel);
 
-    const eulerStepsSlider = document.createElement('input');
-    eulerStepsSlider.type = 'range';
-    eulerStepsSlider.min = '2';
-    eulerStepsSlider.max = '100';
-    eulerStepsSlider.step = '1';
-    eulerStepsSlider.value = eulerSteps.toString();
-    eulerStepsContainer.appendChild(eulerStepsSlider);
+    const eulerStepsSlider = addEl(eulerStepsDiv, 'input', {
+      type: 'range',
+      min: '2',
+      max: '100',
+      step: '1',
+      value: eulerSteps.toString()
+    }) as HTMLInputElement;
 
-    const eulerStepsValue = document.createElement('span');
+    const eulerStepsValue = addEl(eulerStepsDiv, 'span', {}) as HTMLSpanElement;
     eulerStepsValue.textContent = eulerSteps.toString();
-    eulerStepsContainer.appendChild(eulerStepsValue);
 
     let wasPlaying = false;
 
     eulerStepsSlider.addEventListener('mousedown', () => {
       // Store playing state and pause
-      const playPauseBtn = controlsContainer.querySelector('button');
-      wasPlaying = playPauseBtn?.textContent === 'Pause';
-      if (wasPlaying && playPauseBtn) {
-        playPauseBtn.click();
+      wasPlaying = sliderControls.playPauseBtn.textContent === 'Pause';
+      if (wasPlaying) {
+        sliderControls.playPauseBtn.click();
       }
     });
 
@@ -396,23 +364,36 @@ function setUpVectorField(
 
     eulerStepsSlider.addEventListener('mouseup', () => {
       // Resume if it was playing
-      if (wasPlaying) {
-        const playPauseBtn = controlsContainer.querySelector('button');
-        if (playPauseBtn?.textContent === 'Play') {
-          playPauseBtn.click();
-        }
+      if (wasPlaying && sliderControls.playPauseBtn.textContent === 'Play') {
+        sliderControls.playPauseBtn.click();
       }
     });
+  }
 
-    // Add checkbox to show Euler approximation
-    const eulerStepsPointsLabel = document.createElement('label');
-    checkboxesColumn.appendChild(eulerStepsPointsLabel);
+  // Create checkbox for trajectory display
+  const trajectorySwitch = addDiv(container, { class: 'trajectory-switch' });
+  const trajectoryLabel = addEl(trajectorySwitch, 'label', {}) as HTMLLabelElement;
+  const trajectoryCheckbox = addEl(trajectoryLabel, 'input', {
+    type: 'checkbox',
+    checked: showTrajectory.toString()
+  }) as HTMLInputElement;
+  trajectoryCheckbox.checked = showTrajectory;
+  trajectoryLabel.appendChild(document.createTextNode(' Display trajectory'));
 
-    const eulerStepsPointsCheckbox = document.createElement('input');
-    eulerStepsPointsCheckbox.type = 'checkbox';
+  trajectoryCheckbox.addEventListener('change', () => {
+    showTrajectory = trajectoryCheckbox.checked;
+    render(currentTime);
+  });
+
+  // Add checkbox to show Euler approximation if in demonstration mode
+  if (showEulerSteps) {
+    const eulerApproximationSwitch = addDiv(container, { class: 'euler-approximation-switch' });
+    const eulerStepsPointsLabel = addEl(eulerApproximationSwitch, 'label', {}) as HTMLLabelElement;
+    const eulerStepsPointsCheckbox = addEl(eulerStepsPointsLabel, 'input', {
+      type: 'checkbox',
+      checked: showEulerStepsPoints.toString()
+    }) as HTMLInputElement;
     eulerStepsPointsCheckbox.checked = showEulerStepsPoints;
-    eulerStepsPointsLabel.appendChild(eulerStepsPointsCheckbox);
-
     eulerStepsPointsLabel.appendChild(document.createTextNode(' Display Euler approximation'));
 
     eulerStepsPointsCheckbox.addEventListener('change', () => {
@@ -426,20 +407,16 @@ function setUpVectorField(
 
   // Add mousedown listener to pause and store playing state
   canvas.addEventListener('mousedown', () => {
-    const playPauseBtn = controlsContainer.querySelector('button');
-    wasPlayingBeforeDrag = playPauseBtn?.textContent === 'Pause';
-    if (wasPlayingBeforeDrag && playPauseBtn) {
-      playPauseBtn.click(); // Pause the animation
+    wasPlayingBeforeDrag = sliderControls.playPauseBtn.textContent === 'Pause';
+    if (wasPlayingBeforeDrag) {
+      sliderControls.playPauseBtn.click(); // Pause the animation
     }
   });
 
   // Add mouseup listener to resume if it was playing
   canvas.addEventListener('mouseup', () => {
-    if (wasPlayingBeforeDrag) {
-      const playPauseBtn = controlsContainer.querySelector('button');
-      if (playPauseBtn?.textContent === 'Play') {
-        playPauseBtn.click(); // Resume the animation
-      }
+    if (wasPlayingBeforeDrag && sliderControls.playPauseBtn.textContent === 'Play') {
+      sliderControls.playPauseBtn.click(); // Resume the animation
     }
   });
 

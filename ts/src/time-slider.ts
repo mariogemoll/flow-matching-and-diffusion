@@ -13,6 +13,7 @@ export interface TimeSliderOptions {
 export interface TimeSliderControls {
   update: (time: number) => void;
   setSteps: (newSteps: number | undefined) => void;
+  playPauseBtn: HTMLButtonElement;
 }
 
 export function initTimeSliderWidget(
@@ -256,5 +257,5 @@ export function initTimeSliderWidget(
     animationId = requestAnimationFrame(animate);
   }
 
-  return { update, setSteps };
+  return { update, setSteps, playPauseBtn };
 }
