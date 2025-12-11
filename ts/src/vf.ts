@@ -365,7 +365,7 @@ function setUpVectorField(
     slidersColumn.appendChild(eulerStepsContainer);
 
     const eulerStepsLabel = document.createElement('label');
-    eulerStepsLabel.textContent = 'Euler steps: ';
+    eulerStepsLabel.textContent = 'Steps: ';
     eulerStepsContainer.appendChild(eulerStepsLabel);
 
     const eulerStepsSlider = document.createElement('input');
