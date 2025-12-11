@@ -1,5 +1,5 @@
 import { addFrameUsingScales, createMovableDot, getContext } from 'web-ui-common/canvas';
-import { el } from 'web-ui-common/dom';
+import { addCanvas, removePlaceholder } from 'web-ui-common/dom';
 import type { Pair, Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
@@ -225,13 +225,13 @@ interface VectorFieldOptions {
   showEulerSteps?: boolean;
 }
 
-function setUpVectorField(canvas: HTMLCanvasElement, options: VectorFieldOptions = {}): void {
+function setUpVectorField(
+  canvas: HTMLCanvasElement,
+  container: HTMLElement,
+  options: VectorFieldOptions = {}
+): void {
   const { showEulerSteps = false } = options;
   const ctx = getContext(canvas);
-  const container = canvas.parentElement;
-  if (!container) {
-    throw new Error('Canvas must have a parent element');
-  }
 
   const xRange = [0, 200] as [number, number];
   const yRange = [0, 150] as [number, number];
@@ -505,12 +505,14 @@ function setUpVectorField(canvas: HTMLCanvasElement, options: VectorFieldOptions
   render(0);
 }
 
-function run(): void {
-  const canvas1 = el(document, '#vf-canvas') as HTMLCanvasElement;
-  const canvas2 = el(document, '#vf-canvas2') as HTMLCanvasElement;
-
-  setUpVectorField(canvas1);
-  setUpVectorField(canvas2, { showEulerSteps: true });
+export function initVectorFieldWidget(container: HTMLElement): void {
+  removePlaceholder(container);
+  const canvas = addCanvas(container, { width: '400', height: '300' });
+  setUpVectorField(canvas, container);
 }
 
-run();
+export function initVectorFieldEulerWidget(container: HTMLElement): void {
+  removePlaceholder(container);
+  const canvas = addCanvas(container, { width: '400', height: '300' });
+  setUpVectorField(canvas, container, { showEulerSteps: true });
+}
