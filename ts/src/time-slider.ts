@@ -27,7 +27,6 @@ export function initTimeSliderWidget(
   let steps = initialSteps;
   // Create time slider container
   const sliderDiv = document.createElement('div');
-  sliderDiv.style.marginTop = '16px';
   container.appendChild(sliderDiv);
 
   // Create play/pause button
@@ -48,14 +47,11 @@ export function initTimeSliderWidget(
     timeSlider.step = '0.01';
     timeSlider.value = initialTime.toString();
   }
-  timeSlider.style.width = '320px';
-  timeSlider.style.marginLeft = '8px';
   sliderDiv.appendChild(timeSlider);
 
   // Create time value display
   const timeValue = document.createElement('span');
   timeValue.textContent = initialTime.toFixed(2);
-  timeValue.style.marginLeft = '8px';
   sliderDiv.appendChild(timeValue);
 
   let currentTime = initialTime;

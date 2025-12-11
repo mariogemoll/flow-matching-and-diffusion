@@ -312,9 +312,6 @@ function setUpVectorField(
 
   // Create flex container for controls (two columns)
   const controlsContainer = document.createElement('div');
-  controlsContainer.style.display = 'flex';
-  controlsContainer.style.gap = '40px';
-  controlsContainer.style.marginTop = '16px';
   container.appendChild(controlsContainer);
 
   // Left column: sliders
@@ -323,9 +320,6 @@ function setUpVectorField(
 
   // Right column: checkboxes
   const checkboxesColumn = document.createElement('div');
-  checkboxesColumn.style.display = 'flex';
-  checkboxesColumn.style.flexDirection = 'column';
-  checkboxesColumn.style.gap = '8px';
   controlsContainer.appendChild(checkboxesColumn);
 
   // Initialize time slider with looping and autostart
@@ -337,8 +331,6 @@ function setUpVectorField(
 
   // Create checkbox for trajectory display
   const trajectoryCheckboxContainer = document.createElement('div');
-  trajectoryCheckboxContainer.style.display = 'flex';
-  trajectoryCheckboxContainer.style.alignItems = 'center';
   checkboxesColumn.appendChild(trajectoryCheckboxContainer);
 
   const trajectoryCheckbox = document.createElement('input');
@@ -350,8 +342,6 @@ function setUpVectorField(
   const trajectoryLabel = document.createElement('label');
   trajectoryLabel.htmlFor = 'show-trajectory';
   trajectoryLabel.textContent = ' Display trajectory';
-  trajectoryLabel.style.marginLeft = '4px';
-  trajectoryLabel.style.cursor = 'pointer';
   trajectoryCheckboxContainer.appendChild(trajectoryLabel);
 
   trajectoryCheckbox.addEventListener('change', () => {
@@ -362,7 +352,6 @@ function setUpVectorField(
   // Add Euler steps slider if in demonstration mode
   if (showEulerSteps) {
     const eulerStepsContainer = document.createElement('div');
-    eulerStepsContainer.style.marginTop = '16px';
     slidersColumn.appendChild(eulerStepsContainer);
 
     const eulerStepsLabel = document.createElement('label');
@@ -375,13 +364,10 @@ function setUpVectorField(
     eulerStepsSlider.max = '100';
     eulerStepsSlider.step = '1';
     eulerStepsSlider.value = eulerSteps.toString();
-    eulerStepsSlider.style.width = '320px';
-    eulerStepsSlider.style.marginLeft = '8px';
     eulerStepsContainer.appendChild(eulerStepsSlider);
 
     const eulerStepsValue = document.createElement('span');
     eulerStepsValue.textContent = eulerSteps.toString();
-    eulerStepsValue.style.marginLeft = '8px';
     eulerStepsContainer.appendChild(eulerStepsValue);
 
     let wasPlaying = false;
@@ -424,8 +410,6 @@ function setUpVectorField(
 
     // Add checkbox to show Euler approximation
     const eulerApproxCheckboxContainer = document.createElement('div');
-    eulerApproxCheckboxContainer.style.display = 'flex';
-    eulerApproxCheckboxContainer.style.alignItems = 'center';
     checkboxesColumn.appendChild(eulerApproxCheckboxContainer);
 
     const eulerStepsPointsCheckbox = document.createElement('input');
@@ -437,8 +421,6 @@ function setUpVectorField(
     const eulerStepsPointsLabel = document.createElement('label');
     eulerStepsPointsLabel.htmlFor = 'show-euler-steps-points';
     eulerStepsPointsLabel.textContent = ' Display Euler approximation';
-    eulerStepsPointsLabel.style.marginLeft = '4px';
-    eulerStepsPointsLabel.style.cursor = 'pointer';
     eulerApproxCheckboxContainer.appendChild(eulerStepsPointsLabel);
 
     eulerStepsPointsCheckbox.addEventListener('change', () => {
