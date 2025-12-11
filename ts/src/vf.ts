@@ -432,6 +432,28 @@ function setUpVectorField(canvas: HTMLCanvasElement, options: VectorFieldOptions
     });
   }
 
+  // Track whether animation was playing before dragging
+  let wasPlayingBeforeDrag = false;
+
+  // Add mousedown listener to pause and store playing state
+  canvas.addEventListener('mousedown', () => {
+    const playPauseBtn = controlsContainer.querySelector('button');
+    wasPlayingBeforeDrag = playPauseBtn?.textContent === 'Pause';
+    if (wasPlayingBeforeDrag && playPauseBtn) {
+      playPauseBtn.click(); // Pause the animation
+    }
+  });
+
+  // Add mouseup listener to resume if it was playing
+  canvas.addEventListener('mouseup', () => {
+    if (wasPlayingBeforeDrag) {
+      const playPauseBtn = controlsContainer.querySelector('button');
+      if (playPauseBtn?.textContent === 'Play') {
+        playPauseBtn.click(); // Resume the animation
+      }
+    }
+  });
+
   // Create movable dot
   const dot = createMovableDot(
     canvas,
