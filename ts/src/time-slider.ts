@@ -4,6 +4,7 @@ export interface TimeSliderOptions {
   steps?: number; // Number of discrete steps (undefined = continuous)
   pauseAtEnd?: number; // Pause duration in milliseconds before looping
   onLoopStart?: () => void | Promise<void>; // Callback when loop restarts
+  duration?: number; // Total animation duration in milliseconds (default: 3000, set to 0 for maximum speed)
 }
 
 export interface TimeSliderControls {
@@ -22,7 +23,8 @@ export function initTimeSliderWidget(
     autostart = false,
     steps: initialSteps,
     pauseAtEnd = 0,
-    onLoopStart
+    onLoopStart,
+    duration = 3000
   } = options;
   let steps = initialSteps;
   // Create time slider container
@@ -58,6 +60,29 @@ export function initTimeSliderWidget(
   let isPlaying = false;
   let animationId: number | null = null;
   let isPaused = false;
+  let wasPlayingBeforeSlider = false;
+
+  // Pause animation when starting to drag the slider
+  timeSlider.addEventListener('mousedown', () => {
+    wasPlayingBeforeSlider = isPlaying;
+    if (isPlaying) {
+      isPlaying = false;
+      playPauseBtn.textContent = 'Play';
+      if (animationId !== null) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+    }
+  });
+
+  // Resume animation after dragging the slider if it was playing
+  timeSlider.addEventListener('mouseup', () => {
+    if (wasPlayingBeforeSlider) {
+      isPlaying = true;
+      playPauseBtn.textContent = 'Pause';
+      animationId = requestAnimationFrame(animate);
+    }
+  });
 
   // Time slider event handler
   timeSlider.addEventListener('input', () => {
@@ -71,9 +96,12 @@ export function initTimeSliderWidget(
     onChange(currentTime);
   });
 
-  let lastStepTime = 0;
-  let animationStartTime = 0;
-  const totalAnimationDuration = 4000; // 4 seconds for full animation (0 to 1)
+  // Calculate speed based on duration: at 60fps, we need (60 * duration/1000) frames to complete
+  // So increment per frame = 1 / (60 * duration/1000) = 1000 / (60 * duration)
+  // If duration is 0, go as fast as possible (max increment per frame)
+  const targetFPS = 60;
+  const animationSpeed = duration === 0 ? 1 : 1000 / (targetFPS * duration); // Increment per frame
+  let frameCount = 0;
 
   async function handleLoopRestart(): Promise<void> {
     if (pauseAtEnd > 0) {
@@ -96,7 +124,7 @@ export function initTimeSliderWidget(
     onChange(currentTime);
   }
 
-  function animate(timestamp: number): void {
+  function animate(): void {
     if (!isPlaying || isPaused) {
       if (isPlaying && !isPaused) {
         animationId = requestAnimationFrame(animate);
@@ -105,22 +133,15 @@ export function initTimeSliderWidget(
     }
 
     if (steps !== undefined) {
-      // Discrete mode: advance by steps with timing control
-      const stepDuration = totalAnimationDuration / steps; // ms per step
+      // Discrete mode: advance by one step, but throttle to match duration (unless duration is 0)
+      const framesPerStep = duration === 0 ? 1 : Math.max(1, Math.round((duration / 1000) * targetFPS / steps));
 
-      if (lastStepTime === 0) {
-        lastStepTime = timestamp;
-      }
+      frameCount++;
 
-      const elapsed = timestamp - lastStepTime;
-
-      if (elapsed >= stepDuration) {
-        // Advance multiple steps if needed to maintain timing
-        const stepsToAdvance = Math.floor(elapsed / stepDuration);
-        lastStepTime = lastStepTime + (stepsToAdvance * stepDuration);
-
+      if (frameCount >= framesPerStep) {
+        frameCount = 0;
         const currentStep = Math.round(currentTime * steps);
-        const nextStep = currentStep + stepsToAdvance;
+        const nextStep = currentStep + 1;
 
         if (nextStep > steps) {
           if (loop) {
@@ -138,7 +159,6 @@ export function initTimeSliderWidget(
               cancelAnimationFrame(animationId);
               animationId = null;
             }
-            lastStepTime = 0;
             return;
           }
         } else {
@@ -150,14 +170,8 @@ export function initTimeSliderWidget(
         onChange(currentTime);
       }
     } else {
-      // Continuous mode: wall-time based
-      if (animationStartTime === 0) {
-        animationStartTime = timestamp;
-      }
-
-      const elapsed = timestamp - animationStartTime;
-      const progress = elapsed / totalAnimationDuration;
-      currentTime = Math.min(progress, 1);
+      // Continuous mode: simple increment
+      currentTime += animationSpeed;
 
       if (currentTime >= 1) {
         currentTime = 1;
@@ -168,7 +182,6 @@ export function initTimeSliderWidget(
         if (loop) {
           void handleLoopRestart().then(() => {
             if (isPlaying) {
-              animationStartTime = 0; // Reset for next loop
               animationId = requestAnimationFrame(animate);
             }
           });
@@ -180,7 +193,6 @@ export function initTimeSliderWidget(
             cancelAnimationFrame(animationId);
             animationId = null;
           }
-          animationStartTime = 0;
         }
         return;
       }
@@ -209,14 +221,10 @@ export function initTimeSliderWidget(
         timeValue.textContent = currentTime.toFixed(2);
         onChange(currentTime);
       }
-      lastStepTime = 0; // Reset timing
-      animationStartTime = 0; // Reset wall-time start
       animationId = requestAnimationFrame(animate);
     } else if (animationId !== null) {
       cancelAnimationFrame(animationId);
       animationId = null;
-      lastStepTime = 0;
-      animationStartTime = 0;
     }
   });
 

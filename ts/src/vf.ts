@@ -330,19 +330,15 @@ function setUpVectorField(
   });
 
   // Create checkbox for trajectory display
-  const trajectoryCheckboxContainer = document.createElement('div');
-  checkboxesColumn.appendChild(trajectoryCheckboxContainer);
+  const trajectoryLabel = document.createElement('label');
+  checkboxesColumn.appendChild(trajectoryLabel);
 
   const trajectoryCheckbox = document.createElement('input');
   trajectoryCheckbox.type = 'checkbox';
-  trajectoryCheckbox.id = 'show-trajectory';
   trajectoryCheckbox.checked = showTrajectory;
-  trajectoryCheckboxContainer.appendChild(trajectoryCheckbox);
+  trajectoryLabel.appendChild(trajectoryCheckbox);
 
-  const trajectoryLabel = document.createElement('label');
-  trajectoryLabel.htmlFor = 'show-trajectory';
-  trajectoryLabel.textContent = ' Display trajectory';
-  trajectoryCheckboxContainer.appendChild(trajectoryLabel);
+  trajectoryLabel.appendChild(document.createTextNode(' Display trajectory'));
 
   trajectoryCheckbox.addEventListener('change', () => {
     showTrajectory = trajectoryCheckbox.checked;
@@ -409,19 +405,15 @@ function setUpVectorField(
     });
 
     // Add checkbox to show Euler approximation
-    const eulerApproxCheckboxContainer = document.createElement('div');
-    checkboxesColumn.appendChild(eulerApproxCheckboxContainer);
+    const eulerStepsPointsLabel = document.createElement('label');
+    checkboxesColumn.appendChild(eulerStepsPointsLabel);
 
     const eulerStepsPointsCheckbox = document.createElement('input');
     eulerStepsPointsCheckbox.type = 'checkbox';
-    eulerStepsPointsCheckbox.id = 'show-euler-steps-points';
     eulerStepsPointsCheckbox.checked = showEulerStepsPoints;
-    eulerApproxCheckboxContainer.appendChild(eulerStepsPointsCheckbox);
+    eulerStepsPointsLabel.appendChild(eulerStepsPointsCheckbox);
 
-    const eulerStepsPointsLabel = document.createElement('label');
-    eulerStepsPointsLabel.htmlFor = 'show-euler-steps-points';
-    eulerStepsPointsLabel.textContent = ' Display Euler approximation';
-    eulerApproxCheckboxContainer.appendChild(eulerStepsPointsLabel);
+    eulerStepsPointsLabel.appendChild(document.createTextNode(' Display Euler approximation'));
 
     eulerStepsPointsCheckbox.addEventListener('change', () => {
       showEulerStepsPoints = eulerStepsPointsCheckbox.checked;
