@@ -222,7 +222,7 @@ function drawVectorField(
 }
 
 interface VectorFieldOptions {
-  showEulerSteps?: boolean;
+  eulerMethod?: boolean;
   showTrajectory?: boolean;
 }
 
@@ -231,7 +231,7 @@ function setUpVectorField(
   container: HTMLElement,
   options: VectorFieldOptions = {}
 ): void {
-  const { showEulerSteps = false } = options;
+  const { eulerMethod = false } = options;
   const ctx = getContext(canvas);
 
   const xRange = [0, 200] as [number, number];
@@ -244,9 +244,9 @@ function setUpVectorField(
   let dotPosition: Pair<number> | null = null;
   let trajectory: Pair<number>[] = [];
   let showTrajectory = options.showTrajectory ?? false;
-  let eulerSteps = 8; // For Euler method demonstration
+  let steps = 8; // For Euler method demonstration
   let discreteTrajectory: Pair<number>[] = []; // Coarse trajectory for Euler demo
-  let showEulerStepsPoints = showEulerSteps; // Show Euler approximation by default in Euler mode
+  let showEulerApproximation = eulerMethod; // Show Euler approximation by default in Euler mode
 
   function render(time: number): void {
     currentTime = time;
@@ -263,7 +263,7 @@ function setUpVectorField(
     }
 
     // Draw Euler step line if enabled
-    if (showEulerSteps && showEulerStepsPoints && discreteTrajectory.length > 0) {
+    if (eulerMethod && showEulerApproximation && discreteTrajectory.length > 0) {
       ctx.strokeStyle = '#2196F3';
       ctx.lineWidth = 2;
       ctx.globalAlpha = 0.8;
@@ -288,10 +288,10 @@ function setUpVectorField(
     if (dotPosition) {
       let currentPos: Pair<number>;
 
-      if (showEulerSteps && discreteTrajectory.length > 0) {
+      if (eulerMethod && discreteTrajectory.length > 0) {
         // Use discrete trajectory for Euler demonstration
         const stepIndex = Math.min(
-          Math.floor(currentTime * eulerSteps),
+          Math.floor(currentTime * steps),
           discreteTrajectory.length - 1
         );
         currentPos = discreteTrajectory[stepIndex];
@@ -310,66 +310,6 @@ function setUpVectorField(
     }
   }
 
-  // Initialize time slider with looping and autostart
-  const sliderControls = initTimeSliderWidget(container, currentTime, render, {
-    loop: true,
-    autostart: true,
-    steps: showEulerSteps ? eulerSteps : undefined
-  });
-
-  // Add Euler steps slider if in demonstration mode
-  if (showEulerSteps) {
-    const eulerStepsDiv = addDiv(container, { class: 'euler-steps' });
-
-    const eulerStepsLabel = addEl(eulerStepsDiv, 'label', {}) as HTMLLabelElement;
-    eulerStepsLabel.textContent = 'Steps: ';
-
-    const eulerStepsSlider = addEl(eulerStepsDiv, 'input', {
-      type: 'range',
-      min: '2',
-      max: '100',
-      step: '1',
-      value: eulerSteps.toString()
-    }) as HTMLInputElement;
-
-    const eulerStepsValue = addEl(eulerStepsDiv, 'span', {}) as HTMLSpanElement;
-    eulerStepsValue.textContent = eulerSteps.toString();
-
-    let wasPlaying = false;
-
-    eulerStepsSlider.addEventListener('mousedown', () => {
-      // Store playing state and pause
-      wasPlaying = sliderControls.playPauseBtn.textContent === 'Pause';
-      if (wasPlaying) {
-        sliderControls.playPauseBtn.click();
-      }
-    });
-
-    eulerStepsSlider.addEventListener('input', () => {
-      eulerSteps = parseInt(eulerStepsSlider.value);
-      eulerStepsValue.textContent = eulerSteps.toString();
-
-      // Update slider steps
-      sliderControls.setSteps(eulerSteps);
-
-      // Recalculate discrete trajectory
-      if (dotPosition) {
-        discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, eulerSteps);
-      }
-
-      currentTime = 0;
-      sliderControls.update(0);
-      render(0);
-    });
-
-    eulerStepsSlider.addEventListener('mouseup', () => {
-      // Resume if it was playing
-      if (wasPlaying && sliderControls.playPauseBtn.textContent === 'Play') {
-        sliderControls.playPauseBtn.click();
-      }
-    });
-  }
-
   // Create checkbox for trajectory display
   const trajectorySwitch = addDiv(container, { class: 'trajectory-switch' });
   const trajectoryLabel = addEl(trajectorySwitch, 'label', {}) as HTMLLabelElement;
@@ -385,22 +325,83 @@ function setUpVectorField(
     render(currentTime);
   });
 
-  // Add checkbox to show Euler approximation if in demonstration mode
-  if (showEulerSteps) {
+  // Add checkbox to show Euler approximation if in Euler method mode
+  if (eulerMethod) {
     const eulerApproximationSwitch = addDiv(container, { class: 'euler-approximation-switch' });
-    const eulerStepsPointsLabel = addEl(eulerApproximationSwitch, 'label', {}) as HTMLLabelElement;
-    const eulerStepsPointsCheckbox = addEl(eulerStepsPointsLabel, 'input', {
+    const eulerApproximationLabel = addEl(eulerApproximationSwitch, 'label', {}) as HTMLLabelElement;
+    const eulerApproximationCheckbox = addEl(eulerApproximationLabel, 'input', {
       type: 'checkbox',
-      checked: showEulerStepsPoints.toString()
+      checked: showEulerApproximation.toString()
     }) as HTMLInputElement;
-    eulerStepsPointsCheckbox.checked = showEulerStepsPoints;
-    eulerStepsPointsLabel.appendChild(document.createTextNode(' Display Euler approximation'));
+    eulerApproximationCheckbox.checked = showEulerApproximation;
+    eulerApproximationLabel.appendChild(document.createTextNode(' Display Euler approximation'));
 
-    eulerStepsPointsCheckbox.addEventListener('change', () => {
-      showEulerStepsPoints = eulerStepsPointsCheckbox.checked;
+    eulerApproximationCheckbox.addEventListener('change', () => {
+      showEulerApproximation = eulerApproximationCheckbox.checked;
       render(currentTime);
     });
   }
+
+  // Add Euler steps slider if in Euler method mode
+  let sliderControls: ReturnType<typeof initTimeSliderWidget>;
+  if (eulerMethod) {
+    const stepsSliderDiv = addDiv(container, { class: 'steps-slider' });
+
+    const stepsSliderLabel = addEl(stepsSliderDiv, 'label', {}) as HTMLLabelElement;
+    stepsSliderLabel.textContent = 'Steps: ';
+
+    const stepsSlider = addEl(stepsSliderDiv, 'input', {
+      type: 'range',
+      min: '2',
+      max: '100',
+      step: '1',
+      value: steps.toString()
+    }) as HTMLInputElement;
+
+    const stepsValue = addEl(stepsSliderDiv, 'span', {}) as HTMLSpanElement;
+    stepsValue.textContent = steps.toString();
+
+    let wasPlaying = false;
+
+    stepsSlider.addEventListener('mousedown', () => {
+      // Store playing state and pause
+      wasPlaying = sliderControls.playPauseBtn.textContent === 'Pause';
+      if (wasPlaying) {
+        sliderControls.playPauseBtn.click();
+      }
+    });
+
+    stepsSlider.addEventListener('input', () => {
+      steps = parseInt(stepsSlider.value);
+      stepsValue.textContent = steps.toString();
+
+      // Update slider steps
+      sliderControls.setSteps(steps);
+
+      // Recalculate discrete trajectory
+      if (dotPosition) {
+        discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, steps);
+      }
+
+      currentTime = 0;
+      sliderControls.update(0);
+      render(0);
+    });
+
+    stepsSlider.addEventListener('mouseup', () => {
+      // Resume if it was playing
+      if (wasPlaying && sliderControls.playPauseBtn.textContent === 'Play') {
+        sliderControls.playPauseBtn.click();
+      }
+    });
+  }
+
+  // Initialize time slider with looping and autostart
+  sliderControls = initTimeSliderWidget(container, currentTime, render, {
+    loop: true,
+    autostart: true,
+    steps: eulerMethod ? steps : undefined
+  });
 
   // Track whether animation was playing before dragging
   let wasPlayingBeforeDrag = false;
@@ -434,8 +435,8 @@ function setUpVectorField(
         dotPosition = newPosition;
         trajectory = calculateTrajectory(dotPosition, xScale, yScale);
 
-        if (showEulerSteps) {
-          discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, eulerSteps);
+        if (eulerMethod) {
+          discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, steps);
         }
 
         currentTime = 0;
@@ -451,8 +452,8 @@ function setUpVectorField(
   dotPosition = [initialX, initialY];
   trajectory = calculateTrajectory(dotPosition, xScale, yScale);
 
-  if (showEulerSteps) {
-    discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, eulerSteps);
+  if (eulerMethod) {
+    discreteTrajectory = calculateTrajectory(dotPosition, xScale, yScale, steps);
   }
 
   // Initial render
@@ -468,5 +469,5 @@ export function initVectorFieldWidget(container: HTMLElement): void {
 export function initEulerMethodWidget(container: HTMLElement): void {
   removePlaceholder(container);
   const canvas = addCanvas(container, { width: '480', height: '350' });
-  setUpVectorField(canvas, container, { showEulerSteps: true, showTrajectory: true });
+  setUpVectorField(canvas, container, { eulerMethod: true, showTrajectory: true });
 }
