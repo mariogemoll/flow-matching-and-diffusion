@@ -5,8 +5,39 @@ import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
 import { generateBrownianNoise as generateNoiseForSDE } from './conditional-trajectory-logic';
+import { initDiffusionCoefficientSelectionWidget } from './diffusion-coefficient-selection';
+import { initDiffusionCoefficientVisualizationWidget } from './diffusion-coefficient-visualization';
+import {
+  type DiffusionCoefficientScheduler,
+  makeConstantDiffusionCoefficientScheduler,
+  makeCosineDiffusionCoefficientScheduler,
+  makeLinearDiffusionCoefficientScheduler,
+  makeLinearReverseDiffusionCoefficientScheduler,
+  makeQuadraticDiffusionCoefficientScheduler,
+  makeSqrtDiffusionCoefficientScheduler
+} from './math/diffusion-coefficient-scheduler';
 import { initTimeSliderWidget } from './time-slider';
 import { drawLineDataSpace } from './vector-field-view-common';
+
+function getDiffusionScheduler(
+  diffusionType: string,
+  maxDiffusion: number
+): DiffusionCoefficientScheduler {
+  if (diffusionType === 'constant') {
+    return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'linear') {
+    return makeLinearDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'linear-reverse') {
+    return makeLinearReverseDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'quadratic') {
+    return makeQuadraticDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'sqrt') {
+    return makeSqrtDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'cosine') {
+    return makeCosineDiffusionCoefficientScheduler(maxDiffusion);
+  }
+  return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
+}
 
 /**
  * Vector field for SDE: dx = drift(x, y, t) * dt + sigma * dW
@@ -198,14 +229,14 @@ function calculateDeterministicTrajectory(
 
 /**
  * Solve SDE using Euler-Maruyama method with pre-generated noise
- * dx = vectorField(x, y, t) * dt + sigma * dW
+ * dx = vectorField(x, y, t) * dt + sigma(t) * dW
  */
 function solveSDE(
   startPos: Pair<number>,
   xScale: Scale,
   yScale: Scale,
   numSteps: number,
-  sigma: number,
+  diffusionScheduler: DiffusionCoefficientScheduler,
   noise: Pair<number>[]
 ): Pair<number>[] {
   const path: Pair<number>[] = [startPos];
@@ -216,10 +247,13 @@ function solveSDE(
     const t = i * dt;
     const [vx, vy] = vectorField(x, y, t, xScale, yScale);
 
-    // Use pre-generated noise scaled by sigma
+    // Get time-dependent diffusion coefficient
+    const sigma = diffusionScheduler.getDiffusion(t);
+
+    // Use pre-generated noise scaled by sigma(t)
     const [dWx, dWy] = noise[i];
 
-    // Euler-Maruyama step: x_{t+dt} = x_t + drift * dt + sigma * dW
+    // Euler-Maruyama step: x_{t+dt} = x_t + drift * dt + sigma(t) * dW
     x = x + vx * dt + sigma * dWx;
     y = y + vy * dt + sigma * dWy;
 
@@ -282,7 +316,9 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   // Parameters
   const numSteps = 500;
   const dt = 1.0 / numSteps;
-  let sigma = 5.0;
+  const initialMaxDiffusion = 5.0;
+  let diffusionScheduler: DiffusionCoefficientScheduler =
+    makeConstantDiffusionCoefficientScheduler(initialMaxDiffusion);
 
   let dotPosition: Pair<number> | null = null;
   let deterministicTrajectory: Pair<number>[] = [];
@@ -291,6 +327,9 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   let currentTime = 0;
   let showDeterministic = true;
   let showStochastic = true;
+  let updateDiffusionVizCallback:
+    | ((scheduler: DiffusionCoefficientScheduler, time: number) => void)
+    | null = null;
 
   function render(time: number): void {
     currentTime = time;
@@ -336,6 +375,11 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
 
       dot.render(currentPos);
     }
+
+    // Update diffusion visualization if callback is set
+    if (updateDiffusionVizCallback) {
+      updateDiffusionVizCallback(diffusionScheduler, currentTime);
+    }
   }
 
   // Create controls container
@@ -366,64 +410,62 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
     }
   });
 
-  // Add sigma slider
-  const sigmaSliderContainer = document.createElement('div');
-  sigmaSliderContainer.style.marginTop = '16px';
-  slidersColumn.appendChild(sigmaSliderContainer);
+  // Add diffusion coefficient visualization
+  const diffusionVizContainer = document.createElement('div');
+  diffusionVizContainer.style.marginTop = '16px';
+  diffusionVizContainer.style.display = 'flex';
+  diffusionVizContainer.style.flexDirection = 'column';
+  diffusionVizContainer.style.gap = '8px';
+  checkboxesColumn.appendChild(diffusionVizContainer);
 
-  const sigmaLabel = document.createElement('label');
-  sigmaLabel.textContent = 'Diffusion coefficient σ(t): ';
-  sigmaSliderContainer.appendChild(sigmaLabel);
+  const diffusionVizTitle = document.createElement('h3');
+  diffusionVizTitle.textContent = 'Diffusion Coefficient';
+  diffusionVizTitle.style.marginTop = '0';
+  diffusionVizTitle.style.marginBottom = '8px';
+  diffusionVizTitle.style.fontSize = '14px';
+  diffusionVizContainer.appendChild(diffusionVizTitle);
 
-  const sigmaSlider = document.createElement('input');
-  sigmaSlider.type = 'range';
-  sigmaSlider.min = '0';
-  sigmaSlider.max = '20';
-  sigmaSlider.step = '0.5';
-  sigmaSlider.value = sigma.toString();
-  sigmaSlider.style.width = '320px';
-  sigmaSlider.style.marginLeft = '8px';
-  sigmaSliderContainer.appendChild(sigmaSlider);
+  const updateDiffusionViz = initDiffusionCoefficientVisualizationWidget(diffusionVizContainer);
 
-  const sigmaValue = document.createElement('span');
-  sigmaValue.textContent = sigma.toFixed(1);
-  sigmaValue.style.marginLeft = '8px';
-  sigmaSliderContainer.appendChild(sigmaValue);
+  // Set the callback so render() can update the visualization
+  updateDiffusionVizCallback = updateDiffusionViz;
 
-  let wasPlaying = false;
+  // Add diffusion coefficient selection
+  const diffusionSelectionContainer = document.createElement('div');
+  diffusionSelectionContainer.style.marginTop = '8px';
+  checkboxesColumn.appendChild(diffusionSelectionContainer);
 
-  sigmaSlider.addEventListener('mousedown', () => {
-    // Store playing state and pause
-    const playPauseBtn = controlsContainer.querySelector('button');
-    wasPlaying = playPauseBtn?.textContent === 'Pause';
-    if (wasPlaying && playPauseBtn) {
-      playPauseBtn.click();
-    }
-  });
+  const diffusionSelectionTitle = document.createElement('h3');
+  diffusionSelectionTitle.textContent = 'Scheduler Type';
+  diffusionSelectionTitle.style.marginTop = '0';
+  diffusionSelectionTitle.style.marginBottom = '8px';
+  diffusionSelectionTitle.style.fontSize = '14px';
+  diffusionSelectionContainer.appendChild(diffusionSelectionTitle);
 
-  sigmaSlider.addEventListener('input', () => {
-    sigma = parseFloat(sigmaSlider.value);
-    sigmaValue.textContent = sigma.toFixed(1);
+  initDiffusionCoefficientSelectionWidget(
+    diffusionSelectionContainer,
+    (diffusionType: string, maxDiffusion: number) => {
+      // Update diffusion scheduler
+      diffusionScheduler = getDiffusionScheduler(diffusionType, maxDiffusion);
 
-    // Recalculate trajectory with same noise, different sigma
-    if (dotPosition) {
-      stochasticTrajectory = solveSDE(dotPosition, xScale, yScale, numSteps, sigma, storedNoise);
-    }
-
-    currentTime = 0;
-    sliderControls.update(0);
-    render(0);
-  });
-
-  sigmaSlider.addEventListener('mouseup', () => {
-    // Resume if it was playing
-    if (wasPlaying) {
-      const playPauseBtn = controlsContainer.querySelector('button');
-      if (playPauseBtn?.textContent === 'Play') {
-        playPauseBtn.click();
+      // Recalculate trajectory with new scheduler
+      if (dotPosition) {
+        stochasticTrajectory = solveSDE(
+          dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
+        );
       }
+
+      currentTime = 0;
+      sliderControls.update(0);
+      render(0);
+    },
+    'sde-diffusion',
+    {
+      maxValue: 20,
+      defaultValue: 5.0,
+      step: 0.1
     }
-  });
+  );
 
   // Add regenerate noise button
   const regenerateButtonContainer = document.createElement('div');
@@ -441,7 +483,9 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
 
     // Recalculate stochastic trajectory with new noise
     if (dotPosition) {
-      stochasticTrajectory = solveSDE(dotPosition, xScale, yScale, numSteps, sigma, storedNoise);
+      stochasticTrajectory = solveSDE(
+        dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
+      );
     }
 
     currentTime = 0;
@@ -537,7 +581,9 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
           yScale,
           numSteps
         );
-        stochasticTrajectory = solveSDE(dotPosition, xScale, yScale, numSteps, sigma, storedNoise);
+        stochasticTrajectory = solveSDE(
+          dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
+        );
 
         currentTime = 0;
         sliderControls.update(0);
@@ -550,10 +596,14 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   const initialX = Math.random() * (xRange[1] / 3);
   const initialY = yRange[0] + 0.1 * yRange[1] + Math.random() * 0.8 * yRange[1];
   dotPosition = [initialX, initialY];
-  deterministicTrajectory = calculateDeterministicTrajectory(dotPosition, xScale, yScale, numSteps);
-  stochasticTrajectory = solveSDE(dotPosition, xScale, yScale, numSteps, sigma, storedNoise);
+  deterministicTrajectory = calculateDeterministicTrajectory(
+    dotPosition, xScale, yScale, numSteps
+  );
+  stochasticTrajectory = solveSDE(
+    dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
+  );
 
-  // Initial render
+  // Initial render (this will call updateDiffusionViz via the wrapped render function)
   render(0);
 }
 
