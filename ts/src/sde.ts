@@ -306,9 +306,10 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   const yScale = makeScale(yRange, [canvas.height - margins.bottom, margins.top]);
 
   // Parameters
-  const numSteps = 500;
-  const dt = 1.0 / numSteps;
-  const initialMaxDiffusion = 5.0;
+  const deterministicSteps = 500; // Fixed high resolution for deterministic trajectory
+  let numSteps = 150; // Variable steps for stochastic trajectory
+  let dt = 1.0 / numSteps;
+  const initialMaxDiffusion = 10.0;
   let diffusionScheduler: DiffusionCoefficientScheduler =
     makeConstantDiffusionCoefficientScheduler(initialMaxDiffusion);
 
@@ -454,10 +455,71 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
     'sde-diffusion',
     {
       maxValue: 20,
-      defaultValue: 5.0,
+      defaultValue: 10.0,
       step: 0.1
     }
   );
+
+  // Add steps slider
+  const stepsSliderContainer = document.createElement('div');
+  stepsSliderContainer.style.marginTop = '16px';
+  slidersColumn.appendChild(stepsSliderContainer);
+
+  const stepsSliderLabel = document.createElement('label');
+  stepsSliderLabel.textContent = 'Steps: ';
+  stepsSliderContainer.appendChild(stepsSliderLabel);
+
+  const stepsSlider = document.createElement('input');
+  stepsSlider.type = 'range';
+  stepsSlider.min = '10';
+  stepsSlider.max = '300';
+  stepsSlider.step = '1';
+  stepsSlider.value = numSteps.toString();
+  stepsSliderContainer.appendChild(stepsSlider);
+
+  const stepsValue = document.createElement('span');
+  stepsValue.textContent = numSteps.toString();
+  stepsValue.style.marginLeft = '8px';
+  stepsSliderContainer.appendChild(stepsValue);
+
+  let wasPlayingBeforeStepsChange = false;
+
+  stepsSlider.addEventListener('mousedown', () => {
+    const playPauseBtn = controlsContainer.querySelector('button');
+    wasPlayingBeforeStepsChange = playPauseBtn?.textContent === 'Pause';
+    if (wasPlayingBeforeStepsChange && playPauseBtn) {
+      playPauseBtn.click();
+    }
+  });
+
+  stepsSlider.addEventListener('input', () => {
+    numSteps = parseInt(stepsSlider.value);
+    dt = 1.0 / numSteps;
+    stepsValue.textContent = numSteps.toString();
+
+    // Regenerate noise with new number of steps
+    storedNoise = generateNoiseForSDE(numSteps, dt);
+
+    // Recalculate stochastic trajectory only (deterministic stays at fixed resolution)
+    if (dotPosition) {
+      stochasticTrajectory = solveSDE(
+        dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
+      );
+    }
+
+    currentTime = 0;
+    sliderControls.update(0);
+    render(0);
+  });
+
+  stepsSlider.addEventListener('mouseup', () => {
+    if (wasPlayingBeforeStepsChange) {
+      const playPauseBtn = controlsContainer.querySelector('button');
+      if (playPauseBtn?.textContent === 'Play') {
+        playPauseBtn.click();
+      }
+    }
+  });
 
   // Add regenerate noise button
   const regenerateButtonContainer = document.createElement('div');
@@ -571,7 +633,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
           dotPosition,
           xScale,
           yScale,
-          numSteps
+          deterministicSteps
         );
         stochasticTrajectory = solveSDE(
           dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
@@ -589,7 +651,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   const initialY = yRange[0] + 0.1 * yRange[1] + Math.random() * 0.8 * yRange[1];
   dotPosition = [initialX, initialY];
   deterministicTrajectory = calculateDeterministicTrajectory(
-    dotPosition, xScale, yScale, numSteps
+    dotPosition, xScale, yScale, deterministicSteps
   );
   stochasticTrajectory = solveSDE(
     dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
