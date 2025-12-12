@@ -49,6 +49,9 @@ export function computeBrownianMotion(
     let cumulativeX = 0;
     let cumulativeY = 0;
 
+    // Start at the origin
+    path.push([0, 0]);
+
     for (const [dWx, dWy] of pathNoise) {
       cumulativeX += dWx * sigma;
       cumulativeY += dWy * sigma;
