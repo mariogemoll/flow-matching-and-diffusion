@@ -10,11 +10,10 @@ import { initMarginalVectorFieldView } from './marginal-vector-field-view';
 import {
   type DiffusionCoefficientScheduler,
   makeConstantDiffusionCoefficientScheduler,
-  makeCosineDiffusionCoefficientScheduler,
   makeLinearDiffusionCoefficientScheduler,
   makeLinearReverseDiffusionCoefficientScheduler,
-  makeQuadraticDiffusionCoefficientScheduler,
-  makeSqrtDiffusionCoefficientScheduler } from './math/diffusion-coefficient-scheduler';
+  makeSineBumpDiffusionCoefficientScheduler
+} from './math/diffusion-coefficient-scheduler';
 import {
   makeCircularCircularScheduler,
   makeConstantVarianceScheduler,
@@ -85,18 +84,12 @@ function getDiffusionScheduler(
   diffusionType: string,
   maxDiffusion: number
 ): DiffusionCoefficientScheduler {
-  if (diffusionType === 'constant') {
-    return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
-  } else if (diffusionType === 'linear') {
+  if (diffusionType === 'linear') {
     return makeLinearDiffusionCoefficientScheduler(maxDiffusion);
   } else if (diffusionType === 'linear-reverse') {
     return makeLinearReverseDiffusionCoefficientScheduler(maxDiffusion);
-  } else if (diffusionType === 'quadratic') {
-    return makeQuadraticDiffusionCoefficientScheduler(maxDiffusion);
-  } else if (diffusionType === 'sqrt') {
-    return makeSqrtDiffusionCoefficientScheduler(maxDiffusion);
-  } else if (diffusionType === 'cosine') {
-    return makeCosineDiffusionCoefficientScheduler(maxDiffusion);
+  } else if (diffusionType === 'sine-bump') {
+    return makeSineBumpDiffusionCoefficientScheduler(maxDiffusion);
   }
   return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
 }

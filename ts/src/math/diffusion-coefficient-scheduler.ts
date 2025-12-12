@@ -35,35 +35,14 @@ export function makeLinearReverseDiffusionCoefficientScheduler(
   };
 }
 
-export function makeQuadraticDiffusionCoefficientScheduler(
+export function makeSineBumpDiffusionCoefficientScheduler(
   maxDiffusion: number
 ): DiffusionCoefficientScheduler {
   return {
     getDiffusion: (t: number): number => {
       const tClamped = clamp01(t);
-      return tClamped * tClamped * maxDiffusion;
-    },
-    getMaxDiffusion: (): number => maxDiffusion
-  };
-}
-
-export function makeSqrtDiffusionCoefficientScheduler(
-  maxDiffusion: number
-): DiffusionCoefficientScheduler {
-  return {
-    getDiffusion: (t: number): number => Math.sqrt(clamp01(t)) * maxDiffusion,
-    getMaxDiffusion: (): number => maxDiffusion
-  };
-}
-
-export function makeCosineDiffusionCoefficientScheduler(
-  maxDiffusion: number
-): DiffusionCoefficientScheduler {
-  return {
-    getDiffusion: (t: number): number => {
-      const tClamped = clamp01(t);
-      // Cosine schedule: 0.5 * (1 - cos(π*t)) goes from 0 to 1
-      return 0.5 * (1 - Math.cos(Math.PI * tClamped)) * maxDiffusion;
+      // sin(π*t) goes from 0 to 1 (at t=0.5) back to 0
+      return Math.sin(Math.PI * tClamped) * maxDiffusion;
     },
     getMaxDiffusion: (): number => maxDiffusion
   };

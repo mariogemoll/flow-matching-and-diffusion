@@ -19,12 +19,10 @@ export function initDiffusionCoefficientSelectionWidget(
   container.appendChild(diffusionRadiosContainer);
 
   const diffusionTypes = [
-    { value: 'constant', label: 'Constant', checked: true },
-    { value: 'linear', label: 'Linear (0 → max)' },
-    { value: 'linear-reverse', label: 'Linear (max → 0)' },
-    { value: 'quadratic', label: 'Quadratic' },
-    { value: 'sqrt', label: 'Square root' },
-    { value: 'cosine', label: 'Cosine' }
+    { value: 'constant', label: 'σ(t) = c', checked: true },
+    { value: 'linear', label: 'σ(t) = c·t' },
+    { value: 'linear-reverse', label: 'σ(t) = c·(1-t)' },
+    { value: 'sine-bump', label: 'σ(t) = c·sin(πt)' }
   ];
 
   const diffusionRadios: HTMLInputElement[] = [];
