@@ -1,5 +1,5 @@
 import { addFrameUsingScales, createMovableDot, getContext } from 'web-ui-common/canvas';
-import { el } from 'web-ui-common/dom';
+import { addCanvas, removePlaceholder } from 'web-ui-common/dom';
 import type { Pair, Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
@@ -113,12 +113,8 @@ function drawBrownianPaths(
 /**
  * Set up Brownian motion visualization
  */
-function setUpBrownianMotion(canvas: HTMLCanvasElement): void {
+function setUpBrownianMotion(canvas: HTMLCanvasElement, container: HTMLElement): void {
   const ctx = getContext(canvas);
-  const container = canvas.parentElement;
-  if (!container) {
-    throw new Error('Canvas must have a parent element');
-  }
 
   // Define coordinate system
   const xRange = [-2.5, 2.5] as [number, number];
@@ -427,12 +423,8 @@ function drawTrajectory(
 /**
  * Set up SDE visualization with drift field
  */
-function setUpSDEVisualization(canvas: HTMLCanvasElement): void {
+function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement): void {
   const ctx = getContext(canvas);
-  const container = canvas.parentElement;
-  if (!container) {
-    throw new Error('Canvas must have a parent element');
-  }
 
   // Define coordinate system (same as vf.html)
   const xRange = [0, 200] as [number, number];
@@ -719,19 +711,14 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement): void {
   render(0);
 }
 
-function run(): void {
-  const brownianCanvas = el(document, '#brownian-canvas') as HTMLCanvasElement;
-  const sdeCanvas = el(document, '#sde-canvas') as HTMLCanvasElement;
-
-  setUpBrownianMotion(brownianCanvas);
-  setUpSDEVisualization(sdeCanvas);
+export function initBrownianMotionWidget(container: HTMLElement): void {
+  removePlaceholder(container);
+  const canvas = addCanvas(container, { width: '480', height: '350' });
+  setUpBrownianMotion(canvas, container);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    run();
-  } catch (error) {
-    console.error(error);
-    alert(`Error during page setup: ${error instanceof Error ? error.message : String(error)}`);
-  }
-});
+export function initSdeWidget(container: HTMLElement): void {
+  removePlaceholder(container);
+  const canvas = addCanvas(container, { width: '480', height: '350' });
+  setUpSDEVisualization(canvas, container);
+}

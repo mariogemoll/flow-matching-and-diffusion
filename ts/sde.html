@@ -8,12 +8,16 @@
     <h1>Stochastic Differential Equations (SDEs)</h1>
     <section>
         <h2>Brownian Motion (Pure Diffusion)</h2>
-        <canvas id="brownian-canvas" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
+        <div id="brownian-canvas" class="brownian-motion-widget">
+            <div class="placeholder">Loading...</div>
+        </div>
     </section>
     <section style="margin-top: 40px;">
         <h2>SDE with Drift and Diffusion</h2>
-        <canvas id="sde-canvas" width="480" height="350" style="width: 480px; height: 350px;"></canvas>
+        <div id="sde-canvas" class="sde-widget">
+            <div class="placeholder">Loading...</div>
+        </div>
     </section>
-    <script type="module" src="dist/sde.js"></script>
+    <script type="module" src="dist/sde-page.js"></script>
 </body>
 </html>
