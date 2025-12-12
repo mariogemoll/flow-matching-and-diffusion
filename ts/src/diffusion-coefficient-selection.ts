@@ -1,8 +1,16 @@
 export function initDiffusionCoefficientSelectionWidget(
   container: HTMLElement,
   onChange: (diffusionType: string, maxDiffusion: number) => void,
-  radioGroupName = 'diffusion-coefficient'
+  radioGroupName = 'diffusion-coefficient',
+  options?: {
+    maxValue?: number;
+    defaultValue?: number;
+    step?: number;
+  }
 ): { updateMaxDiffusion: (maxDiffusion: number) => void } {
+  const maxValue = options?.maxValue ?? 3;
+  const defaultValue = options?.defaultValue ?? 0.8;
+  const step = options?.step ?? 0.05;
   const diffusionRadiosContainer = document.createElement('div');
   diffusionRadiosContainer.style.display = 'flex';
   diffusionRadiosContainer.style.flexDirection = 'column';
@@ -55,19 +63,19 @@ export function initDiffusionCoefficientSelectionWidget(
   const slider = document.createElement('input');
   slider.type = 'range';
   slider.min = '0';
-  slider.max = '3';
-  slider.step = '0.05';
-  slider.value = '0.8';
+  slider.max = maxValue.toString();
+  slider.step = step.toString();
+  slider.value = defaultValue.toString();
   slider.style.flex = '1';
   sliderRow.appendChild(slider);
 
   const valueDisplay = document.createElement('span');
-  valueDisplay.textContent = '0.80';
+  valueDisplay.textContent = defaultValue.toFixed(2);
   valueDisplay.style.fontSize = '12px';
   valueDisplay.style.minWidth = '40px';
   sliderRow.appendChild(valueDisplay);
 
-  let currentMaxDiffusion = 0.8;
+  let currentMaxDiffusion = defaultValue;
 
   function getSelectedDiffusionType(): string {
     const selected = diffusionRadios.find(r => r.checked);
