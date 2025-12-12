@@ -4,6 +4,7 @@ import type { Pair, Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
 import { viridis } from './color-maps';
+import { addSlider } from './slider';
 import { initTimeSliderWidget } from './time-slider';
 import { drawLineDataSpace } from './vector-field-view-common';
 
@@ -377,23 +378,19 @@ function setUpVectorField(
   }
 
   // Add Euler steps slider if in Euler method mode
-  let stepsSlider: HTMLInputElement | undefined;
+  let stepsSliderWidget: { slider: HTMLInputElement; getValue: () => number } | undefined;
   if (eulerMethod) {
-    const stepsSliderDiv = addDiv(container, { class: 'steps-slider' });
-
-    const stepsSliderLabel = addEl(stepsSliderDiv, 'label', {}) as HTMLLabelElement;
-    stepsSliderLabel.textContent = 'Steps: ';
-
-    stepsSlider = addEl(stepsSliderDiv, 'input', {
-      type: 'range',
-      min: '2',
-      max: '100',
-      step: '1',
-      value: steps.toString()
-    }) as HTMLInputElement;
-
-    const stepsValue = addEl(stepsSliderDiv, 'span', {}) as HTMLSpanElement;
-    stepsValue.textContent = steps.toString();
+    stepsSliderWidget = addSlider(container, {
+      label: 'Steps: ',
+      min: 2,
+      max: 100,
+      step: 1,
+      initialValue: steps,
+      className: 'steps-slider',
+      onChange: (newSteps: number): void => {
+        steps = Math.round(newSteps);
+      }
+    });
   }
 
   // Initialize time slider with looping and autostart
@@ -404,10 +401,10 @@ function setUpVectorField(
   });
 
   // Add Euler steps slider event handlers after sliderControls is available
-  if (eulerMethod && stepsSlider) {
+  if (eulerMethod && stepsSliderWidget) {
     let wasPlaying = false;
 
-    stepsSlider.addEventListener('mousedown', () => {
+    stepsSliderWidget.slider.addEventListener('mousedown', () => {
       // Store playing state and pause
       wasPlaying = sliderControls.playPauseBtn.textContent === 'Pause';
       if (wasPlaying) {
@@ -415,10 +412,8 @@ function setUpVectorField(
       }
     });
 
-    stepsSlider.addEventListener('input', () => {
-      steps = parseInt(stepsSlider.value);
-      const stepsValue = stepsSlider.nextElementSibling as HTMLSpanElement;
-      stepsValue.textContent = steps.toString();
+    stepsSliderWidget.slider.addEventListener('input', () => {
+      steps = Math.round(stepsSliderWidget.getValue());
 
       // Update slider steps
       sliderControls.setSteps(steps);
@@ -433,7 +428,7 @@ function setUpVectorField(
       render(0);
     });
 
-    stepsSlider.addEventListener('mouseup', () => {
+    stepsSliderWidget.slider.addEventListener('mouseup', () => {
       // Resume if it was playing
       if (wasPlaying && sliderControls.playPauseBtn.textContent === 'Play') {
         sliderControls.playPauseBtn.click();

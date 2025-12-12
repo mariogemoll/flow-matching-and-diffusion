@@ -1,3 +1,5 @@
+import { addSlider } from './slider';
+
 export function initDiffusionCoefficientSelectionWidget(
   container: HTMLElement,
   onChange: (diffusionType: string, maxDiffusion: number) => void,
@@ -11,12 +13,6 @@ export function initDiffusionCoefficientSelectionWidget(
   const maxValue = options?.maxValue ?? 3;
   const defaultValue = options?.defaultValue ?? 0.8;
   const step = options?.step ?? 0.05;
-  const diffusionRadiosContainer = document.createElement('div');
-  diffusionRadiosContainer.style.display = 'flex';
-  diffusionRadiosContainer.style.flexDirection = 'column';
-  diffusionRadiosContainer.style.gap = '4px';
-  diffusionRadiosContainer.style.fontSize = '12px';
-  container.appendChild(diffusionRadiosContainer);
 
   const diffusionTypes = [
     { value: 'constant', label: 'σ(t) = c', checked: true },
@@ -36,43 +32,10 @@ export function initDiffusionCoefficientSelectionWidget(
     diffusionRadios.push(radio);
     radioLabel.appendChild(radio);
     radioLabel.appendChild(document.createTextNode(` ${label}`));
-    diffusionRadiosContainer.appendChild(radioLabel);
+    container.appendChild(radioLabel);
   });
 
   // Add max diffusion slider
-  const sliderContainer = document.createElement('div');
-  sliderContainer.style.marginTop = '8px';
-  sliderContainer.style.display = 'flex';
-  sliderContainer.style.flexDirection = 'column';
-  sliderContainer.style.gap = '4px';
-  container.appendChild(sliderContainer);
-
-  const sliderLabel = document.createElement('label');
-  sliderLabel.style.fontSize = '12px';
-  sliderLabel.textContent = 'Max diffusion coefficient:';
-  sliderContainer.appendChild(sliderLabel);
-
-  const sliderRow = document.createElement('div');
-  sliderRow.style.display = 'flex';
-  sliderRow.style.alignItems = 'center';
-  sliderRow.style.gap = '8px';
-  sliderContainer.appendChild(sliderRow);
-
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.min = '0';
-  slider.max = maxValue.toString();
-  slider.step = step.toString();
-  slider.value = defaultValue.toString();
-  slider.style.flex = '1';
-  sliderRow.appendChild(slider);
-
-  const valueDisplay = document.createElement('span');
-  valueDisplay.textContent = defaultValue.toFixed(2);
-  valueDisplay.style.fontSize = '12px';
-  valueDisplay.style.minWidth = '40px';
-  sliderRow.appendChild(valueDisplay);
-
   let currentMaxDiffusion = defaultValue;
 
   function getSelectedDiffusionType(): string {
@@ -80,11 +43,18 @@ export function initDiffusionCoefficientSelectionWidget(
     return selected?.value ?? 'constant';
   }
 
-  slider.addEventListener('input', () => {
-    const value = parseFloat(slider.value);
-    currentMaxDiffusion = value;
-    valueDisplay.textContent = value.toFixed(2);
-    onChange(getSelectedDiffusionType(), value);
+  const sliderWidget = addSlider(container, {
+    label: 'Max diffusion coefficient: ',
+    min: 0,
+    max: maxValue,
+    step,
+    initialValue: defaultValue,
+    className: 'max-diffusion-coefficient-slider',
+    valueFormat: (v: number) => v.toFixed(2),
+    onChange: (value: number) => {
+      currentMaxDiffusion = value;
+      onChange(getSelectedDiffusionType(), value);
+    }
   });
 
   diffusionRadios.forEach((radio) => {
@@ -98,8 +68,7 @@ export function initDiffusionCoefficientSelectionWidget(
   return {
     updateMaxDiffusion: (maxDiffusion: number): void => {
       currentMaxDiffusion = maxDiffusion;
-      slider.value = maxDiffusion.toString();
-      valueDisplay.textContent = maxDiffusion.toFixed(2);
+      sliderWidget.setValue(maxDiffusion);
     }
   };
 }

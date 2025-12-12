@@ -72,16 +72,11 @@ export function initDiffusionCoefficientVisualizationWidget(
   const diffusionPlotCanvas = document.createElement('canvas');
   diffusionPlotCanvas.width = 160;
   diffusionPlotCanvas.height = 160;
-  diffusionPlotCanvas.style.width = '160px';
-  diffusionPlotCanvas.style.height = '160px';
-  diffusionPlotCanvas.style.border = '1px solid #ccc';
   container.appendChild(diffusionPlotCanvas);
 
   // Create value display
   const valueSummary = document.createElement('span');
   valueSummary.textContent = 'g_t = 0.00';
-  valueSummary.style.fontSize = '12px';
-  valueSummary.style.textAlign = 'center';
   container.appendChild(valueSummary);
 
   function update(diffusionScheduler: DiffusionCoefficientScheduler, time: number): void {

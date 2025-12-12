@@ -14,6 +14,7 @@ import {
   makeLinearReverseDiffusionCoefficientScheduler,
   makeSineBumpDiffusionCoefficientScheduler
 } from './math/diffusion-coefficient-scheduler';
+import { addSlider } from './slider';
 import { initTimeSliderWidget } from './time-slider';
 import { drawLineDataSpace } from './vector-field-view-common';
 
@@ -375,68 +376,127 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
     }
   }
 
-  // Create controls container
-  const controlsContainer = document.createElement('div');
-  controlsContainer.style.display = 'flex';
-  controlsContainer.style.gap = '40px';
-  controlsContainer.style.marginTop = '16px';
-  container.appendChild(controlsContainer);
+  // Trajectories section
+  const trajectoriesDiv = document.createElement('div');
+  trajectoriesDiv.className = 'trajectories';
+  container.appendChild(trajectoriesDiv);
 
-  // Left column: sliders
-  const slidersColumn = document.createElement('div');
-  controlsContainer.appendChild(slidersColumn);
+  const trajectoriesTitle = document.createElement('h3');
+  trajectoriesTitle.textContent = 'Trajectories';
+  trajectoriesDiv.appendChild(trajectoriesTitle);
 
-  // Right column: checkboxes
-  const checkboxesColumn = document.createElement('div');
-  checkboxesColumn.style.display = 'flex';
-  checkboxesColumn.style.flexDirection = 'column';
-  checkboxesColumn.style.gap = '8px';
-  controlsContainer.appendChild(checkboxesColumn);
+  // Add checkbox for deterministic trajectory
+  const detLabel = document.createElement('label');
+  const detCheckbox = document.createElement('input');
+  detCheckbox.type = 'checkbox';
+  detCheckbox.checked = showDeterministic;
+  detLabel.appendChild(detCheckbox);
+  detLabel.appendChild(document.createTextNode(' Deterministic trajectory'));
+  trajectoriesDiv.appendChild(detLabel);
 
-  // Initialize time slider
-  const sliderControls = initTimeSliderWidget(slidersColumn, currentTime, render, {
-    loop: true,
-    autostart: true,
-    pauseAtEnd: 1000,
-    onLoopStart: () => {
-      // Just loop, don't regenerate noise automatically
+  detCheckbox.addEventListener('change', () => {
+    showDeterministic = detCheckbox.checked;
+    render(currentTime);
+  });
+
+  // Add checkbox for stochastic trajectory
+  const stochLabel = document.createElement('label');
+  const stochCheckbox = document.createElement('input');
+  stochCheckbox.type = 'checkbox';
+  stochCheckbox.checked = showStochastic;
+  stochLabel.appendChild(stochCheckbox);
+  stochLabel.appendChild(document.createTextNode(' Stochastic trajectory (with Brownian motion)'));
+  trajectoriesDiv.appendChild(stochLabel);
+
+  stochCheckbox.addEventListener('change', () => {
+    showStochastic = stochCheckbox.checked;
+    render(currentTime);
+  });
+
+  // Add steps slider
+  let wasPlayingBeforeStepsChange = false;
+  const stepsSliderWidget = addSlider(container, {
+    label: 'Steps: ',
+    min: 10,
+    max: 300,
+    step: 1,
+    initialValue: numSteps,
+    className: 'steps-slider',
+    onChange: (steps: number): void => {
+      numSteps = Math.round(steps);
+      dt = 1.0 / numSteps;
+
+      // Regenerate noise with new number of steps
+      storedNoise = generateNoiseForSDE(numSteps, dt);
+
+      // Recalculate stochastic trajectory only (deterministic stays at fixed resolution)
+      if (dotPosition) {
+        stochasticTrajectory = solveSDE(
+          dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
+        );
+      }
+
+      currentTime = 0;
+      sliderControls.update(0);
+      render(0);
     }
   });
 
-  // Add diffusion coefficient visualization
-  const diffusionVizContainer = document.createElement('div');
-  diffusionVizContainer.style.marginTop = '16px';
-  diffusionVizContainer.style.display = 'flex';
-  diffusionVizContainer.style.flexDirection = 'column';
-  diffusionVizContainer.style.gap = '8px';
-  checkboxesColumn.appendChild(diffusionVizContainer);
+  stepsSliderWidget.slider.addEventListener('mousedown', () => {
+    const playPauseBtn = container.querySelector('button');
+    wasPlayingBeforeStepsChange = playPauseBtn?.textContent === 'Pause';
+    if (wasPlayingBeforeStepsChange && playPauseBtn) {
+      playPauseBtn.click();
+    }
+  });
+
+  stepsSliderWidget.slider.addEventListener('mouseup', () => {
+    if (wasPlayingBeforeStepsChange) {
+      const playPauseBtn = container.querySelector('button');
+      if (playPauseBtn?.textContent === 'Play') {
+        playPauseBtn.click();
+      }
+    }
+  });
+
+  // Add regenerate noise button
+  const regenerateButton = document.createElement('button');
+  regenerateButton.textContent = 'Regenerate noise';
+  container.appendChild(regenerateButton);
+
+  regenerateButton.addEventListener('click', () => {
+    // Generate new noise
+    storedNoise = generateNoiseForSDE(numSteps, dt);
+
+    // Recalculate stochastic trajectory with new noise
+    if (dotPosition) {
+      stochasticTrajectory = solveSDE(
+        dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
+      );
+    }
+
+    currentTime = 0;
+    sliderControls.update(0);
+    render(0);
+  });
+
+  // Add diffusion coefficient section
+  const diffusionCoefficientDiv = document.createElement('div');
+  diffusionCoefficientDiv.className = 'diffusion-coefficient';
+  container.appendChild(diffusionCoefficientDiv);
 
   const diffusionVizTitle = document.createElement('h3');
-  diffusionVizTitle.textContent = 'Diffusion Coefficient';
-  diffusionVizTitle.style.marginTop = '0';
-  diffusionVizTitle.style.marginBottom = '8px';
-  diffusionVizTitle.style.fontSize = '14px';
-  diffusionVizContainer.appendChild(diffusionVizTitle);
+  diffusionVizTitle.textContent = 'Diffusion coefficient';
+  diffusionCoefficientDiv.appendChild(diffusionVizTitle);
 
-  const updateDiffusionViz = initDiffusionCoefficientVisualizationWidget(diffusionVizContainer);
+  const updateDiffusionViz = initDiffusionCoefficientVisualizationWidget(diffusionCoefficientDiv);
 
   // Set the callback so render() can update the visualization
   updateDiffusionVizCallback = updateDiffusionViz;
 
-  // Add diffusion coefficient selection
-  const diffusionSelectionContainer = document.createElement('div');
-  diffusionSelectionContainer.style.marginTop = '8px';
-  checkboxesColumn.appendChild(diffusionSelectionContainer);
-
-  const diffusionSelectionTitle = document.createElement('h3');
-  diffusionSelectionTitle.textContent = 'Scheduler Type';
-  diffusionSelectionTitle.style.marginTop = '0';
-  diffusionSelectionTitle.style.marginBottom = '8px';
-  diffusionSelectionTitle.style.fontSize = '14px';
-  diffusionSelectionContainer.appendChild(diffusionSelectionTitle);
-
+  // Add diffusion coefficient selection (radio buttons and slider)
   initDiffusionCoefficientSelectionWidget(
-    diffusionSelectionContainer,
+    diffusionCoefficientDiv,
     (diffusionType: string, maxDiffusion: number) => {
       // Update diffusion scheduler
       diffusionScheduler = getDiffusionScheduler(diffusionType, maxDiffusion);
@@ -460,139 +520,14 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
     }
   );
 
-  // Add steps slider
-  const stepsSliderContainer = document.createElement('div');
-  stepsSliderContainer.style.marginTop = '16px';
-  slidersColumn.appendChild(stepsSliderContainer);
-
-  const stepsSliderLabel = document.createElement('label');
-  stepsSliderLabel.textContent = 'Steps: ';
-  stepsSliderContainer.appendChild(stepsSliderLabel);
-
-  const stepsSlider = document.createElement('input');
-  stepsSlider.type = 'range';
-  stepsSlider.min = '10';
-  stepsSlider.max = '300';
-  stepsSlider.step = '1';
-  stepsSlider.value = numSteps.toString();
-  stepsSliderContainer.appendChild(stepsSlider);
-
-  const stepsValue = document.createElement('span');
-  stepsValue.textContent = numSteps.toString();
-  stepsValue.style.marginLeft = '8px';
-  stepsSliderContainer.appendChild(stepsValue);
-
-  let wasPlayingBeforeStepsChange = false;
-
-  stepsSlider.addEventListener('mousedown', () => {
-    const playPauseBtn = controlsContainer.querySelector('button');
-    wasPlayingBeforeStepsChange = playPauseBtn?.textContent === 'Pause';
-    if (wasPlayingBeforeStepsChange && playPauseBtn) {
-      playPauseBtn.click();
+  // Initialize time slider (last)
+  const sliderControls = initTimeSliderWidget(container, currentTime, render, {
+    loop: true,
+    autostart: true,
+    pauseAtEnd: 1000,
+    onLoopStart: () => {
+      // Just loop, don't regenerate noise automatically
     }
-  });
-
-  stepsSlider.addEventListener('input', () => {
-    numSteps = parseInt(stepsSlider.value);
-    dt = 1.0 / numSteps;
-    stepsValue.textContent = numSteps.toString();
-
-    // Regenerate noise with new number of steps
-    storedNoise = generateNoiseForSDE(numSteps, dt);
-
-    // Recalculate stochastic trajectory only (deterministic stays at fixed resolution)
-    if (dotPosition) {
-      stochasticTrajectory = solveSDE(
-        dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
-      );
-    }
-
-    currentTime = 0;
-    sliderControls.update(0);
-    render(0);
-  });
-
-  stepsSlider.addEventListener('mouseup', () => {
-    if (wasPlayingBeforeStepsChange) {
-      const playPauseBtn = controlsContainer.querySelector('button');
-      if (playPauseBtn?.textContent === 'Play') {
-        playPauseBtn.click();
-      }
-    }
-  });
-
-  // Add regenerate noise button
-  const regenerateButtonContainer = document.createElement('div');
-  regenerateButtonContainer.style.marginTop = '16px';
-  slidersColumn.appendChild(regenerateButtonContainer);
-
-  const regenerateButton = document.createElement('button');
-  regenerateButton.textContent = 'Regenerate noise';
-  regenerateButton.style.padding = '4px 12px';
-  regenerateButtonContainer.appendChild(regenerateButton);
-
-  regenerateButton.addEventListener('click', () => {
-    // Generate new noise
-    storedNoise = generateNoiseForSDE(numSteps, dt);
-
-    // Recalculate stochastic trajectory with new noise
-    if (dotPosition) {
-      stochasticTrajectory = solveSDE(
-        dotPosition, xScale, yScale, numSteps, diffusionScheduler, storedNoise
-      );
-    }
-
-    currentTime = 0;
-    sliderControls.update(0);
-    render(0);
-  });
-
-  // Add checkbox for deterministic trajectory
-  const detCheckboxContainer = document.createElement('div');
-  detCheckboxContainer.style.display = 'flex';
-  detCheckboxContainer.style.alignItems = 'center';
-  checkboxesColumn.appendChild(detCheckboxContainer);
-
-  const detCheckbox = document.createElement('input');
-  detCheckbox.type = 'checkbox';
-  detCheckbox.id = 'show-deterministic';
-  detCheckbox.checked = showDeterministic;
-  detCheckboxContainer.appendChild(detCheckbox);
-
-  const detLabel = document.createElement('label');
-  detLabel.htmlFor = 'show-deterministic';
-  detLabel.textContent = ' Deterministic trajectory';
-  detLabel.style.marginLeft = '4px';
-  detLabel.style.cursor = 'pointer';
-  detCheckboxContainer.appendChild(detLabel);
-
-  detCheckbox.addEventListener('change', () => {
-    showDeterministic = detCheckbox.checked;
-    render(currentTime);
-  });
-
-  // Add checkbox for stochastic trajectory
-  const stochCheckboxContainer = document.createElement('div');
-  stochCheckboxContainer.style.display = 'flex';
-  stochCheckboxContainer.style.alignItems = 'center';
-  checkboxesColumn.appendChild(stochCheckboxContainer);
-
-  const stochCheckbox = document.createElement('input');
-  stochCheckbox.type = 'checkbox';
-  stochCheckbox.id = 'show-stochastic';
-  stochCheckbox.checked = showStochastic;
-  stochCheckboxContainer.appendChild(stochCheckbox);
-
-  const stochLabel = document.createElement('label');
-  stochLabel.htmlFor = 'show-stochastic';
-  stochLabel.textContent = ' Stochastic trajectory (with Brownian motion)';
-  stochLabel.style.marginLeft = '4px';
-  stochLabel.style.cursor = 'pointer';
-  stochCheckboxContainer.appendChild(stochLabel);
-
-  stochCheckbox.addEventListener('change', () => {
-    showStochastic = stochCheckbox.checked;
-    render(currentTime);
   });
 
   // Track whether animation was playing before dragging
@@ -600,7 +535,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
 
   // Add mousedown listener to pause and store playing state
   canvas.addEventListener('mousedown', () => {
-    const playPauseBtn = controlsContainer.querySelector('button');
+    const playPauseBtn = container.querySelector('button');
     wasPlayingBeforeDrag = playPauseBtn?.textContent === 'Pause';
     if (wasPlayingBeforeDrag && playPauseBtn) {
       playPauseBtn.click(); // Pause the animation
@@ -610,7 +545,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   // Add mouseup listener to resume if it was playing
   canvas.addEventListener('mouseup', () => {
     if (wasPlayingBeforeDrag) {
-      const playPauseBtn = controlsContainer.querySelector('button');
+      const playPauseBtn = container.querySelector('button');
       if (playPauseBtn?.textContent === 'Play') {
         playPauseBtn.click(); // Resume the animation
       }
