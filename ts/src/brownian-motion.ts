@@ -1,4 +1,10 @@
-import { addFrameUsingScales, getContext } from 'web-ui-common/canvas';
+import {
+  addAxesThroughOrigin,
+  addFrameUsingScales,
+  addGridLines,
+  getContext,
+  withClippingRegionFromScales
+} from 'web-ui-common/canvas';
 import { addCanvas, removePlaceholder } from 'web-ui-common/dom';
 import { makeScale } from 'web-ui-common/util';
 
@@ -78,11 +84,23 @@ function setUpBrownianMotion(canvas: HTMLCanvasElement, container: HTMLElement):
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw Brownian paths - always show full trajectory for standard Brownian motion
-    drawBrownianPaths(ctx, paths, xScale, yScale, currentTime, true);
+    const numTicks = 11;
+
+    addGridLines(ctx, xScale, yScale, numTicks);
 
     // Draw frame with axes
-    addFrameUsingScales(ctx, xScale, yScale, 10);
+    addFrameUsingScales(ctx, xScale, yScale, numTicks);
+
+    addAxesThroughOrigin(ctx, xScale, yScale, {
+      showTicks: true,
+      showLabels: false,
+      numTicks: numTicks
+    });
+
+    withClippingRegionFromScales(ctx, xScale, yScale, () => {
+      // Draw Brownian paths
+      drawBrownianPaths(ctx, paths, xScale, yScale, currentTime, false);
+    });
   }
 
   // Initialize time slider with looping, autostart, and pause at end
