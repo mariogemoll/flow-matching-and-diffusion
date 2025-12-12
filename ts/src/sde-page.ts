@@ -1,6 +1,7 @@
 import { el } from 'web-ui-common/dom';
 
-import { initBrownianMotionWidget, initSdeWidget } from './sde';
+import { initBrownianMotionWidget } from './brownian-motion';
+import { initSdeWidget } from './sde';
 
 function run(): void {
   const brownianContainer = el(document, '#brownian-canvas') as HTMLElement;
