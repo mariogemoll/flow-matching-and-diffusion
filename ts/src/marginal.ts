@@ -457,8 +457,7 @@ export function initMarginalOdeSdeWidget(
     (diffusionType: string, maxDiffusion: number) => {
       const newDiffusionScheduler = getDiffusionScheduler(diffusionType, maxDiffusion);
       void controller.update({ diffusionType, diffusionScheduler: newDiffusionScheduler });
-    },
-    `diffusion-marginal-${radioGroupName ?? 'odesde'}`
+    }
   );
 
   // Initial render

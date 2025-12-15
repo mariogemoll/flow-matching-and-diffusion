@@ -494,7 +494,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   // Set the callback so render() can update the visualization
   updateDiffusionVizCallback = updateDiffusionViz;
 
-  // Add diffusion coefficient selection (radio buttons and slider)
+  // Add diffusion coefficient selection (select menu and slider)
   initDiffusionCoefficientSelectionWidget(
     diffusionCoefficientDiv,
     (diffusionType: string, maxDiffusion: number) => {
@@ -512,7 +512,6 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
       sliderControls.update(0);
       render(0);
     },
-    'sde-diffusion',
     {
       maxValue: 20,
       defaultValue: 10.0,

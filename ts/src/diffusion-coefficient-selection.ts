@@ -3,7 +3,6 @@ import { addSlider } from './slider';
 export function initDiffusionCoefficientSelectionWidget(
   container: HTMLElement,
   onChange: (diffusionType: string, maxDiffusion: number) => void,
-  radioGroupName = 'diffusion-coefficient',
   options?: {
     maxValue?: number;
     defaultValue?: number;
@@ -21,26 +20,26 @@ export function initDiffusionCoefficientSelectionWidget(
     { value: 'sine-bump', label: 'σ(t) = c·sin(πt)' }
   ];
 
-  const diffusionRadios: HTMLInputElement[] = [];
+  const selectLabel = document.createElement('label');
+  selectLabel.textContent = 'Schedule: ';
+  const select = document.createElement('select');
+
   diffusionTypes.forEach(({ value, label, checked }) => {
-    const radioLabel = document.createElement('label');
-    const radio = document.createElement('input');
-    radio.type = 'radio';
-    radio.name = radioGroupName;
-    radio.value = value;
-    if (checked === true) { radio.checked = true; }
-    diffusionRadios.push(radio);
-    radioLabel.appendChild(radio);
-    radioLabel.appendChild(document.createTextNode(` ${label}`));
-    container.appendChild(radioLabel);
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    if (checked === true) { option.selected = true; }
+    select.appendChild(option);
   });
+
+  selectLabel.appendChild(select);
+  container.appendChild(selectLabel);
 
   // Add max diffusion slider
   let currentMaxDiffusion = defaultValue;
 
   function getSelectedDiffusionType(): string {
-    const selected = diffusionRadios.find(r => r.checked);
-    return selected?.value ?? 'constant';
+    return select.value;
   }
 
   const sliderWidget = addSlider(container, {
@@ -57,12 +56,8 @@ export function initDiffusionCoefficientSelectionWidget(
     }
   });
 
-  diffusionRadios.forEach((radio) => {
-    radio.addEventListener('change', () => {
-      if (radio.checked) {
-        onChange(radio.value, currentMaxDiffusion);
-      }
-    });
+  select.addEventListener('change', () => {
+    onChange(select.value, currentMaxDiffusion);
   });
 
   return {

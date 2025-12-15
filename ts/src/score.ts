@@ -737,8 +737,7 @@ function initOdeSdeWidget(
     (diffusionType: string, maxDiffusion: number) => {
       const newDiffusionScheduler = getDiffusionScheduler(diffusionType, maxDiffusion);
       void controller.update({ diffusionType, diffusionScheduler: newDiffusionScheduler });
-    },
-    `diffusion-odesde-${instanceIndex}`
+    }
   );
 
   void controller.update({});
