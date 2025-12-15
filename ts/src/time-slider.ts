@@ -32,7 +32,7 @@ export function initTimeSliderWidget(
   } = options;
   let steps = initialSteps;
   // Create time slider container
-  const sliderDiv = addDiv(container, { class: 'time-slider' });
+  const sliderDiv = addDiv(container, { class: 'slider time-slider' });
 
   // Create play/pause button
   const playPauseBtn = addEl(sliderDiv, 'button', {}) as HTMLButtonElement;

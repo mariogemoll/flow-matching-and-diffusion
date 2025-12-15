@@ -43,12 +43,12 @@ export function initDiffusionCoefficientSelectionWidget(
   }
 
   const sliderWidget = addSlider(container, {
-    label: 'Max diffusion coefficient: ',
+    label: 'Max: ',
     min: 0,
     max: maxValue,
     step,
     initialValue: defaultValue,
-    className: 'max-diffusion-coefficient-slider',
+    className: 'slider max-diffusion-coefficient-slider',
     valueFormat: (v: number) => v.toFixed(2),
     onChange: (value: number) => {
       currentMaxDiffusion = value;

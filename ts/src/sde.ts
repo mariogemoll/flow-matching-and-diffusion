@@ -381,17 +381,13 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   trajectoriesDiv.className = 'trajectories';
   container.appendChild(trajectoriesDiv);
 
-  const trajectoriesTitle = document.createElement('h3');
-  trajectoriesTitle.textContent = 'Trajectories';
-  trajectoriesDiv.appendChild(trajectoriesTitle);
-
   // Add checkbox for deterministic trajectory
   const detLabel = document.createElement('label');
   const detCheckbox = document.createElement('input');
   detCheckbox.type = 'checkbox';
   detCheckbox.checked = showDeterministic;
   detLabel.appendChild(detCheckbox);
-  detLabel.appendChild(document.createTextNode(' Deterministic trajectory'));
+  detLabel.appendChild(document.createTextNode('Show deterministic trajectory'));
   trajectoriesDiv.appendChild(detLabel);
 
   detCheckbox.addEventListener('change', () => {
@@ -405,7 +401,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   stochCheckbox.type = 'checkbox';
   stochCheckbox.checked = showStochastic;
   stochLabel.appendChild(stochCheckbox);
-  stochLabel.appendChild(document.createTextNode(' Stochastic trajectory (with Brownian motion)'));
+  stochLabel.appendChild(document.createTextNode('Show stochastic trajectory'));
   trajectoriesDiv.appendChild(stochLabel);
 
   stochCheckbox.addEventListener('change', () => {
@@ -414,14 +410,18 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   });
 
   // Add steps slider
+  const stepsDiv = document.createElement('div');
+  stepsDiv.className = 'steps-control';
+  container.appendChild(stepsDiv);
+
   let wasPlayingBeforeStepsChange = false;
-  const stepsSliderWidget = addSlider(container, {
+  const stepsSliderWidget = addSlider(stepsDiv, {
     label: 'Steps: ',
     min: 10,
     max: 300,
     step: 1,
     initialValue: numSteps,
-    className: 'steps-slider',
+    className: 'slider steps-slider',
     onChange: (steps: number): void => {
       numSteps = Math.round(steps);
       dt = 1.0 / numSteps;
@@ -460,9 +460,13 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   });
 
   // Add regenerate noise button
+  const regenerateDiv = document.createElement('div');
+  regenerateDiv.className = 'regenerate-control';
+  container.appendChild(regenerateDiv);
+
   const regenerateButton = document.createElement('button');
   regenerateButton.textContent = 'Regenerate noise';
-  container.appendChild(regenerateButton);
+  regenerateDiv.appendChild(regenerateButton);
 
   regenerateButton.addEventListener('click', () => {
     // Generate new noise
