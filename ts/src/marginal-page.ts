@@ -16,12 +16,12 @@ async function run(): Promise<void> {
   // First widget: Marginal probability path + ODE vector field
   const widget1 = document.createElement('div');
   container.appendChild(widget1);
-  initMarginalProbPathAndVectorFieldWidget(widget1, 'marginal-scheduler-1');
+  initMarginalProbPathAndVectorFieldWidget(widget1);
 
   // Second widget: Marginal probability path + ODE + SDE
   const widget2 = document.createElement('div');
   container.appendChild(widget2);
-  initMarginalOdeSdeWidget(widget2, 'marginal-scheduler-2');
+  initMarginalOdeSdeWidget(widget2);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -27,13 +27,13 @@ async function run(): Promise<void> {
   });
 
   initConditionalProbPathWidget(
-    containerB, initialPosition, initialTime, 'conditional-prob-scheduler'
+    containerB, initialPosition, initialTime
   );
   initConditionalProbPathAndVectorFieldWidget(
-    containerC, initialPosition, initialTime, 'conditional-vector-field-scheduler'
+    containerC, initialPosition, initialTime
   );
   initConditionalProbPathAndTwoVectorFieldsWidget(
-    containerD, initialPosition, initialTime, 'conditional-vector-field-scheduler-2'
+    containerD, initialPosition, initialTime
   );
 }
 

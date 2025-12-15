@@ -524,8 +524,7 @@ function initDoubleConditionalVectorFieldWidget(
     (schedulerType: string) => {
       const newScheduler = getScheduler(schedulerType);
       void controller.update({ schedulerType, scheduler: newScheduler });
-    },
-    `scheduler-${instanceIndex}`
+    }
   );
 
   // Initial render
@@ -533,8 +532,7 @@ function initDoubleConditionalVectorFieldWidget(
 }
 
 function initOdeSdeWidget(
-  container: HTMLElement,
-  instanceIndex: number
+  container: HTMLElement
 ): void {
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
@@ -696,8 +694,7 @@ function initOdeSdeWidget(
     (schedulerType: string) => {
       const newScheduler = getScheduler(schedulerType);
       void controller.update({ schedulerType, scheduler: newScheduler });
-    },
-    `scheduler-odesde-${instanceIndex}`
+    }
   );
 
   controller.registerView({
@@ -755,7 +752,7 @@ function run(): void {
 
   const instance2 = document.createElement('div');
   widgetsContainer.appendChild(instance2);
-  initOdeSdeWidget(instance2, 1);
+  initOdeSdeWidget(instance2);
 }
 
 run();

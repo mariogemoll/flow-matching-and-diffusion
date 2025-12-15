@@ -95,8 +95,7 @@ function getDiffusionScheduler(
 }
 
 export function initMarginalProbPathAndVectorFieldWidget(
-  container: HTMLElement,
-  radioGroupName?: string
+  container: HTMLElement
 ): void {
   removePlaceholder(container);
 
@@ -183,7 +182,7 @@ export function initMarginalProbPathAndVectorFieldWidget(
   initSchedulerSelectionWidget(plotSection, (schedulerType: string) => {
     const newScheduler = getScheduler(schedulerType);
     void controller.update({ schedulerType, scheduler: newScheduler });
-  }, radioGroupName);
+  });
 
   // Initialize probability path view
   const updateProbPathView = initMarginalProbPathView(
@@ -229,8 +228,7 @@ const STEP_COUNT = 100;
 const DEFAULT_DIFFUSION = 0.8;
 
 export function initMarginalOdeSdeWidget(
-  container: HTMLElement,
-  radioGroupName?: string
+  container: HTMLElement
 ): void {
   removePlaceholder(container);
 
@@ -422,8 +420,7 @@ export function initMarginalOdeSdeWidget(
     (schedulerType: string) => {
       const newScheduler = getScheduler(schedulerType);
       void controller.update({ schedulerType, scheduler: newScheduler });
-    },
-    radioGroupName
+    }
   );
 
   // Add diffusion visualization

@@ -1,15 +1,7 @@
 export function initSchedulerSelectionWidget(
   container: HTMLElement,
-  onChange: (schedulerType: string) => void,
-  radioGroupName = 'scheduler'
+  onChange: (schedulerType: string) => void
 ): void {
-  const schedulerRadiosContainer = document.createElement('div');
-  schedulerRadiosContainer.style.display = 'flex';
-  schedulerRadiosContainer.style.flexDirection = 'column';
-  schedulerRadiosContainer.style.gap = '4px';
-  schedulerRadiosContainer.style.fontSize = '12px';
-  container.appendChild(schedulerRadiosContainer);
-
   const schedulers = [
     { value: 'linear', label: 'α=t, β=1-t' },
     { value: 'sqrt', label: 'α=t, β=√(1-t)' },
@@ -19,25 +11,22 @@ export function initSchedulerSelectionWidget(
     { value: 'circular-circular', label: 'α=sin(πt/2), β=cos(πt/2)' }
   ];
 
-  const schedulerRadios: HTMLInputElement[] = [];
+  const selectLabel = document.createElement('label');
+  selectLabel.textContent = 'Schedule: ';
+  const select = document.createElement('select');
+
   schedulers.forEach(({ value, label, checked }) => {
-    const radioLabel = document.createElement('label');
-    const radio = document.createElement('input');
-    radio.type = 'radio';
-    radio.name = radioGroupName;
-    radio.value = value;
-    if (checked === true) { radio.checked = true; }
-    schedulerRadios.push(radio);
-    radioLabel.appendChild(radio);
-    radioLabel.appendChild(document.createTextNode(` ${label}`));
-    schedulerRadiosContainer.appendChild(radioLabel);
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = label;
+    if (checked === true) { option.selected = true; }
+    select.appendChild(option);
   });
 
-  schedulerRadios.forEach((radio) => {
-    radio.addEventListener('change', () => {
-      if (radio.checked) {
-        onChange(radio.value);
-      }
-    });
+  selectLabel.appendChild(select);
+  container.appendChild(selectLabel);
+
+  select.addEventListener('change', () => {
+    onChange(select.value);
   });
 }

@@ -66,8 +66,7 @@ export function initMovableDotWidget(
 export function initConditionalProbPathWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
-  initialTime: number,
-  radioGroupName?: string
+  initialTime: number
 ): void {
   removePlaceholder(container);
   let currentPosition = initialPosition;
@@ -111,7 +110,7 @@ export function initConditionalProbPathWidget(
     }
     updateView(currentPosition, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-  }, radioGroupName);
+  });
 
   const updateView = initConditionalProbabilityPathView(
     leftSection,
@@ -136,8 +135,7 @@ export function initConditionalProbPathWidget(
 export function initConditionalProbPathAndVectorFieldWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
-  initialTime: number,
-  radioGroupName?: string
+  initialTime: number
 ): void {
   removePlaceholder(container);
   let currentPosition = initialPosition;
@@ -189,7 +187,7 @@ export function initConditionalProbPathAndVectorFieldWidget(
     updateCondProbView(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView(currentPosition, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-  }, radioGroupName);
+  });
 
   const updateCondProbView = initConditionalProbabilityPathView(
     leftContainer,
@@ -227,8 +225,7 @@ export function initConditionalProbPathAndVectorFieldWidget(
 export function initConditionalProbPathAndTwoVectorFieldsWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
-  initialTime: number,
-  radioGroupName?: string
+  initialTime: number
 ): void {
   removePlaceholder(container);
   let currentPosition = initialPosition;
@@ -283,7 +280,7 @@ export function initConditionalProbPathAndTwoVectorFieldsWidget(
     updateVectorFieldView1(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView2(currentPosition, currentTime, currentScheduler);
     updateSchedulerVisualization(currentScheduler, currentTime);
-  }, radioGroupName);
+  });
 
   const updateCondProbView = initConditionalProbabilityPathView(
     leftContainer,
