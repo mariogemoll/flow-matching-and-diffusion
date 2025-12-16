@@ -8,9 +8,11 @@
     "test": "vitest"
   },
   "exports": {
+    "./brownian-motion": "./src/brownian-motion.ts",
     "./conditional": "./src/conditional.ts",
     "./marginal": "./src/marginal.ts",
     "./flow-matching-pipeline": "./src/flow-matching-pipeline.ts",
+    "./sde": "./src/sde.ts",
     "./vf": "./src/vf.ts"
   },
   "dependencies": {
