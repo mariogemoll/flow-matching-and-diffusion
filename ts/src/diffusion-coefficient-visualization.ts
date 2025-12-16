@@ -28,19 +28,19 @@ export function renderDiffusionCoefficientPlot(
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Draw just the rectangle frame without ticks or labels
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 0.5;
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
   ctx.strokeRect(
-    margins.left + 0.5,
-    margins.top + 0.5,
+    margins.left,
+    margins.top,
     canvas.width - margins.left - margins.right,
     canvas.height - margins.top - margins.bottom
   );
 
   // Draw diffusion curve
   drawFunction1D(ctx, tScale, valueScale, (tVal) => scheduler.getDiffusion(tVal), {
-    stroke: 'darkorchid',
-    lineWidth: 2,
+    stroke: '#000',
+    lineWidth: 1,
     sampleCount: 100
   });
 
@@ -49,7 +49,7 @@ export function renderDiffusionCoefficientPlot(
   const currentX = tScale(t);
   const currentY = valueScale(currentDiffusion);
 
-  addDot(ctx, currentX, currentY, 4, 'darkorchid');
+  addDot(ctx, currentX, currentY, 2, '#000');
 }
 
 export function initDiffusionCoefficientVisualizationWidget(
