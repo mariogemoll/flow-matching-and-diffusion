@@ -347,22 +347,17 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
     // Draw frame with axes
     addFrameUsingScales(ctx, xScale, yScale, 10);
 
-    // Draw dot at current position along trajectory
+    // Draw dot at current position along stochastic trajectory
     if (dotPosition) {
       let currentPos: Pair<number>;
 
-      if (showStochastic && stochasticTrajectory.length > 0) {
+      // Dot always follows the stochastic trajectory
+      if (stochasticTrajectory.length > 0) {
         const trajectoryIndex = Math.min(
           Math.floor(currentTime * (stochasticTrajectory.length - 1)),
           stochasticTrajectory.length - 1
         );
         currentPos = stochasticTrajectory[trajectoryIndex];
-      } else if (showDeterministic && deterministicTrajectory.length > 0) {
-        const trajectoryIndex = Math.min(
-          Math.floor(currentTime * (deterministicTrajectory.length - 1)),
-          deterministicTrajectory.length - 1
-        );
-        currentPos = deterministicTrajectory[trajectoryIndex];
       } else {
         currentPos = dotPosition;
       }
