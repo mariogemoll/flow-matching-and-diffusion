@@ -62,7 +62,7 @@ export function initMovableDotWidget(
   return update;
 }
 
-export function initConditionalProbPathWidget(
+export function initConditionalPathWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
   initialTime: number
@@ -125,7 +125,7 @@ export function initConditionalProbPathWidget(
   updateScheduler(currentScheduler, currentTime);
 }
 
-export function initConditionalProbPathAndVectorFieldWidget(
+export function initConditionalPathOdeWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
   initialTime: number
@@ -202,7 +202,7 @@ export function initConditionalProbPathAndVectorFieldWidget(
   updateScheduler(currentScheduler, currentTime);
 }
 
-export function initConditionalProbPathAndTwoVectorFieldsWidget(
+export function initConditionalPathDoubleOdeWidget(
   container: HTMLElement,
   initialPosition: Pair<number>,
   initialTime: number

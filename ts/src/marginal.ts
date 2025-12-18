@@ -92,7 +92,7 @@ function getDiffusionScheduler(
   return makeConstantDiffusionCoefficientScheduler(maxDiffusion);
 }
 
-export function initMarginalProbPathAndVectorFieldWidget(
+export function initMarginalPathOdeWidget(
   container: HTMLElement
 ): void {
   removePlaceholder(container);
@@ -216,7 +216,7 @@ export function initMarginalProbPathAndVectorFieldWidget(
 const STEP_COUNT = 100;
 const DEFAULT_DIFFUSION = 0.8;
 
-export function initMarginalOdeSdeWidget(
+export function initMarginalPathOdeSdeWidget(
   container: HTMLElement
 ): void {
   removePlaceholder(container);

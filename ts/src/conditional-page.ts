@@ -5,9 +5,9 @@ import { el } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 
 import {
-  initConditionalProbPathAndTwoVectorFieldsWidget,
-  initConditionalProbPathAndVectorFieldWidget,
-  initConditionalProbPathWidget,
+  initConditionalPathDoubleOdeWidget,
+  initConditionalPathOdeWidget,
+  initConditionalPathWidget,
   initMovableDotWidget
 } from './conditional';
 
@@ -26,13 +26,13 @@ async function run(): Promise<void> {
     updateWidgetA(newPosition);
   });
 
-  initConditionalProbPathWidget(
+  initConditionalPathWidget(
     containerB, initialPosition, initialTime
   );
-  initConditionalProbPathAndVectorFieldWidget(
+  initConditionalPathOdeWidget(
     containerC, initialPosition, initialTime
   );
-  initConditionalProbPathAndTwoVectorFieldsWidget(
+  initConditionalPathDoubleOdeWidget(
     containerD, initialPosition, initialTime
   );
 }

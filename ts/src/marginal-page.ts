@@ -3,7 +3,7 @@ declare const tf: typeof tfType;
 
 import { el } from 'web-ui-common/dom';
 
-import { initMarginalOdeSdeWidget,initMarginalProbPathAndVectorFieldWidget } from './marginal';
+import { initMarginalPathOdeSdeWidget, initMarginalPathOdeWidget } from './marginal';
 
 async function run(): Promise<void> {
   await tf.ready();
@@ -11,8 +11,8 @@ async function run(): Promise<void> {
   const containerA = el(document, '#containerA') as HTMLElement;
   const containerB = el(document, '#containerB') as HTMLElement;
 
-  initMarginalProbPathAndVectorFieldWidget(containerA);
-  initMarginalOdeSdeWidget(containerB);
+  initMarginalPathOdeWidget(containerA);
+  initMarginalPathOdeSdeWidget(containerB);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
