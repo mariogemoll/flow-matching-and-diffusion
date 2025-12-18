@@ -5,7 +5,6 @@ import { el } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 
 import {
-  initConditionalPathDoubleOdeWidget,
   initConditionalPathOdeWidget,
   initConditionalPathWidget,
   initMovableDotWidget
@@ -16,7 +15,6 @@ async function run(): Promise<void> {
   const containerA = el(document, '#containerA') as HTMLElement;
   const containerB = el(document, '#containerB') as HTMLElement;
   const containerC = el(document, '#containerC') as HTMLElement;
-  const containerD = el(document, '#containerD') as HTMLElement;
 
   const initialPosition: Pair<number> = [1.0, 0.5];
   const initialTime = 0;
@@ -31,9 +29,6 @@ async function run(): Promise<void> {
   );
   initConditionalPathOdeWidget(
     containerC, initialPosition, initialTime
-  );
-  initConditionalPathDoubleOdeWidget(
-    containerD, initialPosition, initialTime
   );
 }
 
