@@ -78,7 +78,7 @@ export function setUpMarginalPathWidget(): void {
 
   const updateSchedulerPlot = (): void => {
     const plotCanvas = el(document, '#scheduler-plot') as HTMLCanvasElement;
-    renderSchedulerPlot(plotCanvas, scheduler, t, 'Scheduler');
+    renderSchedulerPlot(plotCanvas, scheduler, t);
   };
 
   const updateVariancePlot = (): void => {

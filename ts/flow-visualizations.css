@@ -1,0 +1,98 @@
+
+.schedule-controls,
+.schedule-controls h3,
+.schedule-controls select {
+  line-height: 26px;
+  margin: 0;
+}
+
+.schedule-controls > label {
+  display: flex;
+}
+
+.schedule-controls select {
+  height: 2em;
+  margin-left: 10px;
+}
+
+.schedule-controls.noise select {
+  width: 100%;
+}
+
+.schedule-controls {
+  position: relative;
+  width: 280px;
+  height: 100px;
+}
+
+.time-slider {
+  width: 480px;
+}
+
+.time-slider button {
+  width: 80px;
+}
+
+.time-slider span {
+  width: 80px;
+}
+
+.options label {
+  display: block;
+}
+
+.with-controls {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  gap: 20px 8px;
+}
+
+.one-chart {
+  width: 480px;
+}
+
+.one-chart.with-controls {
+  width: 768px;
+}
+
+.two-charts {
+  width: 1440px;
+}
+
+.three-charts {
+  width: 1440px;
+  display: flex;
+  flex-flow: row wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 20px 0;
+}
+
+.three-charts > .controls {
+  display: flex;
+  order: 2;
+}
+
+.one-chart.with-controls > .controls,
+.two-charts.with-controls > .controls {
+  width: 260px;
+  height: 300px;
+  padding-top: 8px;
+}
+
+.one-chart.with-controls > .controls > *:not(:last-child),
+.two-charts.with-controls > .controls > *:not(:last-child) {
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 8px;
+}
+
+.three-charts .schedule-controls {
+  padding: 10px;
+  border-left: 1px solid #ccc;
+}
+
+.three-charts .time-slider {
+  order: 1;
+  padding-right: 10px;
+}

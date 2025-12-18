@@ -4,7 +4,7 @@ import {
   defaultMargins,
   getContext
 } from 'web-ui-common/canvas';
-import { addCanvas, el } from 'web-ui-common/dom';
+import { addCanvas, removePlaceholder } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
@@ -16,8 +16,7 @@ import {
 } from './conditional-trajectory-logic';
 import { initVectorFieldView } from './conditional-vector-field-view';
 import { NUM_SAMPLES, SAMPLED_POINT_COLOR, SAMPLED_POINT_RADIUS } from './constants';
-import { initDiffusionCoefficientSelectionWidget } from './diffusion-coefficient-selection';
-import { initDiffusionCoefficientVisualizationWidget } from './diffusion-coefficient-visualization';
+import { initDiffusionCoefficientWidget } from './diffusion-coefficient-widget';
 import { createFrameworkController } from './framework-controller';
 import {
   type DiffusionCoefficientScheduler,
@@ -35,8 +34,7 @@ import {
   makeSqrtSqrtScheduler,
   type NoiseScheduler
 } from './math/noise-scheduler';
-import { initSchedulerSelectionWidget } from './scheduler-selection';
-import { initSchedulerVisualizationWidget } from './scheduler-visualization';
+import { initNoiseSchedulerWidget } from './noise-scheduler-widget';
 import { initTimeSliderWidget } from './time-slider';
 import { drawStandardNormalBackground } from './vector-field-view-common';
 
@@ -237,17 +235,6 @@ function initPrecomputedSDEView(
     render();
   }
 
-  function resamplePoints(): void {
-    const { initialSamples: samples } = sampleStandardNormalPoints({
-      count: NUM_SAMPLES,
-      xScale,
-      yScale
-    });
-    initialSamples = samples;
-    generateNoiseMatrices();
-    precomputeStochasticTrajectories(currentPosition);
-    render();
-  }
 
   function resampleNoise(): void {
     generateNoiseMatrices();
@@ -256,14 +243,15 @@ function initPrecomputedSDEView(
   }
 
   const controlsDiv = document.createElement('div');
-  controlsDiv.style.marginTop = '8px';
-  controlsDiv.style.display = 'flex';
-  controlsDiv.style.flexDirection = 'column';
-  controlsDiv.style.gap = '8px';
   container.appendChild(controlsDiv);
 
-  const checkboxRow = document.createElement('div');
-  controlsDiv.appendChild(checkboxRow);
+  const resamplePointsButton = document.createElement('button');
+  resamplePointsButton.textContent = 'Sample points';
+
+  const resampleNoiseButton = document.createElement('button');
+  resampleNoiseButton.textContent = 'Sample noise';
+  resampleNoiseButton.addEventListener('click', resampleNoise);
+  controlsDiv.appendChild(resampleNoiseButton);
 
   const trajectoryCheckboxLabel = document.createElement('label');
   const trajectoryCheckbox = document.createElement('input');
@@ -271,27 +259,13 @@ function initPrecomputedSDEView(
   trajectoryCheckbox.checked = showTrajectories;
   trajectoryCheckboxLabel.appendChild(trajectoryCheckbox);
   trajectoryCheckboxLabel.appendChild(document.createTextNode(' Show trajectories'));
-  checkboxRow.appendChild(trajectoryCheckboxLabel);
+  controlsDiv.appendChild(trajectoryCheckboxLabel);
 
   trajectoryCheckbox.addEventListener('change', () => {
     showTrajectories = trajectoryCheckbox.checked;
     render();
   });
 
-  const buttonRow = document.createElement('div');
-  buttonRow.style.display = 'flex';
-  buttonRow.style.gap = '8px';
-  controlsDiv.appendChild(buttonRow);
-
-  const resamplePointsButton = document.createElement('button');
-  resamplePointsButton.textContent = 'Sample points';
-  resamplePointsButton.addEventListener('click', resamplePoints);
-  buttonRow.appendChild(resamplePointsButton);
-
-  const resampleNoiseButton = document.createElement('button');
-  resampleNoiseButton.textContent = 'Sample noise';
-  resampleNoiseButton.addEventListener('click', resampleNoise);
-  buttonRow.appendChild(resampleNoiseButton);
 
   // Add drag functionality
   let isDragging = false;
@@ -333,44 +307,8 @@ function initPrecomputedSDEView(
   return { updatePosition, updateTime, updateStepCount, updateDiffusionScheduler, updateScheduler };
 }
 
-function initDoubleConditionalVectorFieldWidget(
-  container: HTMLElement,
-  instanceIndex: number
-): void {
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-  container.style.gap = '12px';
-  container.style.border = '1px solid #e0e0e0';
-  container.style.padding = '12px';
-  container.style.borderRadius = '8px';
-
-  const instanceTitle = document.createElement('h2');
-  instanceTitle.textContent = `Instance ${instanceIndex + 1}`;
-  instanceTitle.style.margin = '0';
-  container.appendChild(instanceTitle);
-
-  const mainLayout = document.createElement('div');
-  mainLayout.style.display = 'flex';
-  mainLayout.style.gap = '20px';
-  container.appendChild(mainLayout);
-
-  // Create left side for widgets
-  const leftSide = document.createElement('div');
-  leftSide.style.flex = '1';
-  mainLayout.appendChild(leftSide);
-
-  // Create right side for scheduler controls
-  const rightSide = document.createElement('div');
-  rightSide.style.width = '200px';
-  rightSide.style.display = 'flex';
-  rightSide.style.flexDirection = 'column';
-  rightSide.style.gap = '16px';
-  mainLayout.appendChild(rightSide);
-
-  // Create container for widgets row
-  const widgetRow = document.createElement('div');
-  widgetRow.className = 'widget-container';
-  leftSide.appendChild(widgetRow);
+export function initDoubleConditionalVectorFieldWidget(container: HTMLElement): void {
+  removePlaceholder(container);
 
   // Initialize state with a random starting point in the visible range
   const initialPosition: Pair<number> = [
@@ -395,17 +333,13 @@ function initDoubleConditionalVectorFieldWidget(
 
   // Create containers for all three widgets
   const condProbContainer = document.createElement('div');
-  widgetRow.appendChild(condProbContainer);
+  container.appendChild(condProbContainer);
 
   const dotView2Container = document.createElement('div');
-  dotView2Container.style.display = 'flex';
-  dotView2Container.style.flexDirection = 'column';
-  widgetRow.appendChild(dotView2Container);
+  container.appendChild(dotView2Container);
 
   const dotView3Container = document.createElement('div');
-  dotView3Container.style.display = 'flex';
-  dotView3Container.style.flexDirection = 'column';
-  widgetRow.appendChild(dotView3Container);
+  container.appendChild(dotView3Container);
 
   // Initialize the two interactive vector field views (lighter, no full precompute)
   const makeVectorFieldView = (container: HTMLElement): void => {
@@ -444,28 +378,20 @@ function initDoubleConditionalVectorFieldWidget(
     }
   ));
 
-  // Slider + counters directly under the views
-  const instanceSliderContainer = document.createElement('div');
-  instanceSliderContainer.style.marginTop = '12px';
-  instanceSliderContainer.style.marginBottom = '4px';
-  instanceSliderContainer.style.display = 'flex';
-  instanceSliderContainer.style.flexDirection = 'column';
-  instanceSliderContainer.style.gap = '8px';
-  leftSide.appendChild(instanceSliderContainer);
-
-  initTimeSliderWidget(instanceSliderContainer, 0, (time: number) => {
+  initTimeSliderWidget(container, 0, (time: number) => {
     void controller.update({ time });
   }, {
     loop: true,
     autostart: false
   });
 
+  const controls = document.createElement('div');
+  controls.className = 'controls';
+  container.appendChild(controls);
+
   // Add early exit counter display
   const counterContainer = document.createElement('div');
-  counterContainer.style.marginTop = '12px';
-  counterContainer.style.fontSize = '14px';
-  counterContainer.style.color = '#666';
-  instanceSliderContainer.appendChild(counterContainer);
+  container.appendChild(counterContainer);
 
   const counterLabel = document.createElement('span');
   counterLabel.textContent = 'Early exits: ';
@@ -473,14 +399,10 @@ function initDoubleConditionalVectorFieldWidget(
 
   const counterValue = document.createElement('span');
   counterValue.textContent = '0';
-  counterValue.style.fontWeight = 'bold';
-  counterValue.style.color = '#ff6200';
   counterContainer.appendChild(counterValue);
 
   const resetButton = document.createElement('button');
   resetButton.textContent = 'Reset';
-  resetButton.style.marginLeft = '8px';
-  resetButton.style.fontSize = '12px';
   resetButton.addEventListener('click', () => {
     controller.resetEarlyExitCount();
     counterValue.textContent = '0';
@@ -492,92 +414,37 @@ function initDoubleConditionalVectorFieldWidget(
     counterValue.textContent = controller.getEarlyExitCount().toString();
   }, 100);
 
-  // Add scheduler visualization (top of right column)
-  const schedulerVizContainer = document.createElement('div');
-  const schedulerVizTitle = document.createElement('h3');
-  schedulerVizTitle.textContent = 'Scheduler';
-  schedulerVizTitle.style.marginTop = '0';
-  schedulerVizTitle.style.marginBottom = '8px';
-  schedulerVizContainer.appendChild(schedulerVizTitle);
-  rightSide.appendChild(schedulerVizContainer);
+  // Add combined noise scheduler widget
+  const schedulerContainer = document.createElement('div');
+  schedulerContainer.className = 'schedule-controls noise';
+  controls.appendChild(schedulerContainer);
 
-  const updateSchedulerViz = initSchedulerVisualizationWidget(schedulerVizContainer);
-
-  // Register scheduler viz as a view
-  controller.registerView({
-    render: (params: DoubleConditionalState) => {
-      updateSchedulerViz(params.scheduler, params.time);
-    }
+  const updateScheduler = initNoiseSchedulerWidget(schedulerContainer, (schedulerType: string) => {
+    const newScheduler = getScheduler(schedulerType);
+    void controller.update({ schedulerType, scheduler: newScheduler });
   });
 
-  // Add scheduler selection (bottom of right column)
-  const schedulerSelectionContainer = document.createElement('div');
-  const schedulerSelectionTitle = document.createElement('h3');
-  schedulerSelectionTitle.textContent = 'Type';
-  schedulerSelectionTitle.style.marginTop = '0';
-  schedulerSelectionTitle.style.marginBottom = '8px';
-  schedulerSelectionContainer.appendChild(schedulerSelectionTitle);
-  rightSide.appendChild(schedulerSelectionContainer);
-
-  initSchedulerSelectionWidget(
-    schedulerSelectionContainer,
-    (schedulerType: string) => {
-      const newScheduler = getScheduler(schedulerType);
-      void controller.update({ schedulerType, scheduler: newScheduler });
+  // Register scheduler as a view
+  controller.registerView({
+    render: (params: DoubleConditionalState) => {
+      updateScheduler(params.scheduler, params.time);
     }
-  );
+  });
 
   // Initial render
   void controller.update({});
 }
 
-function initOdeSdeWidget(
-  container: HTMLElement
-): void {
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-  container.style.gap = '12px';
-  container.style.border = '1px solid #e0e0e0';
-  container.style.padding = '12px';
-  container.style.borderRadius = '8px';
-
-  const instanceTitle = document.createElement('h2');
-  instanceTitle.textContent = 'OdeSdeWidget';
-  instanceTitle.style.margin = '0';
-  container.appendChild(instanceTitle);
-
-  const mainLayout = document.createElement('div');
-  mainLayout.style.display = 'flex';
-  mainLayout.style.gap = '20px';
-  container.appendChild(mainLayout);
-
-  const leftSide = document.createElement('div');
-  leftSide.style.flex = '1';
-  mainLayout.appendChild(leftSide);
-
-  const rightSide = document.createElement('div');
-  rightSide.style.width = '220px';
-  rightSide.style.display = 'flex';
-  rightSide.style.flexDirection = 'column';
-  rightSide.style.gap = '16px';
-  mainLayout.appendChild(rightSide);
-
-  const widgetRow = document.createElement('div');
-  widgetRow.className = 'widget-container';
-  leftSide.appendChild(widgetRow);
-
+export function initOdeSdeWidget(container: HTMLElement): void {
+  removePlaceholder(container);
   const condProbContainer = document.createElement('div');
-  widgetRow.appendChild(condProbContainer);
+  container.appendChild(condProbContainer);
 
   const odeContainer = document.createElement('div');
-  odeContainer.style.display = 'flex';
-  odeContainer.style.flexDirection = 'column';
-  widgetRow.appendChild(odeContainer);
+  container.appendChild(odeContainer);
 
   const sdeContainer = document.createElement('div');
-  sdeContainer.style.display = 'flex';
-  sdeContainer.style.flexDirection = 'column';
-  widgetRow.appendChild(sdeContainer);
+  container.appendChild(sdeContainer);
 
   const initialPosition: Pair<number> = [
     (Math.random() * 8) - 4,
@@ -655,104 +522,53 @@ function initOdeSdeWidget(
   });
 
   const controlsSection = document.createElement('div');
-  controlsSection.style.display = 'flex';
-  controlsSection.style.flexDirection = 'column';
-  controlsSection.style.gap = '10px';
-  controlsSection.style.marginTop = '8px';
-  leftSide.appendChild(controlsSection);
+  controlsSection.className = 'controls';
+  container.appendChild(controlsSection);
 
   const updateWidgets = (time: number): void => {
     void controller.update({ time });
   };
 
-  initTimeSliderWidget(controlsSection, 0, updateWidgets, {
+  initTimeSliderWidget(container, 0, updateWidgets, {
     loop: true,
     autostart: false,
     steps: stepCount
   });
 
-  const schedulerVizContainer = document.createElement('div');
-  const schedulerVizTitle = document.createElement('h3');
-  schedulerVizTitle.textContent = 'Scheduler';
-  schedulerVizTitle.style.marginTop = '0';
-  schedulerVizTitle.style.marginBottom = '8px';
-  schedulerVizContainer.appendChild(schedulerVizTitle);
-  rightSide.appendChild(schedulerVizContainer);
+  // Add combined noise scheduler widget
+  const schedulerContainer = document.createElement('div');
+  schedulerContainer.className = 'schedule-controls noise';
+  controlsSection.appendChild(schedulerContainer);
 
-  const updateSchedulerViz = initSchedulerVisualizationWidget(schedulerVizContainer);
-
-  const schedulerSelectionContainer = document.createElement('div');
-  const schedulerSelectionTitle = document.createElement('h3');
-  schedulerSelectionTitle.textContent = 'Type';
-  schedulerSelectionTitle.style.marginTop = '0';
-  schedulerSelectionTitle.style.marginBottom = '8px';
-  schedulerSelectionContainer.appendChild(schedulerSelectionTitle);
-  rightSide.appendChild(schedulerSelectionContainer);
-
-  initSchedulerSelectionWidget(
-    schedulerSelectionContainer,
-    (schedulerType: string) => {
-      const newScheduler = getScheduler(schedulerType);
-      void controller.update({ schedulerType, scheduler: newScheduler });
-    }
-  );
+  const updateScheduler = initNoiseSchedulerWidget(schedulerContainer, (schedulerType: string) => {
+    const newScheduler = getScheduler(schedulerType);
+    void controller.update({ schedulerType, scheduler: newScheduler });
+  });
 
   controller.registerView({
     render: (params: DoubleConditionalState) => {
-      updateSchedulerViz(params.scheduler, params.time);
+      updateScheduler(params.scheduler, params.time);
     }
   });
 
-  // Add diffusion visualization
-  const diffusionVizContainer = document.createElement('div');
-  const diffusionVizTitle = document.createElement('h3');
-  diffusionVizTitle.textContent = 'Diffusion';
-  diffusionVizTitle.style.marginTop = '0';
-  diffusionVizTitle.style.marginBottom = '8px';
-  diffusionVizContainer.appendChild(diffusionVizTitle);
-  rightSide.appendChild(diffusionVizContainer);
+  // Add combined diffusion coefficient widget
+  const diffusionContainer = document.createElement('div');
+  diffusionContainer.className = 'schedule-controls diffusion-coefficient';
+  controlsSection.appendChild(diffusionContainer);
 
-  const updateDiffusionViz = initDiffusionCoefficientVisualizationWidget(diffusionVizContainer);
-
-  controller.registerView({
-    render: (params: DoubleConditionalState) => {
-      updateDiffusionViz(params.diffusionScheduler, params.time);
-    }
-  });
-
-  // Add diffusion selection
-  const diffusionSelectionContainer = document.createElement('div');
-  const diffusionSelectionTitle = document.createElement('h3');
-  diffusionSelectionTitle.textContent = 'Type';
-  diffusionSelectionTitle.style.marginTop = '0';
-  diffusionSelectionTitle.style.marginBottom = '8px';
-  diffusionSelectionContainer.appendChild(diffusionSelectionTitle);
-  rightSide.appendChild(diffusionSelectionContainer);
-
-  initDiffusionCoefficientSelectionWidget(
-    diffusionSelectionContainer,
+  const updateDiffusion = initDiffusionCoefficientWidget(
+    diffusionContainer,
     (diffusionType: string, maxDiffusion: number) => {
       const newDiffusionScheduler = getDiffusionScheduler(diffusionType, maxDiffusion);
       void controller.update({ diffusionType, diffusionScheduler: newDiffusionScheduler });
     }
   );
 
+  controller.registerView({
+    render: (params: DoubleConditionalState) => {
+      updateDiffusion(params.diffusionScheduler, params.time);
+    }
+  });
+
   void controller.update({});
 }
-
-function run(): void {
-  const widgetsContainer = el(document, '#widgets-container') as HTMLElement;
-  widgetsContainer.style.display = 'flex';
-  widgetsContainer.style.flexDirection = 'column';
-  widgetsContainer.style.gap = '24px';
-
-  const instance1 = document.createElement('div');
-  widgetsContainer.appendChild(instance1);
-  initDoubleConditionalVectorFieldWidget(instance1, 0);
-
-  const instance2 = document.createElement('div');
-  widgetsContainer.appendChild(instance2);
-  initOdeSdeWidget(instance2);
-}
-
-run();

@@ -1,5 +1,5 @@
 import { addFrameUsingScales, createMovableDot, getContext } from 'web-ui-common/canvas';
-import { addCanvas, removePlaceholder } from 'web-ui-common/dom';
+import { addCanvas, addDiv, removePlaceholder } from 'web-ui-common/dom';
 import type { Pair, Scale } from 'web-ui-common/types';
 import { makeScale } from 'web-ui-common/util';
 
@@ -296,7 +296,10 @@ function drawTrajectory(
 /**
  * Set up SDE visualization with drift field
  */
-function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement): void {
+function setUpSDEVisualization(container: HTMLElement): void {
+  const canvasContainer = addDiv(container, {});
+
+  const canvas = addCanvas(canvasContainer, { width: '480', height: '350' });
   const ctx = getContext(canvas);
 
   // Define coordinate system (same as vf.html)
@@ -371,10 +374,12 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
     }
   }
 
+  const controlsContainer = addDiv(container, {});
+  controlsContainer.className = 'controls';
   // Trajectories section
   const trajectoriesDiv = document.createElement('div');
-  trajectoriesDiv.className = 'trajectories';
-  container.appendChild(trajectoriesDiv);
+  trajectoriesDiv.className = 'options';
+  controlsContainer.appendChild(trajectoriesDiv);
 
   // Add checkbox for deterministic trajectory
   const detLabel = document.createElement('label');
@@ -407,7 +412,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   // Add steps slider
   const stepsDiv = document.createElement('div');
   stepsDiv.className = 'steps-control';
-  container.appendChild(stepsDiv);
+  controlsContainer.appendChild(stepsDiv);
 
   let wasPlayingBeforeStepsChange = false;
   const stepsSliderWidget = addSlider(stepsDiv, {
@@ -438,7 +443,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   });
 
   stepsSliderWidget.slider.addEventListener('mousedown', () => {
-    const playPauseBtn = container.querySelector('button');
+    const playPauseBtn = controlsContainer.querySelector('button');
     wasPlayingBeforeStepsChange = playPauseBtn?.textContent === 'Pause';
     if (wasPlayingBeforeStepsChange && playPauseBtn) {
       playPauseBtn.click();
@@ -447,7 +452,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
 
   stepsSliderWidget.slider.addEventListener('mouseup', () => {
     if (wasPlayingBeforeStepsChange) {
-      const playPauseBtn = container.querySelector('button');
+      const playPauseBtn = controlsContainer.querySelector('button');
       if (playPauseBtn?.textContent === 'Play') {
         playPauseBtn.click();
       }
@@ -457,7 +462,7 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
   // Add regenerate noise button
   const regenerateDiv = document.createElement('div');
   regenerateDiv.className = 'regenerate-control';
-  container.appendChild(regenerateDiv);
+  controlsContainer.appendChild(regenerateDiv);
 
   const regenerateButton = document.createElement('button');
   regenerateButton.textContent = 'Regenerate noise';
@@ -481,8 +486,8 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
 
   // Add diffusion coefficient section
   const diffusionCoefficientDiv = document.createElement('div');
-  diffusionCoefficientDiv.className = 'diffusion-coefficient';
-  container.appendChild(diffusionCoefficientDiv);
+  diffusionCoefficientDiv.className = 'schedule-controls diffusion-coefficient';
+  controlsContainer.appendChild(diffusionCoefficientDiv);
 
   const diffusionVizTitle = document.createElement('h3');
   diffusionVizTitle.textContent = 'Diffusion coefficient';
@@ -596,6 +601,5 @@ function setUpSDEVisualization(canvas: HTMLCanvasElement, container: HTMLElement
 
 export function initSdeWidget(container: HTMLElement): void {
   removePlaceholder(container);
-  const canvas = addCanvas(container, { width: '480', height: '350' });
-  setUpSDEVisualization(canvas, container);
+  setUpSDEVisualization(container);
 }

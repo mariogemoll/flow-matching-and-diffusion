@@ -1,55 +1,17 @@
-import { addDot, drawFunction1D, getContext } from 'web-ui-common/canvas';
-import { makeScale } from 'web-ui-common/util';
-
 import type { DiffusionCoefficientScheduler } from './math/diffusion-coefficient-scheduler';
+import { renderMinimalPlot } from './widgets/plot-renderers';
 
 export function renderDiffusionCoefficientPlot(
   canvas: HTMLCanvasElement,
   scheduler: DiffusionCoefficientScheduler,
   t: number
 ): void {
-  const ctx = getContext(canvas);
-  const margins = { top: 4, right: 4, bottom: 4, left: 4 };
-  const tScaleRange: [number, number] = [0, 1];
-
   // Calculate max diffusion for the scale
   const maxVal = scheduler.getMaxDiffusion();
   const valueScaleRange: [number, number] = [0, Math.max(maxVal * 1.1, 0.1)];
 
-  const tScale = makeScale(
-    tScaleRange,
-    [margins.left, canvas.width - margins.right]
-  );
-  const valueScale = makeScale(
-    valueScaleRange,
-    [canvas.height - margins.bottom, margins.top]
-  );
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw just the rectangle frame without ticks or labels
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(
-    margins.left,
-    margins.top,
-    canvas.width - margins.left - margins.right,
-    canvas.height - margins.top - margins.bottom
-  );
-
-  // Draw diffusion curve
-  drawFunction1D(ctx, tScale, valueScale, (tVal) => scheduler.getDiffusion(tVal), {
-    stroke: '#000',
-    lineWidth: 1,
-    sampleCount: 100
-  });
-
-  // Draw current position dot
-  const currentDiffusion = scheduler.getDiffusion(t);
-  const currentX = tScale(t);
-  const currentY = valueScale(currentDiffusion);
-
-  addDot(ctx, currentX, currentY, 2, '#000');
+  const valueFunctions = [(tVal: number): number => scheduler.getDiffusion(tVal)];
+  renderMinimalPlot(canvas, valueFunctions, t, valueScaleRange);
 }
 
 export function initDiffusionCoefficientVisualizationWidget(

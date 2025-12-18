@@ -34,9 +34,6 @@ export function initMarginalVectorFieldView(
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
-  canvas.style.width = `${CANVAS_WIDTH}px`;
-  canvas.style.height = `${CANVAS_HEIGHT}px`;
-  canvas.style.border = '1px solid #ccc';
   container.appendChild(canvas);
   const ctx = getContext(canvas);
 

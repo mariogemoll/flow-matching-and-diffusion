@@ -16,8 +16,7 @@ import {
   makeSqrtSqrtScheduler,
   type NoiseScheduler
 } from './math/noise-scheduler';
-import { initSchedulerSelectionWidget } from './scheduler-selection';
-import { initSchedulerVisualizationWidget } from './scheduler-visualization';
+import { initNoiseSchedulerWidget } from './noise-scheduler-widget';
 import { initTimeSliderWidget } from './time-slider';
 
 const CANVAS_WIDTH = 480;
@@ -73,28 +72,22 @@ export function initConditionalProbPathWidget(
   let currentTime = initialTime;
   let currentScheduler: NoiseScheduler = makeConstantVarianceScheduler();
 
-  // Create main layout structure
-  const mainDiv = document.createElement('div');
-  mainDiv.style.display = 'flex';
-  mainDiv.style.gap = '20px';
-  container.appendChild(mainDiv);
+  // Canvas container (view)
+  const canvasContainer = document.createElement('div');
+  canvasContainer.className = 'conditional-path';
+  container.appendChild(canvasContainer);
 
-  // Left section (view)
-  const leftSection = document.createElement('div');
-  mainDiv.appendChild(leftSection);
+  const controlsContainer = document.createElement('div');
+  controlsContainer.className = 'controls';
+  container.appendChild(controlsContainer);
 
-  // Right section (scheduler visualization and selection)
-  const rightSection = document.createElement('div');
-  rightSection.style.display = 'flex';
-  rightSection.style.flexDirection = 'column';
-  rightSection.style.gap = '10px';
-  mainDiv.appendChild(rightSection);
+  // Scheduler section
+  const schedulerSection = document.createElement('div');
+  schedulerSection.className = 'schedule-controls';
+  controlsContainer.appendChild(schedulerSection);
 
-  // Initialize scheduler visualization
-  const updateSchedulerVisualization = initSchedulerVisualizationWidget(rightSection);
-
-  // Initialize scheduler selection
-  initSchedulerSelectionWidget(rightSection, (schedulerType: string) => {
+  // Initialize combined noise scheduler widget
+  const updateScheduler = initNoiseSchedulerWidget(schedulerSection, (schedulerType: string) => {
     if (schedulerType === 'linear') {
       currentScheduler = makeLinearNoiseScheduler();
     } else if (schedulerType === 'sqrt') {
@@ -109,11 +102,11 @@ export function initConditionalProbPathWidget(
       currentScheduler = makeCircularCircularScheduler();
     }
     updateView(currentPosition, currentTime, currentScheduler);
-    updateSchedulerVisualization(currentScheduler, currentTime);
+    updateScheduler(currentScheduler, currentTime);
   });
 
   const updateView = initConditionalProbabilityPathView(
-    leftSection,
+    canvasContainer,
     initialPosition,
     initialTime,
     currentScheduler,
@@ -125,11 +118,11 @@ export function initConditionalProbPathWidget(
   void initTimeSliderWidget(container, initialTime, (newTime: number) => {
     currentTime = newTime;
     updateView(currentPosition, currentTime, currentScheduler);
-    updateSchedulerVisualization(currentScheduler, currentTime);
+    updateScheduler(currentScheduler, currentTime);
   });
 
   // Initial render
-  updateSchedulerVisualization(currentScheduler, currentTime);
+  updateScheduler(currentScheduler, currentTime);
 }
 
 export function initConditionalProbPathAndVectorFieldWidget(
@@ -142,35 +135,22 @@ export function initConditionalProbPathAndVectorFieldWidget(
   let currentTime = initialTime;
   let currentScheduler: NoiseScheduler = makeConstantVarianceScheduler();
 
-  // Create main layout structure
-  const mainDiv = document.createElement('div');
-  mainDiv.style.display = 'flex';
-  mainDiv.style.gap = '20px';
-  container.appendChild(mainDiv);
-
-  // Create a container for side-by-side views
-  const viewsContainer = document.createElement('div');
-  viewsContainer.style.display = 'flex';
-  viewsContainer.style.gap = '16px';
-  mainDiv.appendChild(viewsContainer);
-
+  // Canvas containers (views)
   const leftContainer = document.createElement('div');
+  leftContainer.className = 'conditional-path';
+  container.appendChild(leftContainer);
+
   const rightContainer = document.createElement('div');
-  viewsContainer.appendChild(leftContainer);
-  viewsContainer.appendChild(rightContainer);
+  rightContainer.className = 'conditional-vector-field';
+  container.appendChild(rightContainer);
 
-  // Right section (scheduler visualization and selection)
+  // Scheduler section
   const schedulerSection = document.createElement('div');
-  schedulerSection.style.display = 'flex';
-  schedulerSection.style.flexDirection = 'column';
-  schedulerSection.style.gap = '10px';
-  mainDiv.appendChild(schedulerSection);
+  schedulerSection.className = 'schedule-controls';
+  container.appendChild(schedulerSection);
 
-  // Initialize scheduler visualization
-  const updateSchedulerVisualization = initSchedulerVisualizationWidget(schedulerSection);
-
-  // Initialize scheduler selection
-  initSchedulerSelectionWidget(schedulerSection, (schedulerType: string) => {
+  // Initialize combined noise scheduler widget
+  const updateScheduler = initNoiseSchedulerWidget(schedulerSection, (schedulerType: string) => {
     if (schedulerType === 'linear') {
       currentScheduler = makeLinearNoiseScheduler();
     } else if (schedulerType === 'sqrt') {
@@ -186,7 +166,7 @@ export function initConditionalProbPathAndVectorFieldWidget(
     }
     updateCondProbView(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView(currentPosition, currentTime, currentScheduler);
-    updateSchedulerVisualization(currentScheduler, currentTime);
+    updateScheduler(currentScheduler, currentTime);
   });
 
   const updateCondProbView = initConditionalProbabilityPathView(
@@ -215,11 +195,11 @@ export function initConditionalProbPathAndVectorFieldWidget(
     currentTime = newTime;
     updateCondProbView(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView(currentPosition, currentTime, currentScheduler);
-    updateSchedulerVisualization(currentScheduler, currentTime);
+    updateScheduler(currentScheduler, currentTime);
   });
 
   // Initial render
-  updateSchedulerVisualization(currentScheduler, currentTime);
+  updateScheduler(currentScheduler, currentTime);
 }
 
 export function initConditionalProbPathAndTwoVectorFieldsWidget(
@@ -232,37 +212,27 @@ export function initConditionalProbPathAndTwoVectorFieldsWidget(
   let currentTime = initialTime;
   let currentScheduler: NoiseScheduler = makeConstantVarianceScheduler();
 
-  // Create main layout structure
-  const mainDiv = document.createElement('div');
-  mainDiv.style.display = 'flex';
-  mainDiv.style.gap = '20px';
-  container.appendChild(mainDiv);
-
-  // Create a container for three side-by-side views
-  const viewsContainer = document.createElement('div');
-  viewsContainer.style.display = 'flex';
-  viewsContainer.style.gap = '16px';
-  mainDiv.appendChild(viewsContainer);
-
   const leftContainer = document.createElement('div');
+  leftContainer.className = 'conditional-path';
   const middleContainer = document.createElement('div');
+  middleContainer.className = 'conditional-ode';
   const rightContainer = document.createElement('div');
-  viewsContainer.appendChild(leftContainer);
-  viewsContainer.appendChild(middleContainer);
-  viewsContainer.appendChild(rightContainer);
+  rightContainer.className = 'conditional-sde';
+  container.appendChild(leftContainer);
+  container.appendChild(middleContainer);
+  container.appendChild(rightContainer);
 
-  // Right section (scheduler visualization and selection)
+  const controlsContainer = document.createElement('div');
+  controlsContainer.className = 'controls';
+  container.appendChild(controlsContainer);
+
+  // Scheduler section
   const schedulerSection = document.createElement('div');
-  schedulerSection.style.display = 'flex';
-  schedulerSection.style.flexDirection = 'column';
-  schedulerSection.style.gap = '10px';
-  mainDiv.appendChild(schedulerSection);
+  schedulerSection.className = 'schedule-controls';
+  controlsContainer.appendChild(schedulerSection);
 
-  // Initialize scheduler visualization
-  const updateSchedulerVisualization = initSchedulerVisualizationWidget(schedulerSection);
-
-  // Initialize scheduler selection
-  initSchedulerSelectionWidget(schedulerSection, (schedulerType: string) => {
+  // Initialize combined noise scheduler widget
+  const updateScheduler = initNoiseSchedulerWidget(schedulerSection, (schedulerType: string) => {
     if (schedulerType === 'linear') {
       currentScheduler = makeLinearNoiseScheduler();
     } else if (schedulerType === 'sqrt') {
@@ -279,7 +249,7 @@ export function initConditionalProbPathAndTwoVectorFieldsWidget(
     updateCondProbView(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView1(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView2(currentPosition, currentTime, currentScheduler);
-    updateSchedulerVisualization(currentScheduler, currentTime);
+    updateScheduler(currentScheduler, currentTime);
   });
 
   const updateCondProbView = initConditionalProbabilityPathView(
@@ -323,9 +293,9 @@ export function initConditionalProbPathAndTwoVectorFieldsWidget(
     updateCondProbView(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView1(currentPosition, currentTime, currentScheduler);
     updateVectorFieldView2(currentPosition, currentTime, currentScheduler);
-    updateSchedulerVisualization(currentScheduler, currentTime);
+    updateScheduler(currentScheduler, currentTime);
   });
 
   // Initial render
-  updateSchedulerVisualization(currentScheduler, currentTime);
+  updateScheduler(currentScheduler, currentTime);
 }

@@ -69,8 +69,8 @@ export function initVectorFieldView(
     }
   );
 
-  // Create sample/clear buttons
-  const { updateButtonStates } = createSampleButtons({
+  // Create sample/clear buttons and checkbox
+  const { updateButtonStates, controlsDiv } = createSampleButtons({
     container,
     onSample: () => {
       const { initialSamples, pixelSamples } = sampleStandardNormalPoints({
@@ -92,13 +92,12 @@ export function initVectorFieldView(
 
   // Create checkbox for trajectory display
   const trajectoryCheckboxLabel = document.createElement('label');
-  trajectoryCheckboxLabel.style.marginLeft = '12px';
   const trajectoryCheckbox = document.createElement('input');
   trajectoryCheckbox.type = 'checkbox';
   trajectoryCheckbox.checked = showTrajectories;
   trajectoryCheckboxLabel.appendChild(trajectoryCheckbox);
   trajectoryCheckboxLabel.appendChild(document.createTextNode(' Show trajectories'));
-  container.appendChild(trajectoryCheckboxLabel);
+  controlsDiv.appendChild(trajectoryCheckboxLabel);
 
   trajectoryCheckbox.addEventListener('change', () => {
     showTrajectories = trajectoryCheckbox.checked;

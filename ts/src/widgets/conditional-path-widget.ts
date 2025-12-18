@@ -88,7 +88,7 @@ export function setUpConditionalPathWidget(): void {
       '#conditional-variance-plot'
     ) as HTMLCanvasElement;
 
-    renderSchedulerPlot(schedulerPlot, scheduler, t, 'Scheduler');
+    renderSchedulerPlot(schedulerPlot, scheduler, t);
     renderMeanPlot(meanPlot, scheduler, t, targetX, 'Mean');
     renderVariancePlot(variancePlot, scheduler, t, 0, 'Variance'); // stdDev = 0 for Dirac delta
   };

@@ -2,14 +2,21 @@
 <html>
 <head>
     <title>Double Conditional Vector Field Widget</title>
-    <link rel="stylesheet" href="score.css">
+    <link rel="stylesheet" href="controls.css">
+    <link rel="stylesheet" href="flow-visualizations.css">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 </head>
 <body>
     <h1>Double Conditional Vector Field Widget</h1>
 
-    <div id="widgets-container"></div>
+    <div id="double-ode-widget" class="three-charts with-controls">
+        <div class="placeholder">Loading...</div>
+    </div>
 
-    <script type="module" src="dist/score.js"></script>
+    <div id="ode-sde-widget" class="three-charts with-controls">
+        <div class="placeholder">Loading...</div>
+    </div>
+
+    <script type="module" src="dist/score-page.js"></script>
 </body>
 </html>

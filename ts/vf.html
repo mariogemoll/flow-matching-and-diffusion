@@ -2,17 +2,19 @@
 <html>
 <head>
     <title>VF</title>
+    <link rel="stylesheet" href="controls.css">
+    <link rel="stylesheet" href="flow-visualizations.css">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
 </head>
 <body>
     <h1>Vector field and trajectory visualization</h1>
     <section>
-        <div id="vf-widget-1" class="vector-field-widget">
+        <div id="vf-widget-1" class="vector-field-widget one-chart with-controls">
             <div class="placeholder">Loading...</div>
         </div>
     </section>
     <section style="margin-top: 40px;">
-        <div id="vf-widget-2" class="euler-method-widget">
+        <div id="vf-widget-2" class="euler-method-widget one-chart with-controls">
             <div class="placeholder">Loading...</div>
         </div>
     </section>

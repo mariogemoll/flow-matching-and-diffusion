@@ -30,9 +30,6 @@ export function initMarginalProbPathView(
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
-  canvas.style.width = `${CANVAS_WIDTH}px`;
-  canvas.style.height = `${CANVAS_HEIGHT}px`;
-  canvas.style.border = '1px solid #ccc';
   container.appendChild(canvas);
   const ctx = getContext(canvas);
 
@@ -65,10 +62,7 @@ export function initMarginalProbPathView(
 
   // Color controls
   const colorControls = document.createElement('div');
-  colorControls.style.marginTop = '8px';
   colorControls.style.display = 'none'; // Hidden for now
-  colorControls.style.gap = '8px';
-  colorControls.style.alignItems = 'center';
   container.appendChild(colorControls);
 
   const controlColorLabel = document.createElement('label');

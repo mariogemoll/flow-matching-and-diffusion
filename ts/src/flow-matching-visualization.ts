@@ -79,15 +79,10 @@ export function initWidget(
   // Create control panel
   const controlPanel = document.createElement('div');
   controlPanel.className = 'control-panel';
-  controlPanel.style.display = 'flex';
-  controlPanel.style.alignItems = 'center';
-  controlPanel.style.gap = '15px';
-  controlPanel.style.marginBottom = '10px';
 
   // Play/Pause button
   const playButton = document.createElement('button');
   playButton.textContent = 'Play';
-  playButton.style.minWidth = '80px';
   controlPanel.appendChild(playButton);
 
   // Time label
@@ -102,13 +97,11 @@ export function initWidget(
   timeSlider.max = '1';
   timeSlider.step = '0.001'; // Fine-grained control
   timeSlider.value = '0';
-  timeSlider.style.flex = '1';
   controlPanel.appendChild(timeSlider);
 
   // Time display
   const timeDisplay = document.createElement('span');
   timeDisplay.textContent = 't = 0.000';
-  timeDisplay.style.minWidth = '80px';
   controlPanel.appendChild(timeDisplay);
 
   container.appendChild(controlPanel);
@@ -120,10 +113,6 @@ export function initWidget(
   if (options?.onResample) {
     const resamplePanel = document.createElement('div');
     resamplePanel.className = 'control-panel';
-    resamplePanel.style.display = 'flex';
-    resamplePanel.style.alignItems = 'center';
-    resamplePanel.style.gap = '15px';
-    resamplePanel.style.marginBottom = '10px';
 
     // Sample size input
     const sampleLabel = document.createElement('label');
@@ -149,7 +138,6 @@ export function initWidget(
   const canvas = document.createElement('canvas');
   canvas.width = CANVAS_WIDTH;
   canvas.height = CANVAS_HEIGHT;
-  canvas.style.marginTop = '10px';
   container.appendChild(canvas);
 
   const ctx = getContext(canvas);

@@ -219,10 +219,10 @@ export interface SampleButtonConfig {
 export function createSampleButtons(config: SampleButtonConfig): {
   sampleBtn: HTMLButtonElement;
   clearBtn: HTMLButtonElement;
+  controlsDiv: HTMLDivElement;
   updateButtonStates: (time: number, hasSamples: boolean) => void;
 } {
   const controlsDiv = document.createElement('div');
-  controlsDiv.style.marginTop = '8px';
   config.container.appendChild(controlsDiv);
 
   const sampleBtn = document.createElement('button');
@@ -231,7 +231,6 @@ export function createSampleButtons(config: SampleButtonConfig): {
 
   const clearBtn = document.createElement('button');
   clearBtn.textContent = 'Clear';
-  clearBtn.style.marginLeft = '8px';
   controlsDiv.appendChild(clearBtn);
 
   sampleBtn.addEventListener('click', config.onSample);
@@ -242,5 +241,5 @@ export function createSampleButtons(config: SampleButtonConfig): {
     clearBtn.disabled = !hasSamples;
   }
 
-  return { sampleBtn, clearBtn, updateButtonStates };
+  return { sampleBtn, clearBtn, controlsDiv, updateButtonStates };
 }

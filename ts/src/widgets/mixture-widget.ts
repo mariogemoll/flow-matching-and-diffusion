@@ -104,7 +104,7 @@ export function setUpMixtureWidget(): void {
       '#mixture-variance-plot'
     ) as HTMLCanvasElement;
 
-    renderSchedulerPlot(schedulerPlot, scheduler, t, 'Scheduler');
+    renderSchedulerPlot(schedulerPlot, scheduler, t);
 
     // For mixture, compute weighted average of means and variances
     const normalizedComponents = normalizeGaussianComponents(components);

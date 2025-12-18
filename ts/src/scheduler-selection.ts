@@ -1,3 +1,5 @@
+import { makeEl } from 'web-ui-common/dom';
+
 export function initSchedulerSelectionWidget(
   container: HTMLElement,
   onChange: (schedulerType: string) => void
@@ -11,22 +13,22 @@ export function initSchedulerSelectionWidget(
     { value: 'circular-circular', label: 'α=sin(πt/2), β=cos(πt/2)' }
   ];
 
-  const selectLabel = document.createElement('label');
+  const selectLabel = makeEl('label', {}) as HTMLLabelElement;
   selectLabel.textContent = 'Schedule: ';
-  const select = document.createElement('select');
+
+  const select = makeEl('select', {}) as HTMLSelectElement;
 
   schedulers.forEach(({ value, label, checked }) => {
-    const option = document.createElement('option');
-    option.value = value;
+    const option = makeEl('option', { value }) as HTMLOptionElement;
     option.textContent = label;
     if (checked === true) { option.selected = true; }
     select.appendChild(option);
   });
 
-  selectLabel.appendChild(select);
-  container.appendChild(selectLabel);
-
   select.addEventListener('change', () => {
     onChange(select.value);
   });
+
+  selectLabel.appendChild(select);
+  container.appendChild(selectLabel);
 }

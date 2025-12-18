@@ -1,7 +1,6 @@
 import { removePlaceholder } from 'web-ui-common/dom';
 
-import { initDiffusionCoefficientSelectionWidget } from './diffusion-coefficient-selection';
-import { initDiffusionCoefficientVisualizationWidget } from './diffusion-coefficient-visualization';
+import { initDiffusionCoefficientWidget } from './diffusion-coefficient-widget';
 import { createFrameworkController } from './framework-controller';
 import type { GaussianComponent } from './gaussian';
 import { initMarginalProbPathView } from './marginal-prob-path-view';
@@ -23,8 +22,7 @@ import {
   makeSqrtSqrtScheduler,
   type NoiseScheduler
 } from './math/noise-scheduler';
-import { initSchedulerSelectionWidget } from './scheduler-selection';
-import { initSchedulerVisualizationWidget } from './scheduler-visualization';
+import { initNoiseSchedulerWidget } from './noise-scheduler-widget';
 import { initTimeSliderWidget } from './time-slider';
 
 interface ExtendedGaussianComponent extends GaussianComponent {
@@ -99,27 +97,6 @@ export function initMarginalProbPathAndVectorFieldWidget(
 ): void {
   removePlaceholder(container);
 
-  // Create main layout structure
-  const mainDiv = document.createElement('div');
-  mainDiv.style.display = 'flex';
-  mainDiv.style.gap = '20px';
-  container.appendChild(mainDiv);
-
-  // Left section (marginal probability path)
-  const leftSection = document.createElement('div');
-  mainDiv.appendChild(leftSection);
-
-  // Right section (vector field)
-  const rightSection = document.createElement('div');
-  mainDiv.appendChild(rightSection);
-
-  // Plot section (scheduler visualization and selection)
-  const plotSection = document.createElement('div');
-  plotSection.style.display = 'flex';
-  plotSection.style.flexDirection = 'column';
-  plotSection.style.gap = '10px';
-  mainDiv.appendChild(plotSection);
-
   // Initialize components
   const components: ExtendedGaussianComponent[] = [
     {
@@ -170,23 +147,33 @@ export function initMarginalProbPathAndVectorFieldWidget(
     components
   });
 
-  // Initialize scheduler visualization
-  const updateSchedulerVisualization = initSchedulerVisualizationWidget(plotSection);
-  controller.registerView({
-    render: (state: MarginalState) => {
-      updateSchedulerVisualization(state.scheduler, state.time);
-    }
-  });
+  // Canvas containers (views)
+  const leftContainer = document.createElement('div');
+  leftContainer.className = 'marginal-path';
+  container.appendChild(leftContainer);
 
-  // Initialize scheduler selection
-  initSchedulerSelectionWidget(plotSection, (schedulerType: string) => {
+  const rightContainer = document.createElement('div');
+  rightContainer.className = 'marginal-ode';
+  container.appendChild(rightContainer);
+
+  const controlsContainer = document.createElement('div');
+  controlsContainer.className = 'controls';
+  container.appendChild(controlsContainer);
+
+  // Scheduler section
+  const schedulerSection = document.createElement('div');
+  schedulerSection.className = 'schedule-controls noise';
+  controlsContainer.appendChild(schedulerSection);
+
+  // Initialize combined noise scheduler widget
+  const updateScheduler = initNoiseSchedulerWidget(schedulerSection, (schedulerType: string) => {
     const newScheduler = getScheduler(schedulerType);
     void controller.update({ schedulerType, scheduler: newScheduler });
   });
 
   // Initialize probability path view
   const updateProbPathView = initMarginalProbPathView(
-    leftSection,
+    leftContainer,
     components,
     initialTime,
     initialScheduler,
@@ -197,12 +184,13 @@ export function initMarginalProbPathAndVectorFieldWidget(
   controller.registerView({
     render: (state: MarginalState) => {
       updateProbPathView(state.components, state.time, state.scheduler);
+      updateScheduler(state.scheduler, state.time);
     }
   });
 
   // Initialize vector field view
   const updateVectorFieldView = initMarginalVectorFieldView(
-    rightSection,
+    rightContainer,
     components,
     initialTime,
     initialScheduler
@@ -219,6 +207,7 @@ export function initMarginalProbPathAndVectorFieldWidget(
   });
 
   // Initial render
+  updateScheduler(initialScheduler, initialTime);
   void controller.update({});
 
   console.log('Marginal probability path initialized with TF.js and framework controller');
@@ -232,50 +221,31 @@ export function initMarginalOdeSdeWidget(
 ): void {
   removePlaceholder(container);
 
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-  container.style.gap = '12px';
-  container.style.border = '1px solid #e0e0e0';
-  container.style.padding = '12px';
-  container.style.borderRadius = '8px';
-
-  const instanceTitle = document.createElement('h2');
-  instanceTitle.textContent = 'Marginal Path: ODE + SDE';
-  instanceTitle.style.margin = '0';
-  container.appendChild(instanceTitle);
-
-  const mainLayout = document.createElement('div');
-  mainLayout.style.display = 'flex';
-  mainLayout.style.gap = '20px';
-  container.appendChild(mainLayout);
-
-  const leftSide = document.createElement('div');
-  leftSide.style.flex = '1';
-  mainLayout.appendChild(leftSide);
-
-  const rightSide = document.createElement('div');
-  rightSide.style.width = '220px';
-  rightSide.style.display = 'flex';
-  rightSide.style.flexDirection = 'column';
-  rightSide.style.gap = '16px';
-  mainLayout.appendChild(rightSide);
-
-  const widgetRow = document.createElement('div');
-  widgetRow.className = 'widget-container';
-  leftSide.appendChild(widgetRow);
-
   const probPathContainer = document.createElement('div');
-  widgetRow.appendChild(probPathContainer);
+  probPathContainer.className = 'marginal-path';
+  container.appendChild(probPathContainer);
 
   const odeContainer = document.createElement('div');
-  odeContainer.style.display = 'flex';
-  odeContainer.style.flexDirection = 'column';
-  widgetRow.appendChild(odeContainer);
+  odeContainer.className = 'marginal-ode';
+  container.appendChild(odeContainer);
 
   const sdeContainer = document.createElement('div');
-  sdeContainer.style.display = 'flex';
-  sdeContainer.style.flexDirection = 'column';
-  widgetRow.appendChild(sdeContainer);
+  sdeContainer.className = 'marginal-sde';
+  container.appendChild(sdeContainer);
+
+  const controlsContainer = document.createElement('div');
+  controlsContainer.className = 'controls';
+  container.appendChild(controlsContainer);
+
+  // Scheduler section
+  const schedulerSection = document.createElement('div');
+  schedulerSection.className = 'schedule-controls noise';
+  controlsContainer.appendChild(schedulerSection);
+
+  // Diffusion section
+  const diffusionSection = document.createElement('div');
+  diffusionSection.className = 'schedule-controls diffusion-coefficient';
+  controlsContainer.appendChild(diffusionSection);
 
   // Initialize components
   const components: ExtendedGaussianComponent[] = [
@@ -322,6 +292,12 @@ export function initMarginalOdeSdeWidget(
     components
   });
 
+  // Initialize combined noise scheduler widget
+  const updateScheduler = initNoiseSchedulerWidget(schedulerSection, (schedulerType: string) => {
+    const newScheduler = getScheduler(schedulerType);
+    void controller.update({ schedulerType, scheduler: newScheduler });
+  });
+
   // Initialize probability path view
   const updateProbPathView = initMarginalProbPathView(
     probPathContainer,
@@ -335,6 +311,7 @@ export function initMarginalOdeSdeWidget(
   controller.registerView({
     render: (state: MarginalState) => {
       updateProbPathView(state.components, state.time, state.scheduler);
+      updateScheduler(state.scheduler, state.time);
     }
   });
 
@@ -372,92 +349,32 @@ export function initMarginalOdeSdeWidget(
     }
   });
 
-  const controlsSection = document.createElement('div');
-  controlsSection.style.display = 'flex';
-  controlsSection.style.flexDirection = 'column';
-  controlsSection.style.gap = '10px';
-  controlsSection.style.marginTop = '8px';
-  leftSide.appendChild(controlsSection);
-
-  const updateWidgets = (time: number): void => {
-    void controller.update({ time });
-  };
-
-  initTimeSliderWidget(controlsSection, 0, updateWidgets, {
-    loop: true,
-    autostart: false,
-    steps: stepCount
-  });
-
-  // Add scheduler visualization (top of right column)
-  const schedulerVizContainer = document.createElement('div');
-  const schedulerVizTitle = document.createElement('h3');
-  schedulerVizTitle.textContent = 'Scheduler';
-  schedulerVizTitle.style.marginTop = '0';
-  schedulerVizTitle.style.marginBottom = '8px';
-  schedulerVizContainer.appendChild(schedulerVizTitle);
-  rightSide.appendChild(schedulerVizContainer);
-
-  const updateSchedulerViz = initSchedulerVisualizationWidget(schedulerVizContainer);
-
-  controller.registerView({
-    render: (params: MarginalState) => {
-      updateSchedulerViz(params.scheduler, params.time);
-    }
-  });
-
-  // Add scheduler selection (bottom of right column)
-  const schedulerSelectionContainer = document.createElement('div');
-  const schedulerSelectionTitle = document.createElement('h3');
-  schedulerSelectionTitle.textContent = 'Type';
-  schedulerSelectionTitle.style.marginTop = '0';
-  schedulerSelectionTitle.style.marginBottom = '8px';
-  schedulerSelectionContainer.appendChild(schedulerSelectionTitle);
-  rightSide.appendChild(schedulerSelectionContainer);
-
-  initSchedulerSelectionWidget(
-    schedulerSelectionContainer,
-    (schedulerType: string) => {
-      const newScheduler = getScheduler(schedulerType);
-      void controller.update({ schedulerType, scheduler: newScheduler });
-    }
-  );
-
-  // Add diffusion visualization
-  const diffusionVizContainer = document.createElement('div');
-  const diffusionVizTitle = document.createElement('h3');
-  diffusionVizTitle.textContent = 'Diffusion';
-  diffusionVizTitle.style.marginTop = '0';
-  diffusionVizTitle.style.marginBottom = '8px';
-  diffusionVizContainer.appendChild(diffusionVizTitle);
-  rightSide.appendChild(diffusionVizContainer);
-
-  const updateDiffusionViz = initDiffusionCoefficientVisualizationWidget(diffusionVizContainer);
-
-  controller.registerView({
-    render: (params: MarginalState) => {
-      updateDiffusionViz(params.diffusionScheduler, params.time);
-    }
-  });
-
-  // Add diffusion selection
-  const diffusionSelectionContainer = document.createElement('div');
-  const diffusionSelectionTitle = document.createElement('h3');
-  diffusionSelectionTitle.textContent = 'Type';
-  diffusionSelectionTitle.style.marginTop = '0';
-  diffusionSelectionTitle.style.marginBottom = '8px';
-  diffusionSelectionContainer.appendChild(diffusionSelectionTitle);
-  rightSide.appendChild(diffusionSelectionContainer);
-
-  initDiffusionCoefficientSelectionWidget(
-    diffusionSelectionContainer,
+  // Initialize combined diffusion coefficient widget
+  const updateDiffusion = initDiffusionCoefficientWidget(
+    diffusionSection,
     (diffusionType: string, maxDiffusion: number) => {
       const newDiffusionScheduler = getDiffusionScheduler(diffusionType, maxDiffusion);
       void controller.update({ diffusionType, diffusionScheduler: newDiffusionScheduler });
     }
   );
 
+  controller.registerView({
+    render: (state: MarginalState) => {
+      updateDiffusion(state.diffusionScheduler, state.time);
+    }
+  });
+
+  // Initialize time slider
+  void initTimeSliderWidget(container, initialTime, (newTime: number) => {
+    void controller.update({ time: newTime });
+  }, {
+    loop: true,
+    autostart: false,
+    steps: stepCount
+  });
+
   // Initial render
+  updateScheduler(initialScheduler, initialTime);
   void controller.update({});
 
   console.log('Marginal ODE+SDE widget initialized');

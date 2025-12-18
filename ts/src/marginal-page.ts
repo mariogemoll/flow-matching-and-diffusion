@@ -8,20 +8,11 @@ import { initMarginalOdeSdeWidget,initMarginalProbPathAndVectorFieldWidget } fro
 async function run(): Promise<void> {
   await tf.ready();
 
-  const container = el(document, '#container') as HTMLElement;
-  container.style.display = 'flex';
-  container.style.flexDirection = 'column';
-  container.style.gap = '24px';
+  const containerA = el(document, '#containerA') as HTMLElement;
+  const containerB = el(document, '#containerB') as HTMLElement;
 
-  // First widget: Marginal probability path + ODE vector field
-  const widget1 = document.createElement('div');
-  container.appendChild(widget1);
-  initMarginalProbPathAndVectorFieldWidget(widget1);
-
-  // Second widget: Marginal probability path + ODE + SDE
-  const widget2 = document.createElement('div');
-  container.appendChild(widget2);
-  initMarginalOdeSdeWidget(widget2);
+  initMarginalProbPathAndVectorFieldWidget(containerA);
+  initMarginalOdeSdeWidget(containerB);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

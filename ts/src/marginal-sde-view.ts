@@ -434,15 +434,18 @@ export function initMarginalSDEView(
     render();
   }
 
-  const controlsDiv = document.createElement('div');
-  controlsDiv.style.marginTop = '8px';
-  controlsDiv.style.display = 'flex';
-  controlsDiv.style.flexDirection = 'column';
-  controlsDiv.style.gap = '8px';
-  container.appendChild(controlsDiv);
+  const controlsContainer = document.createElement('div');
+  container.appendChild(controlsContainer);
 
-  const checkboxRow = document.createElement('div');
-  controlsDiv.appendChild(checkboxRow);
+  const resamplePointsButton = document.createElement('button');
+  resamplePointsButton.textContent = 'Sample points';
+  resamplePointsButton.addEventListener('click', resamplePoints);
+  controlsContainer.appendChild(resamplePointsButton);
+
+  const resampleNoiseButton = document.createElement('button');
+  resampleNoiseButton.textContent = 'Sample noise';
+  resampleNoiseButton.addEventListener('click', resampleNoise);
+  controlsContainer.appendChild(resampleNoiseButton);
 
   const trajectoryCheckboxLabel = document.createElement('label');
   const trajectoryCheckbox = document.createElement('input');
@@ -450,27 +453,12 @@ export function initMarginalSDEView(
   trajectoryCheckbox.checked = showTrajectories;
   trajectoryCheckboxLabel.appendChild(trajectoryCheckbox);
   trajectoryCheckboxLabel.appendChild(document.createTextNode(' Show trajectories'));
-  checkboxRow.appendChild(trajectoryCheckboxLabel);
+  controlsContainer.appendChild(trajectoryCheckboxLabel);
 
   trajectoryCheckbox.addEventListener('change', () => {
     showTrajectories = trajectoryCheckbox.checked;
     render();
   });
-
-  const buttonRow = document.createElement('div');
-  buttonRow.style.display = 'flex';
-  buttonRow.style.gap = '8px';
-  controlsDiv.appendChild(buttonRow);
-
-  const resamplePointsButton = document.createElement('button');
-  resamplePointsButton.textContent = 'Sample points';
-  resamplePointsButton.addEventListener('click', resamplePoints);
-  buttonRow.appendChild(resamplePointsButton);
-
-  const resampleNoiseButton = document.createElement('button');
-  resampleNoiseButton.textContent = 'Sample noise';
-  resampleNoiseButton.addEventListener('click', resampleNoise);
-  buttonRow.appendChild(resampleNoiseButton);
 
   generateNoiseMatrices();
   precomputeStochasticTrajectories();

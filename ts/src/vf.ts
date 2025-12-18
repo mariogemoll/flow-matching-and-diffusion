@@ -312,21 +312,22 @@ function setUpVectorField(
     }
   }
 
+  const controls = addDiv(container, {});
+  controls.className = 'controls';
+
+  const optionsContainer = addDiv(controls, {});
+  optionsContainer.className = 'options';
+
   // Create checkbox for trajectory display
   if (eulerMethod) {
-    // Add header for Euler method mode
-    const header = addEl(container, 'h3', {}) as HTMLHeadingElement;
-    header.textContent = 'Trajectories:';
-
     // Real trajectory checkbox
-    const realTrajectorySwitch = addDiv(container, { class: 'real-trajectory-switch' });
-    const trajectoryLabel = addEl(realTrajectorySwitch, 'label', {}) as HTMLLabelElement;
+    const trajectoryLabel = addEl(optionsContainer, 'label', {}) as HTMLLabelElement;
     const trajectoryCheckbox = addEl(trajectoryLabel, 'input', {
       type: 'checkbox',
       checked: showTrajectory.toString()
     }) as HTMLInputElement;
     trajectoryCheckbox.checked = showTrajectory;
-    trajectoryLabel.appendChild(document.createTextNode(' Real'));
+    trajectoryLabel.appendChild(document.createTextNode(' Show trajectory'));
 
     trajectoryCheckbox.addEventListener('change', () => {
       showTrajectory = trajectoryCheckbox.checked;
@@ -334,12 +335,8 @@ function setUpVectorField(
     });
 
     // Euler approximation trajectory checkbox
-    const eulerApproximationTrajectorySwitch = addDiv(
-      container,
-      { class: 'euler-approximation-trajectory-switch' }
-    );
     const eulerApproximationTrajectoryLabel = addEl(
-      eulerApproximationTrajectorySwitch,
+      optionsContainer,
       'label',
       {}
     ) as HTMLLabelElement;
@@ -353,7 +350,7 @@ function setUpVectorField(
     ) as HTMLInputElement;
     eulerApproximationTrajectoryCheckbox.checked = showEulerApproximationTrajectory;
     eulerApproximationTrajectoryLabel.appendChild(
-      document.createTextNode(' Euler approximation')
+      document.createTextNode(' Show Euler approximation')
     );
 
     eulerApproximationTrajectoryCheckbox.addEventListener('change', () => {
@@ -362,8 +359,7 @@ function setUpVectorField(
     });
   } else {
     // Standard trajectory checkbox for non-Euler mode
-    const trajectorySwitch = addDiv(container, { class: 'trajectory-switch' });
-    const trajectoryLabel = addEl(trajectorySwitch, 'label', {}) as HTMLLabelElement;
+    const trajectoryLabel = addEl(optionsContainer, 'label', {}) as HTMLLabelElement;
     const trajectoryCheckbox = addEl(trajectoryLabel, 'input', {
       type: 'checkbox',
       checked: showTrajectory.toString()
@@ -380,13 +376,13 @@ function setUpVectorField(
   // Add Euler steps slider if in Euler method mode
   let stepsSliderWidget: { slider: HTMLInputElement; getValue: () => number } | undefined;
   if (eulerMethod) {
-    stepsSliderWidget = addSlider(container, {
+    stepsSliderWidget = addSlider(controls, {
       label: 'Steps: ',
       min: 2,
       max: 100,
       step: 1,
       initialValue: steps,
-      className: 'steps-slider',
+      className: 'slider steps-slider',
       onChange: (newSteps: number): void => {
         steps = Math.round(newSteps);
       }

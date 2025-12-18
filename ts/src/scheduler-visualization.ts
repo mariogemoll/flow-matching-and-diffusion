@@ -6,18 +6,13 @@ export function initSchedulerVisualizationWidget(
 ): (scheduler: NoiseScheduler, time: number) => void {
   // Create canvas for scheduler plot
   const schedulerPlotCanvas = document.createElement('canvas');
-  schedulerPlotCanvas.width = 160;
-  schedulerPlotCanvas.height = 160;
-  schedulerPlotCanvas.style.width = '160px';
-  schedulerPlotCanvas.style.height = '160px';
-  schedulerPlotCanvas.style.border = '1px solid #ccc';
+  schedulerPlotCanvas.width = 64;
+  schedulerPlotCanvas.height = 64;
   container.appendChild(schedulerPlotCanvas);
 
   // Create weight summary display
   const weightSummary = document.createElement('span');
   weightSummary.textContent = 'α_t = 0.00, β_t = 1.00';
-  weightSummary.style.fontSize = '12px';
-  weightSummary.style.textAlign = 'center';
   container.appendChild(weightSummary);
 
   function update(scheduler: NoiseScheduler, time: number): void {
@@ -29,7 +24,7 @@ export function initSchedulerVisualizationWidget(
     weightSummary.textContent = summaryParts.join(', ');
 
     // Update scheduler plot
-    renderSchedulerPlot(schedulerPlotCanvas, scheduler, time, 'Scheduler');
+    renderSchedulerPlot(schedulerPlotCanvas, scheduler, time);
   }
 
   return update;

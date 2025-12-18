@@ -1,18 +1,22 @@
-import { addFrameUsingScales, drawFunction1D, getContext } from 'web-ui-common/canvas';
+import { addDot, addFrameUsingScales, drawFunction1D, getContext } from 'web-ui-common/canvas';
 import { makeScale } from 'web-ui-common/util';
 
 import { type NoiseScheduler } from '../math/noise-scheduler';
 
-export function renderSchedulerPlot(
+/**
+ * Generic plot renderer for time-series values
+ * Renders multiple curves in a small, monochrome, minimal style
+ */
+export function renderMinimalPlot(
   canvas: HTMLCanvasElement,
-  scheduler: NoiseScheduler,
+  valueFunctions: ((t: number) => number)[],
   t: number,
-  title?: string
+  valueScaleRange: [number, number]
 ): void {
   const ctx = getContext(canvas);
-  const margins = { top: 15, right: 10, bottom: 20, left: 25 };
+  const margins = { top: 4, right: 4, bottom: 4, left: 4 };
   const tScaleRange: [number, number] = [0, 1];
-  const valueScaleRange: [number, number] = [0, 1];
+
   const tScale = makeScale(
     tScaleRange,
     [margins.left, canvas.width - margins.right]
@@ -23,59 +27,45 @@ export function renderSchedulerPlot(
   );
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  addFrameUsingScales(ctx, tScale, valueScale, 5);
 
-  // Draw alpha curve
-  drawFunction1D(ctx, tScale, valueScale, (tVal) => scheduler.getAlpha(tVal), {
-    stroke: 'firebrick',
-    lineWidth: 2,
-    sampleCount: 100
-  });
+  // Draw just the rectangle frame without ticks or labels
+  ctx.strokeStyle = '#333';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(
+    margins.left,
+    margins.top,
+    canvas.width - margins.left - margins.right,
+    canvas.height - margins.top - margins.bottom
+  );
 
-  // Draw beta curve
-  drawFunction1D(ctx, tScale, valueScale, (tVal) => scheduler.getBeta(tVal), {
-    stroke: 'steelblue',
-    lineWidth: 2,
-    sampleCount: 100
+  // Draw all curves
+  valueFunctions.forEach((valueFunc) => {
+    drawFunction1D(ctx, tScale, valueScale, valueFunc, {
+      stroke: '#000',
+      lineWidth: 1,
+      sampleCount: 100
+    });
   });
 
   // Draw current position dots
-  const currentAlpha = scheduler.getAlpha(t);
-  const currentBeta = scheduler.getBeta(t);
   const currentX = tScale(t);
+  valueFunctions.forEach((valueFunc) => {
+    const currentValue = valueFunc(t);
+    const currentY = valueScale(currentValue);
+    addDot(ctx, currentX, currentY, 2, '#000');
+  });
+}
 
-  ctx.save();
-  ctx.fillStyle = 'firebrick';
-  ctx.beginPath();
-  ctx.arc(currentX, valueScale(currentAlpha), 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.fillStyle = 'steelblue';
-  ctx.beginPath();
-  ctx.arc(currentX, valueScale(currentBeta), 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // Labels with colored legend
-  ctx.save();
-  ctx.font = '10px sans-serif';
-  ctx.fillStyle = 'firebrick';
-  ctx.fillText('α', margins.left + 5, margins.top + 10);
-  ctx.fillStyle = 'steelblue';
-  ctx.fillText('β', margins.left + 5, margins.top + 20);
-  ctx.restore();
-
-  // Title
-  if (title !== undefined && title !== '') {
-    ctx.save();
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillStyle = '#333';
-    ctx.textAlign = 'center';
-    ctx.fillText(title, canvas.width / 2, 10);
-    ctx.restore();
-  }
+export function renderSchedulerPlot(
+  canvas: HTMLCanvasElement,
+  scheduler: NoiseScheduler,
+  t: number
+): void {
+  const valueFunctions = [
+    (tVal: number): number => scheduler.getAlpha(tVal),
+    (tVal: number): number => scheduler.getBeta(tVal)
+  ];
+  renderMinimalPlot(canvas, valueFunctions, t, [0, 1]);
 }
 
 export function renderMeanPlot(

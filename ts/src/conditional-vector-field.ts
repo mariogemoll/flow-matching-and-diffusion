@@ -223,7 +223,6 @@ export function initPrecomputedVectorFieldView(
 
   // Create controls container
   const controlsDiv = document.createElement('div');
-  controlsDiv.style.marginTop = '8px';
   container.appendChild(controlsDiv);
 
   // Create checkbox for vector field display
@@ -237,7 +236,6 @@ export function initPrecomputedVectorFieldView(
 
   // Create checkbox for trajectory display
   const trajectoryCheckboxLabel = document.createElement('label');
-  trajectoryCheckboxLabel.style.marginLeft = '12px';
   const trajectoryCheckbox = document.createElement('input');
   trajectoryCheckbox.type = 'checkbox';
   trajectoryCheckbox.checked = showTrajectories;

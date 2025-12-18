@@ -28,9 +28,8 @@ export function initConditionalProbabilityPathView(
   const canvas = addCanvas(container, { width: `${CANVAS_WIDTH}`, height: `${CANVAS_HEIGHT}` });
   const ctx = getContext(canvas);
 
-  // Create controls container
+  // Create controls div for buttons and checkbox
   const controlsDiv = document.createElement('div');
-  controlsDiv.style.marginTop = '8px';
   container.appendChild(controlsDiv);
 
   // Create sample button
@@ -46,6 +45,7 @@ export function initConditionalProbabilityPathView(
   sampleContinuouslyLabel.appendChild(sampleContinuouslyCheckbox);
   sampleContinuouslyLabel.appendChild(document.createTextNode(' Sample continuously'));
   controlsDiv.appendChild(sampleContinuouslyLabel);
+
 
   const xRange = [-4, 4] as [number, number];
   const yRange = [-3, 3] as [number, number];
