@@ -3,14 +3,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/flow-and-score-matching-pipeline.ts src/vf-page.ts src/sde-page.ts src/framework.ts --bundle --outdir=dist",
-    "watch": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/flow-and-score-matching-pipeline.ts src/vf-page.ts src/sde-page.ts src/framework.ts --bundle --outdir=dist --watch",
+    "build": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/diffusion-model-page.ts src/vf-page.ts src/sde-page.ts src/framework.ts --bundle --outdir=dist",
+    "watch": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/diffusion-model-page.ts src/vf-page.ts src/sde-page.ts src/framework.ts --bundle --outdir=dist --watch",
     "test": "vitest"
   },
   "exports": {
     "./brownian-motion": "./src/brownian-motion.ts",
     "./conditional": "./src/conditional.ts",
     "./marginal": "./src/marginal.ts",
+    "./flow-and-score-matching-pipeline": "./src/flow-and-score-matching-pipeline.ts",
     "./flow-matching-pipeline": "./src/flow-matching-pipeline.ts",
     "./sde": "./src/sde.ts",
     "./vf": "./src/vf.ts"

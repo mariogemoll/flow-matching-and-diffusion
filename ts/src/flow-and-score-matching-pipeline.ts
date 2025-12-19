@@ -4,7 +4,6 @@ import type { Tensor2D } from 'flow-models-common/tf-types';
 import { trainModel } from 'flow-models-common/train';
 import { initWidget as initTrainingWidget } from 'flow-models-common/training-widget';
 import { quantizeFloats } from 'web-ui-common/data';
-import { el } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 
 import { DiffusionModel } from './diffusion-model';
@@ -50,18 +49,17 @@ interface PageState {
   };
 }
 
-void (async(): Promise<void> => {
+export async function initFlowAndScoreMatchingPipeline(
+  moonsDatasetContainer: HTMLDivElement,
+  flowMatchingTrainingContainer: HTMLDivElement,
+  scoreMatchingTrainingContainer: HTMLDivElement,
+  diffusionVisualizationContainer: HTMLDivElement,
+  flowMatchingModelUrl: string,
+  flowMatchingLossHistoryUrl: string,
+  scoreMatchingModelUrl: string,
+  scoreMatchingLossHistoryUrl: string
+): Promise<void> {
   await tf.ready();
-
-  // Get container elements
-  const moonsDatasetContainer = el(
-    document, '#moons-dataset-widget') as HTMLDivElement;
-  const flowMatchingTrainingContainer = el(
-    document, '#flow-matching-training-widget') as HTMLDivElement;
-  const scoreMatchingTrainingContainer = el(
-    document, '#score-matching-training-widget') as HTMLDivElement;
-  const diffusionVisualizationContainer = el(
-    document, '#diffusion-visualization-widget') as HTMLDivElement;
 
   // Create page state
   const pageState: PageState = {
@@ -102,12 +100,12 @@ void (async(): Promise<void> => {
   };
 
   // Initialize Flow Matching training widget
-  const flowMatchingWidget = initTrainingWidget(flowMatchingTrainingContainer);
+  let flowMatchingWidget = initTrainingWidget(flowMatchingTrainingContainer);
   flowMatchingWidget.setMaxEpochs(1000);
   flowMatchingWidget.statusText.textContent = 'Loading...';
 
   // Initialize Score Matching training widget
-  const scoreMatchingWidget = initTrainingWidget(scoreMatchingTrainingContainer);
+  let scoreMatchingWidget = initTrainingWidget(scoreMatchingTrainingContainer);
   scoreMatchingWidget.setMaxEpochs(1000);
   scoreMatchingWidget.statusText.textContent = 'Loading...';
 
@@ -145,9 +143,9 @@ void (async(): Promise<void> => {
   // Try to load Flow Matching model
   try {
     const success = await pageState.flowMatching.model.loadWeights(
-      'flow-matching-model.json');
+      flowMatchingModelUrl);
     if (success) {
-      console.log('Loaded Flow Matching weights from flow-matching-model.json');
+      console.log(`Loaded Flow Matching weights from ${flowMatchingModelUrl}`);
       flowMatchingWidget.statusText.textContent = 'Loaded pre-trained weights';
       pageState.flowMatching.trainingState = 'completed';
       flowMatchingWidget.trainButton.textContent = 'Training completed';
@@ -155,7 +153,7 @@ void (async(): Promise<void> => {
       flowMatchingWidget.resetButton.disabled = false;
 
       // Try to load loss history
-      const lossHistory = await loadLossHistory('flow-matching-loss-history.bin');
+      const lossHistory = await loadLossHistory(flowMatchingLossHistoryUrl);
       if (lossHistory) {
         flowMatchingWidget.setLossHistory(lossHistory);
       }
@@ -163,7 +161,7 @@ void (async(): Promise<void> => {
       flowMatchingWidget.statusText.textContent = 'Failed to load weights';
     }
   } catch (error) {
-    console.log('Could not load flow-matching-model.json:', error);
+    console.log(`Could not load ${flowMatchingModelUrl}:`, error);
     flowMatchingWidget.statusText.textContent =
       'No pre-trained weights found. Click "Train model" to train.';
   }
@@ -171,9 +169,9 @@ void (async(): Promise<void> => {
   // Try to load Score Matching model
   try {
     const success = await pageState.scoreMatching.model.loadWeights(
-      'score-matching-model.json');
+      scoreMatchingModelUrl);
     if (success) {
-      console.log('Loaded Score Matching weights from score-matching-model.json');
+      console.log(`Loaded Score Matching weights from ${scoreMatchingModelUrl}`);
       scoreMatchingWidget.statusText.textContent = 'Loaded pre-trained weights';
       pageState.scoreMatching.trainingState = 'completed';
       scoreMatchingWidget.trainButton.textContent = 'Training completed';
@@ -181,7 +179,7 @@ void (async(): Promise<void> => {
       scoreMatchingWidget.resetButton.disabled = false;
 
       // Try to load loss history
-      const lossHistory = await loadLossHistory('score-matching-loss-history.bin');
+      const lossHistory = await loadLossHistory(scoreMatchingLossHistoryUrl);
       if (lossHistory) {
         scoreMatchingWidget.setLossHistory(lossHistory);
       }
@@ -189,100 +187,128 @@ void (async(): Promise<void> => {
       scoreMatchingWidget.statusText.textContent = 'Failed to load weights';
     }
   } catch (error) {
-    console.log('Could not load score-matching-model.json:', error);
+    console.log(`Could not load ${scoreMatchingModelUrl}:`, error);
     scoreMatchingWidget.statusText.textContent =
       'No pre-trained weights found. Click "Train model" to train.';
   }
 
-  // Flow Matching training button handler
-  flowMatchingWidget.trainButton.addEventListener('click', () => {
-    void (async(): Promise<void> => {
-      if (flowMatchingState.trainingState === 'training') {
-        flowMatchingState.trainingState = 'paused';
-        flowMatchingWidget.statusText.textContent = 'Pausing training...';
-      } else if (flowMatchingState.trainingState !== 'completed') {
-        flowMatchingState.trainingState = 'training';
-        flowMatchingWidget.trainButton.textContent = 'Pause training';
-        flowMatchingWidget.resetButton.disabled = true;
-        flowMatchingWidget.statusText.textContent = 'Training...';
+  // Setup Flow Matching event handlers
+  function setupFlowMatchingHandlers(): void {
+    // Training button handler
+    flowMatchingWidget.trainButton.addEventListener('click', () => {
+      void (async(): Promise<void> => {
+        if (flowMatchingState.trainingState === 'training') {
+          flowMatchingState.trainingState = 'paused';
+          flowMatchingWidget.statusText.textContent = 'Pausing training...';
+        } else if (flowMatchingState.trainingState !== 'completed') {
+          flowMatchingState.trainingState = 'training';
+          flowMatchingWidget.trainButton.textContent = 'Pause training';
+          flowMatchingWidget.resetButton.disabled = true;
+          flowMatchingWidget.statusText.textContent = 'Training...';
 
-        flowMatchingState.model = await trainModel(
-          flowMatchingState,
-          () => new FlowMatchingModel(512),
-          flowMatchingWidget
-        );
+          flowMatchingState.model = await trainModel(
+            flowMatchingState,
+            () => new FlowMatchingModel(512),
+            flowMatchingWidget
+          );
 
-        const finalState = flowMatchingState.trainingState as TrainingState;
-        if (finalState === 'completed') {
-          flowMatchingWidget.trainButton.textContent = 'Training completed';
-          flowMatchingWidget.trainButton.disabled = true;
-          flowMatchingWidget.resetButton.disabled = false;
-          flowMatchingWidget.statusText.textContent = 'Training complete!';
-          // Update diffusion visualization if both models are trained
-          updateDiffusionVisualization();
-        } else {
-          flowMatchingWidget.trainButton.textContent = 'Resume training';
-          flowMatchingWidget.resetButton.disabled = false;
-          flowMatchingWidget.statusText.textContent = 'Training paused';
+          const finalState = flowMatchingState.trainingState as TrainingState;
+          if (finalState === 'completed') {
+            flowMatchingWidget.trainButton.textContent = 'Training completed';
+            flowMatchingWidget.trainButton.disabled = true;
+            flowMatchingWidget.resetButton.disabled = false;
+            flowMatchingWidget.statusText.textContent = 'Training complete!';
+            // Update diffusion visualization if both models are trained
+            updateDiffusionVisualization();
+          } else {
+            flowMatchingWidget.trainButton.textContent = 'Resume training';
+            flowMatchingWidget.resetButton.disabled = false;
+            flowMatchingWidget.statusText.textContent = 'Training paused';
+          }
         }
-      }
-    })();
-  });
+      })();
+    });
 
-  // Flow Matching reset button handler
-  flowMatchingWidget.resetButton.addEventListener('click', () => {
-    pageState.flowMatching.model = new FlowMatchingModel(512);
-    pageState.flowMatching.trainingState = 'not_started';
-    flowMatchingWidget.setLossHistory([]);
-    flowMatchingWidget.trainButton.textContent = 'Train model';
-    flowMatchingWidget.trainButton.disabled = false;
-    flowMatchingWidget.statusText.textContent = 'Model reset. Ready to train.';
-  });
+    // Reset button handler
+    flowMatchingWidget.resetButton.addEventListener('click', () => {
+      pageState.flowMatching.model = new FlowMatchingModel(512);
+      pageState.flowMatching.trainingState = 'not_started';
 
-  // Score Matching training button handler
-  scoreMatchingWidget.trainButton.addEventListener('click', () => {
-    void (async(): Promise<void> => {
-      if (scoreMatchingState.trainingState === 'training') {
-        scoreMatchingState.trainingState = 'paused';
-        scoreMatchingWidget.statusText.textContent = 'Pausing training...';
-      } else if (scoreMatchingState.trainingState !== 'completed') {
-        scoreMatchingState.trainingState = 'training';
-        scoreMatchingWidget.trainButton.textContent = 'Pause training';
-        scoreMatchingWidget.resetButton.disabled = true;
-        scoreMatchingWidget.statusText.textContent = 'Training...';
+      // Re-initialize the widget (following pipeline pattern)
+      flowMatchingWidget = initTrainingWidget(flowMatchingTrainingContainer);
+      flowMatchingWidget.setMaxEpochs(1000);
+      flowMatchingWidget.statusText.textContent = 'Model reset. Ready to train.';
 
-        scoreMatchingState.model = await trainModel(
-          scoreMatchingState,
-          () => new ScoreMatchingModel(512),
-          scoreMatchingWidget
-        );
+      // Reset diffusion visualization (following pipeline pattern)
+      diffusionVisualizationContainer.innerHTML =
+        '<div class="placeholder">Train both models first...</div>';
 
-        const finalState = scoreMatchingState.trainingState as TrainingState;
-        if (finalState === 'completed') {
-          scoreMatchingWidget.trainButton.textContent = 'Training completed';
-          scoreMatchingWidget.trainButton.disabled = true;
-          scoreMatchingWidget.resetButton.disabled = false;
-          scoreMatchingWidget.statusText.textContent = 'Training complete!';
-          // Update diffusion visualization if both models are trained
-          updateDiffusionVisualization();
-        } else {
-          scoreMatchingWidget.trainButton.textContent = 'Resume training';
-          scoreMatchingWidget.resetButton.disabled = false;
-          scoreMatchingWidget.statusText.textContent = 'Training paused';
+      // Re-attach event handlers
+      setupFlowMatchingHandlers();
+    });
+  }
+
+  // Initial setup
+  setupFlowMatchingHandlers();
+
+  // Setup Score Matching event handlers
+  function setupScoreMatchingHandlers(): void {
+    // Training button handler
+    scoreMatchingWidget.trainButton.addEventListener('click', () => {
+      void (async(): Promise<void> => {
+        if (scoreMatchingState.trainingState === 'training') {
+          scoreMatchingState.trainingState = 'paused';
+          scoreMatchingWidget.statusText.textContent = 'Pausing training...';
+        } else if (scoreMatchingState.trainingState !== 'completed') {
+          scoreMatchingState.trainingState = 'training';
+          scoreMatchingWidget.trainButton.textContent = 'Pause training';
+          scoreMatchingWidget.resetButton.disabled = true;
+          scoreMatchingWidget.statusText.textContent = 'Training...';
+
+          scoreMatchingState.model = await trainModel(
+            scoreMatchingState,
+            () => new ScoreMatchingModel(512),
+            scoreMatchingWidget
+          );
+
+          const finalState = scoreMatchingState.trainingState as TrainingState;
+          if (finalState === 'completed') {
+            scoreMatchingWidget.trainButton.textContent = 'Training completed';
+            scoreMatchingWidget.trainButton.disabled = true;
+            scoreMatchingWidget.resetButton.disabled = false;
+            scoreMatchingWidget.statusText.textContent = 'Training complete!';
+            // Update diffusion visualization if both models are trained
+            updateDiffusionVisualization();
+          } else {
+            scoreMatchingWidget.trainButton.textContent = 'Resume training';
+            scoreMatchingWidget.resetButton.disabled = false;
+            scoreMatchingWidget.statusText.textContent = 'Training paused';
+          }
         }
-      }
-    })();
-  });
+      })();
+    });
 
-  // Score Matching reset button handler
-  scoreMatchingWidget.resetButton.addEventListener('click', () => {
-    pageState.scoreMatching.model = new ScoreMatchingModel(512);
-    pageState.scoreMatching.trainingState = 'not_started';
-    scoreMatchingWidget.setLossHistory([]);
-    scoreMatchingWidget.trainButton.textContent = 'Train model';
-    scoreMatchingWidget.trainButton.disabled = false;
-    scoreMatchingWidget.statusText.textContent = 'Model reset. Ready to train.';
-  });
+    // Reset button handler
+    scoreMatchingWidget.resetButton.addEventListener('click', () => {
+      pageState.scoreMatching.model = new ScoreMatchingModel(512);
+      pageState.scoreMatching.trainingState = 'not_started';
+
+      // Re-initialize the widget (following pipeline pattern)
+      scoreMatchingWidget = initTrainingWidget(scoreMatchingTrainingContainer);
+      scoreMatchingWidget.setMaxEpochs(1000);
+      scoreMatchingWidget.statusText.textContent = 'Model reset. Ready to train.';
+
+      // Reset diffusion visualization (following pipeline pattern)
+      diffusionVisualizationContainer.innerHTML =
+        '<div class="placeholder">Train both models first...</div>';
+
+      // Re-attach event handlers
+      setupScoreMatchingHandlers();
+    });
+  }
+
+  // Initial setup
+  setupScoreMatchingHandlers();
 
   // Expose state globally for console access
   interface WindowWithState {
@@ -316,4 +342,4 @@ void (async(): Promise<void> => {
     'await state.scoreMatching.model.saveWeights()');
   console.log('To save Score Matching loss history: saveScoreMatchingLossHistory()');
   console.log('To manually update diffusion visualization: updateDiffusionVisualization()');
-})();
+}
