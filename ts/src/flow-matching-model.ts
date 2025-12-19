@@ -1,8 +1,8 @@
 import type * as tfjs from '@tensorflow/tfjs';
 import type { FlowModel } from 'flow-models-common/model-interface';
-import type { LayerVariable, Tensor1D, Tensor2D } from 'flow-models-common/tf-types';
+import type { Tensor1D, Tensor2D } from 'flow-models-common/tf-types';
 
-import { VectorNetwork } from './vector-network';
+import { BaseModel } from './base-model';
 
 /**
  * Flow Matching Model using Conditional Optimal Transport (CondOT) path
@@ -12,11 +12,9 @@ import { VectorNetwork } from './vector-network';
  *
  * The conditional vector field is simply: u_t(x|z) = z - ε
  */
-export class FlowMatchingModel implements FlowModel {
-  private velocityNet: VectorNetwork;
-
+export class FlowMatchingModel extends BaseModel implements FlowModel {
   constructor(hiddenDim = 128) {
-    this.velocityNet = new VectorNetwork(hiddenDim);
+    super(hiddenDim, 'Flow Matching');
   }
 
   /**
@@ -36,7 +34,7 @@ export class FlowMatchingModel implements FlowModel {
         const tTensor = tf.fill([x.shape[0], 1], t) as Tensor2D;
 
         // Get velocity from network
-        const velocity = this.velocityNet.predict(x, tTensor);
+        const velocity = this.network.predict(x, tTensor);
 
         // Euler step: x_{t+dt} = x_t + dt * u_t(x_t)
         return tf.add(x, tf.mul(velocity, dt));
@@ -76,7 +74,7 @@ export class FlowMatchingModel implements FlowModel {
 
       // Predict velocity
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      const predictedVelocity = this.velocityNet.predict(x as Tensor2D, t as Tensor2D);
+      const predictedVelocity = this.network.predict(x as Tensor2D, t as Tensor2D);
 
       // MSE loss
       const diff = tf.sub(predictedVelocity, targetVelocity);
@@ -85,41 +83,5 @@ export class FlowMatchingModel implements FlowModel {
 
       return loss as tfjs.Scalar;
     });
-  }
-
-  getTrainableWeights(): LayerVariable[] {
-    return this.velocityNet.getModel().trainableWeights;
-  }
-
-  /**
-   * Load model weights from TensorFlow.js format
-   */
-  async loadWeights(modelPath: string): Promise<boolean> {
-    console.log('Loading flow matching model weights...');
-
-    try {
-      const loadedModel = await tf.loadLayersModel(modelPath) as tfjs.Sequential;
-
-      // Set weights to velocity network
-      const weights = loadedModel.getWeights();
-      this.velocityNet.getModel().setWeights(weights);
-
-      console.log('Flow matching model weights loaded successfully');
-      return true;
-    } catch (error) {
-      console.error('Failed to load weights:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Save model weights to downloads
-   */
-  async saveWeights(): Promise<void> {
-    console.log('Saving flow matching model weights...');
-    await this.velocityNet.getModel().save('downloads://flow-matching-model');
-    console.log('Model weights saved! Check your downloads folder for:');
-    console.log('  - flow-matching-model.json');
-    console.log('  - flow-matching-model.weights.bin');
   }
 }
