@@ -20,6 +20,14 @@ export class ScoreMatchingModel extends BaseModel {
   }
 
   /**
+   * Predict noise ε at position x and time t
+   * The network predicts noise, and the score is s_t = -ε_t / β_t
+   */
+  predictNoise(x: Tensor2D, t: Tensor2D): Tensor2D {
+    return this.network.predict(x, t);
+  }
+
+  /**
    * Compute score matching loss using Gaussian path
    *
    * Uses alternative noise prediction formulation (numerically stable):

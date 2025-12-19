@@ -7,7 +7,9 @@ import { quantizeFloats } from 'web-ui-common/data';
 import { el } from 'web-ui-common/dom';
 import type { Pair } from 'web-ui-common/types';
 
+import { DiffusionModel } from './diffusion-model';
 import { FlowMatchingModel } from './flow-matching-model';
+import { initWidget as initFlowMatchingVisualization } from './flow-matching-visualization';
 import { ScoreMatchingModel } from './score-matching-model';
 
 /**
@@ -58,6 +60,8 @@ void (async(): Promise<void> => {
     document, '#flow-matching-training-widget') as HTMLDivElement;
   const scoreMatchingTrainingContainer = el(
     document, '#score-matching-training-widget') as HTMLDivElement;
+  const diffusionVisualizationContainer = el(
+    document, '#diffusion-visualization-widget') as HTMLDivElement;
 
   // Create page state
   const pageState: PageState = {
@@ -106,6 +110,37 @@ void (async(): Promise<void> => {
   const scoreMatchingWidget = initTrainingWidget(scoreMatchingTrainingContainer);
   scoreMatchingWidget.setMaxEpochs(1000);
   scoreMatchingWidget.statusText.textContent = 'Loading...';
+
+  // Function to update diffusion visualization
+  function updateDiffusionVisualization(): void {
+    // Check if both models are trained
+    if (pageState.flowMatching.trainingState === 'completed' &&
+        pageState.scoreMatching.trainingState === 'completed') {
+      // Create diffusion model combining both trained models
+      const diffusionModel = new DiffusionModel(
+        pageState.flowMatching.model,
+        pageState.scoreMatching.model
+      );
+
+      // Generate frames using Euler-Maruyama
+      const initialNumSamples = 500;
+      const normalSamples = tf.randomNormal([initialNumSamples, 2]) as Tensor2D;
+      const [frames] = diffusionModel.generate(normalSamples);
+
+      // Initialize visualization
+      initFlowMatchingVisualization(diffusionVisualizationContainer, frames, {
+        onResample: (numSamples: number) => {
+          const samples = tf.randomNormal([numSamples, 2]) as Tensor2D;
+          const [newFrames] = diffusionModel.generate(samples);
+          return newFrames;
+        },
+        initialSamples: initialNumSamples,
+        autoplay: false
+      });
+
+      console.log('Diffusion visualization updated!');
+    }
+  }
 
   // Try to load Flow Matching model
   try {
@@ -183,6 +218,8 @@ void (async(): Promise<void> => {
           flowMatchingWidget.trainButton.disabled = true;
           flowMatchingWidget.resetButton.disabled = false;
           flowMatchingWidget.statusText.textContent = 'Training complete!';
+          // Update diffusion visualization if both models are trained
+          updateDiffusionVisualization();
         } else {
           flowMatchingWidget.trainButton.textContent = 'Resume training';
           flowMatchingWidget.resetButton.disabled = false;
@@ -226,6 +263,8 @@ void (async(): Promise<void> => {
           scoreMatchingWidget.trainButton.disabled = true;
           scoreMatchingWidget.resetButton.disabled = false;
           scoreMatchingWidget.statusText.textContent = 'Training complete!';
+          // Update diffusion visualization if both models are trained
+          updateDiffusionVisualization();
         } else {
           scoreMatchingWidget.trainButton.textContent = 'Resume training';
           scoreMatchingWidget.resetButton.disabled = false;
@@ -250,6 +289,7 @@ void (async(): Promise<void> => {
     state: typeof pageState;
     saveFlowMatchingLossHistory: () => void;
     saveScoreMatchingLossHistory: () => void;
+    updateDiffusionVisualization: () => void;
   }
   const windowWithState = window as unknown as WindowWithState;
   windowWithState.state = pageState;
@@ -261,14 +301,19 @@ void (async(): Promise<void> => {
     saveLossHistoryWithFilename(
       scoreMatchingWidget.getLossHistory(), 'score-matching-loss-history.bin');
   };
+  windowWithState.updateDiffusionVisualization = updateDiffusionVisualization;
+
+  // Try to update visualization immediately if both models are already trained
+  updateDiffusionVisualization();
 
   console.log('Page state available as window.state');
   console.log(
     'To save Flow Matching model weights: ' +
-    'await state.flowMatching.model.saveWeights("flow-matching-model")');
+    'await state.flowMatching.model.saveWeights()');
   console.log('To save Flow Matching loss history: saveFlowMatchingLossHistory()');
   console.log(
     'To save Score Matching model weights: ' +
-    'await state.scoreMatching.model.saveWeights("score-matching-model")');
+    'await state.scoreMatching.model.saveWeights()');
   console.log('To save Score Matching loss history: saveScoreMatchingLossHistory()');
+  console.log('To manually update diffusion visualization: updateDiffusionVisualization()');
 })();

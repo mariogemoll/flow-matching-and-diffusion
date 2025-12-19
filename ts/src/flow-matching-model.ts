@@ -18,6 +18,13 @@ export class FlowMatchingModel extends BaseModel implements FlowModel, Generativ
   }
 
   /**
+   * Predict velocity field at position x and time t
+   */
+  predictVelocity(x: Tensor2D, t: Tensor2D): Tensor2D {
+    return this.network.predict(x, t);
+  }
+
+  /**
    * Generate samples by solving ODE forward from t=0 to t=1
    * Uses Euler method with fixed step size
    */
