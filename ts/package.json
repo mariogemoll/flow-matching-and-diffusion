@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "build": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/vf-page.ts src/sde-page.ts src/framework.ts --bundle --outdir=dist",
-    "watch": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/vf-page.ts src/sde-page.ts src/framework.ts --bundle --outdir=dist --watch",
+    "build": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/diffusion-model-page.ts src/vf-page.ts src/sde-page.ts src/framework.ts --bundle --outdir=dist",
+    "watch": "npx esbuild src/demo.ts src/conditional-page.ts src/conditional0.ts src/marginal-page.ts src/1d.ts src/flow-matching.ts src/diffusion-model-page.ts src/vf-page.ts src/sde-page.ts src/framework.ts --bundle --outdir=dist --watch",
     "test": "vitest"
   },
   "exports": {
@@ -16,7 +16,7 @@
     "./vf": "./src/vf.ts"
   },
   "dependencies": {
-    "flow-models-common": "mariogemoll/flow-models-common#8aff32246ff3ee1eb495d0698e94dbc7e66830e2",
+    "flow-models-common": "mariogemoll/flow-models-common#0778423be6450395f9b04dbe3bed73a26b10e009",
     "web-ui-common": "mariogemoll/web-ui-common#84a60ad7b7fe4b7e1162d6fff86533a982f5b117"
   },
   "devDependencies": {

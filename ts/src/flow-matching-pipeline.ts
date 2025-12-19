@@ -1,4 +1,4 @@
-import type { FlowModel } from 'flow-models-common/model-interface';
+import type { Generative } from 'flow-models-common/model-interface';
 import { initPipeline, type VisualizationCallbacks } from 'flow-models-common/pipeline';
 import type { Tensor2D } from 'flow-models-common/tf-types';
 
@@ -15,7 +15,7 @@ export function initFlowMatchingPipeline(
 ): Promise<void> {
   // Create visualization callbacks for flow matching
   const visualizationCallbacks: VisualizationCallbacks = {
-    updateVisualization: (model: FlowModel, container: HTMLDivElement) => {
+    updateVisualization: (model: Generative, container: HTMLDivElement) => {
       const initialNumSamples = 500;
 
       // Function to generate frames using Euler method at different time steps

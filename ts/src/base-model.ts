@@ -50,7 +50,7 @@ export abstract class BaseModel {
    * Save model weights to downloads
    */
   async saveWeights(): Promise<void> {
-    const filename = this.modelName.toLowerCase().replace(/\s+/g, '-');
+    const filename = this.modelName.toLowerCase().replace(/\s+/g, '-') + '-model';
     console.log(`Saving ${this.modelName} model weights...`);
     await this.network.getModel().save(`downloads://${filename}`);
     console.log('Model weights saved! Check your downloads folder for:');

@@ -9,8 +9,10 @@ import { BaseModel } from './base-model';
  * Uses the Gaussian probability path: p_t(x|z) = N(α_t*z, β_t²*I)
  * with noise schedulers α_t = t and β_t = 1-t
  *
- * The score field is: s_t(x|z) = -ε/β_t
- * We train a score network s_t^θ(x) to predict the score
+ * Trains using the noise prediction formulation: e_t^θ(x) ≈ ε
+ * where x_t = α_t*z + β_t*ε
+ *
+ * This is equivalent to score matching (s_t^θ = -e_t^θ/β_t) but numerically stable.
  */
 export class ScoreMatchingModel extends BaseModel {
   constructor(hiddenDim = 128) {
@@ -20,8 +22,12 @@ export class ScoreMatchingModel extends BaseModel {
   /**
    * Compute score matching loss using Gaussian path
    *
-   * Loss = E[||s_t^θ(x_t) + ε/β_t||²]
+   * Uses alternative noise prediction formulation (numerically stable):
+   * Loss = E[||e_t^θ(x_t) - ε||²]
    * where x_t = α_t*z + β_t*ε, t ~ U(0,1), z ~ p_data, ε ~ N(0,I)
+   *
+   * This is equivalent to the score matching loss L = E[||s_t^θ(x_t) + ε/β_t||²]
+   * but avoids division by β_t which can be numerically unstable when t→0.
    */
   computeLoss(z: Tensor2D): tfjs.Scalar {
     return tf.tidy(() => {
@@ -43,15 +49,13 @@ export class ScoreMatchingModel extends BaseModel {
         tf.mul(beta_t, epsilon)
       );
 
-      // Target score: s_t(x|z) = -ε/β_t
-      const targetScore = tf.div(tf.neg(epsilon), beta_t);
-
-      // Predict score using the network
+      // Predict noise using the network (interprets output as noise prediction)
+      // Note: Network output e_t^θ = -β_t * s_t^θ, so this is equivalent to score matching
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      const predictedScore = this.network.predict(x as Tensor2D, t as Tensor2D);
+      const predictedNoise = this.network.predict(x as Tensor2D, t as Tensor2D);
 
-      // MSE loss: ||s_t^θ(x_t) - (-ε/β_t)||² = ||s_t^θ(x_t) + ε/β_t||²
-      const diff = tf.sub(predictedScore, targetScore);
+      // MSE loss: ||e_t^θ(x_t) - ε||²
+      const diff = tf.sub(predictedNoise, epsilon);
       const squaredError = tf.square(diff);
       const loss = tf.mean(squaredError);
 

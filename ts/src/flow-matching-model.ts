@@ -1,5 +1,5 @@
 import type * as tfjs from '@tensorflow/tfjs';
-import type { FlowModel } from 'flow-models-common/model-interface';
+import type { FlowModel, Generative } from 'flow-models-common/model-interface';
 import type { Tensor1D, Tensor2D } from 'flow-models-common/tf-types';
 
 import { BaseModel } from './base-model';
@@ -12,7 +12,7 @@ import { BaseModel } from './base-model';
  *
  * The conditional vector field is simply: u_t(x|z) = z - ε
  */
-export class FlowMatchingModel extends BaseModel implements FlowModel {
+export class FlowMatchingModel extends BaseModel implements FlowModel, Generative {
   constructor(hiddenDim = 128) {
     super(hiddenDim, 'Flow Matching');
   }
