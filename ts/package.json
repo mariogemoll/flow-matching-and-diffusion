@@ -14,6 +14,7 @@
     "./flow-and-score-matching-pipeline": "./src/flow-and-score-matching-pipeline.ts",
     "./flow-matching-pipeline": "./src/flow-matching-pipeline.ts",
     "./sde": "./src/sde.ts",
+    "./vector-field": "./src/widgets/vector-field/index.ts",
     "./vf": "./src/vf.ts"
   },
   "dependencies": {
