@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "flow-models-common": "mariogemoll/flow-models-common#0778423be6450395f9b04dbe3bed73a26b10e009",
-    "web-ui-common": "mariogemoll/web-ui-common#84a60ad7b7fe4b7e1162d6fff86533a982f5b117"
+    "web-ui-common": "mariogemoll/web-ui-common#418b547f8e3fe5d9b16ebe63be80c6d56741d339"
   },
   "devDependencies": {
     "@tensorflow/tfjs": "^4.22.0",
