@@ -12,20 +12,14 @@ jobs:
         with:
           node-version: 24
       - name: "Install dependencies"
-        working-directory: ts
         run: pnpm i
       - name: "ESLint the ESLint config"
-        working-directory: ts
         run: pnpm eslint -c basic.eslint.config.js basic.eslint.config.js eslint.config.js
       - name: "ESLint"
-        working-directory: ts
         run: pnpm eslint src
       - name: "Stylelint"
-        working-directory: ts
         run: pnpm stylelint css
       - name: "Run type checks"
-        working-directory: ts
         run: pnpm tsc
       - name: "Build"
-        working-directory: ts
         run: pnpm build
