@@ -20,7 +20,8 @@ export interface PointRenderer {
     dataToClipMatrix: Float32Array,
     points: Points2D,
     color: RGBA,
-    size: number
+    size: number,
+    count?: number
   ): void;
   destroy(): void;
 }
@@ -93,7 +94,8 @@ export function createPointRenderer(gl: WebGLRenderingContext): PointRenderer {
       dataToClipMatrix: Float32Array,
       points: Points2D,
       color: RGBA,
-      size: number
+      size: number,
+      count?: number
     ): void {
       if (points.xs.length === 0) { return; }
 
@@ -133,7 +135,8 @@ export function createPointRenderer(gl: WebGLRenderingContext): PointRenderer {
       gl.uniform1f(state.sizeLocation, size * dpr);
       gl.uniform4fv(state.colorLocation, color);
 
-      gl.drawArrays(gl.POINTS, 0, points.xs.length);
+      const numPoints = count ?? points.xs.length;
+      gl.drawArrays(gl.POINTS, 0, numPoints);
 
       // Cleanup
       gl.disableVertexAttribArray(state.xLocation);
