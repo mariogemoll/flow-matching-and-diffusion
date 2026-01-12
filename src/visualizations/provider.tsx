@@ -1,22 +1,22 @@
 import React, { type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 
-import { createVisualizationEngine, EngineContext, type Model } from './engine';
+import { createVisualizationEngine, type Engine,EngineContext, type Model } from './engine';
 import { VisualizationRootContext } from './react-root';
 
-interface VisualizationProviderProps {
-  model: Model;
+interface VisualizationProviderProps<S = unknown, A = unknown> {
+  model: Model<S, A>;
   name?: string;
   children: ReactNode;
 }
 
-export function VisualizationProvider(
-  { model, name, children }: VisualizationProviderProps
+export function VisualizationProvider<S, A>(
+  { model, name, children }: VisualizationProviderProps<S, A>
 ): React.ReactElement {
   const rootEl = useContext(VisualizationRootContext);
   const visibleRef = useRef<boolean | null>(null);
   const nameRef = useRef(name ?? 'visualization');
 
-  const engine = useMemo(() => createVisualizationEngine({ model }), [model]);
+  const engine = useMemo(() => createVisualizationEngine<S, A>({ model }), [model]);
 
   useEffect((): (() => void) => () => { engine.destroy(); }, [engine]);
 
@@ -75,7 +75,7 @@ export function VisualizationProvider(
   }, [engine, rootEl]);
 
   return (
-    <EngineContext.Provider value={engine}>
+    <EngineContext.Provider value={engine as unknown as Engine}>
       {children}
     </EngineContext.Provider>
   );
