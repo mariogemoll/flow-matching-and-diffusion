@@ -14,6 +14,12 @@ jobs:
       - name: "Install dependencies"
         working-directory: ts
         run: pnpm i
+      - name: "ESLint the ESLint config"
+        working-directory: ts
+        run: pnpm eslint -c basic.eslint.config.js basic.eslint.config.js eslint.config.js
+      - name: "ESLint"
+        working-directory: ts
+        run: pnpm eslint src
       - name: "Compile TypeScript"
         working-directory: ts
         run: pnpm tsc
