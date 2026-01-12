@@ -23,6 +23,11 @@ const config = {
     'react/jsx-runtime',
     'react/jsx-dev-runtime'
   ],
+  loader: {
+    '.glsl': 'text',
+    '.vert': 'text',
+    '.frag': 'text',
+  },
 };
 
 if (isWatch) {
