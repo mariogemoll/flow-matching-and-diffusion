@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
 import { type AlphaBetaScheduleName, getAlpha, getBeta } from '../../../math/schedules/alpha-beta';
@@ -10,9 +10,10 @@ import {
   type GaussianPdfRenderer
 } from '../../../webgl/renderers/gaussian-pdf';
 import { createPointRenderer, type PointRenderer } from '../../../webgl/renderers/point';
-import { ViewContainer } from '../../components/layout';
+import { EllipsisToggle } from '../../components/ellipsis-toggle';
+import { ViewContainer, ViewControls } from '../../components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from '../../components/pointer-canvas';
-import { ProbPathVisualizationControls } from '../../components/prob-path-visualization-controls';
+import { ResampleButton, SampleFrequencySlider } from '../../components/standard-controls';
 import { COLORS, DOT_SIZE, POINT_SIZE, X_DOMAIN, Y_DOMAIN } from '../../constants';
 import { useEngine } from '../../engine';
 import { type CondPathActions, type CondPathParams } from '../index';
@@ -31,8 +32,39 @@ export function CondPathView(): React.ReactElement {
     version: 0
   }).current;
 
+  // Local state
+  const [sampleFrequency, setSampleFrequency] = useState(15);
+  const [showAdditionalControls, setShowAdditionalControls] = useState(false);
+
+  // Use Refs for mutable state accessed in render loop
+  const paramsRef = useRef({
+    sampleFrequency,
+    resampleRequested: true
+  });
+
   // Samples
   const samplePointsRef = useRef<Points2D>(makePoints2D(0));
+
+  // Sync params ref with state
+  useEffect(() => {
+    paramsRef.current.sampleFrequency = sampleFrequency;
+    engine.renderOnce();
+  }, [sampleFrequency, engine]);
+
+  // Sync z/schedule/numSamples changes to request resample
+  const lastRenderedRef = useRef<{
+    z: Point2D;
+    schedule: AlphaBetaScheduleName;
+    numSamples: number;
+    t: number;
+    timestamp: number;
+  }>({
+    z: engine.frame.state.z,
+    schedule: engine.frame.state.schedule,
+    numSamples: engine.frame.state.numSamples,
+    t: engine.frame.clock.t,
+    timestamp: 0
+  });
 
   useEffect(() => {
     engine.setLoopPause(0);
@@ -56,6 +88,43 @@ export function CondPathView(): React.ReactElement {
       const dotRenderer = dotRendererRef.current;
       const sampleRenderer = sampleRendererRef.current;
       const pdfRenderer = pdfRendererRef.current;
+      const params = paramsRef.current;
+
+      const now = performance.now();
+      const current = {
+        z: frame.state.z,
+        schedule: frame.state.schedule,
+        numSamples: frame.state.numSamples,
+        t: frame.clock.t
+      };
+
+      const last = lastRenderedRef.current;
+
+      const zChanged = current.z !== last.z;
+      const tChanged = current.t !== last.t;
+      const numSamplesChanged = current.numSamples !== last.numSamples;
+      const scheduleChanged = current.schedule !== last.schedule;
+      const resampleRequested = params.resampleRequested;
+      const isFinished = current.t >= 1.0;
+
+      // Immediate updates: Schedule change, manual request, or finishing move
+      const isImmediate = scheduleChanged ||
+        resampleRequested ||
+        (isFinished && (tChanged || zChanged));
+
+      // Throttled updates: Standard animation or interaction
+      const isThrottled = tChanged || zChanged || numSamplesChanged;
+
+      const numSamplesChangedWhilePaused = numSamplesChanged && !tChanged;
+
+      let shouldUpdate = isImmediate;
+      if (!shouldUpdate && isThrottled && !numSamplesChangedWhilePaused) {
+        const dt = now - last.timestamp;
+        const threshold = params.sampleFrequency >= 120 ? 0 : (1000 / params.sampleFrequency);
+        if (dt >= threshold) {
+          shouldUpdate = true;
+        }
+      }
 
       clearWebGl(webGl, COLORS.background);
 
@@ -85,20 +154,34 @@ export function CondPathView(): React.ReactElement {
         COLORS.pdf
       );
 
+      // Update samples if needed
       if (samplePointsRef.current.xs.length !== numSamples) {
         samplePointsRef.current = makePoints2D(numSamples);
+        shouldUpdate = true; // Force update if size changed
       }
       const samples = samplePointsRef.current;
 
-      // 1. Fill with standard normal N(0, I)
-      fillWithSamplesFromStdGaussian(samples);
+      if (shouldUpdate) {
+        if (!numSamplesChangedWhilePaused || params.resampleRequested) {
+          // 1. Fill with standard normal N(0, I)
+          fillWithSamplesFromStdGaussian(samples);
+        }
 
-      // 2. Transform to N(mean, beta^2 I)
-      for (let i = 0; i < numSamples; i++) {
-        samples.xs[i] = mean[0] + beta * samples.xs[i];
-        samples.ys[i] = mean[1] + beta * samples.ys[i];
+        // 2. Transform to N(mean, beta^2 I)
+        // We need to re-transform even if noise didn't change, but mean/beta did.
+        for (let i = 0; i < numSamples; i++) {
+          samples.xs[i] = mean[0] + beta * samples.xs[i];
+          samples.ys[i] = mean[1] + beta * samples.ys[i];
+        }
+        samples.version++;
+
+        // Update state
+        params.resampleRequested = false;
+        lastRenderedRef.current = {
+          ...current,
+          timestamp: now
+        };
       }
-      samples.version++;
 
       sampleRenderer.render(
         webGl.dataToClipMatrix,
@@ -122,16 +205,34 @@ export function CondPathView(): React.ReactElement {
     });
   }, [engine, dotPoints, samplePointsRef]);
 
+  // Implement resample action
+  const handleResample = (): void => {
+    paramsRef.current.resampleRequested = true;
+    engine.renderOnce();
+  };
+
   return (
     <>
       <ViewContainer>
-        <ProbPathVisualizationControls />
         <PointerCanvas
           ref={pointerCanvasRef}
           onPositionChange={(pos: Point2D) => { engine.actions.setZ(pos); }}
           xDomain={X_DOMAIN}
           yDomain={Y_DOMAIN}
         />
+        <ViewControls>
+          <ResampleButton onClick={handleResample} />
+          {showAdditionalControls ? (
+            <SampleFrequencySlider
+              value={sampleFrequency}
+              onChange={setSampleFrequency}
+            />
+          ) : null}
+          <EllipsisToggle
+            expanded={showAdditionalControls}
+            onToggle={() => { setShowAdditionalControls((current) => !current); }}
+          />
+        </ViewControls>
       </ViewContainer>
     </>
   );
