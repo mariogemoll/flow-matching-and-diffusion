@@ -20,6 +20,9 @@ jobs:
       - name: "ESLint"
         working-directory: ts
         run: pnpm eslint src
+      - name: "Stylelint"
+        working-directory: ts
+        run: pnpm stylelint css
       - name: "Run type checks"
         working-directory: ts
         run: pnpm tsc
