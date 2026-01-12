@@ -40,6 +40,34 @@ body {
   text-align: center;
 }
 
+/* Button & ellipsis toggle */
+button {
+  background: #fff;
+  border: 1px solid var(--viz-border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--viz-control);
+  transition: all 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  box-sizing: border-box;
+}
+
+button:hover {
+  background: #f8f8f8;
+  border-color: var(--viz-border-hover);
+}
+
+button:active {
+  background: #eee;
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 10%);
+}
+
+
 /* ==========================================================================
    Visualization Container
    ========================================================================== */
@@ -457,4 +485,138 @@ input[type="range"]:active::-moz-range-thumb {
   min-width: 2.5em;
   display: inline-block;
   color: var(--viz-value);
+}
+
+/* ==========================================================================
+   Iconic dropdown & layout additions
+   ========================================================================== */
+
+.row {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: center;
+}
+
+.row canvas {
+  margin: 0;
+}
+
+/* Visualization row override */
+.visualization .row {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* Iconic dropdown */
+.iconic-dropdown {
+  position: relative;
+  display: inline-block;
+  width: 200px;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--viz-control);
+  user-select: none;
+  text-align: left;
+}
+
+.iconic-dropdown canvas,
+.iconic-dropdown svg {
+  margin: 0;
+  display: block;
+  border: 1px solid #ccc;
+}
+
+.iconic-dropdown svg {
+  padding: 1px;
+}
+
+.iconic-dropdown-trigger {
+  background: #fff;
+  border: 1px solid var(--viz-border);
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  box-sizing: border-box;
+  transition: all 0.1s ease;
+}
+
+.iconic-dropdown-trigger:hover {
+  background: #f8f8f8;
+  border-color: var(--viz-border-hover);
+}
+
+.iconic-dropdown.open .iconic-dropdown-trigger {
+  border-color: var(--viz-muted);
+  box-shadow: 0 0 0 1px var(--viz-muted);
+}
+
+.iconic-dropdown-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid var(--viz-border);
+  border-radius: 4px;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 10%);
+  display: none;
+}
+
+.iconic-dropdown.open .iconic-dropdown-options {
+  display: block;
+}
+
+.iconic-dropdown-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.1s;
+  height: 28px;
+  box-sizing: content-box;
+}
+
+.iconic-dropdown-option:hover,
+.iconic-dropdown-option.active {
+  background: #f5f5f5;
+}
+
+.iconic-dropdown-option.selected {
+  background: #e8e8e8;
+  color: #666;
+}
+
+.iconic-dropdown-arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #666;
+  margin-left: 8px;
+}
+
+.iconic-dropdown.open .iconic-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+button.ellipsis-toggle {
+  width: 24px;
+  min-width: 24px;
+  padding: 0;
+}
+
+button.ellipsis-toggle svg {
+  display: block;
 }

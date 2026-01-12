@@ -34,7 +34,7 @@ export function SpeedControl(): React.JSX.Element {
       step={0.01}
       value={speed}
       onChange={changeSpeed}
-      formatValue={(v) => `${v.toFixed(2)}x`}
+      formatValue={(v) => v.toFixed(2)}
     />
   );
 }

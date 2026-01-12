@@ -21,3 +21,9 @@ export const DOT_SIZE = 10;
 export const THICK_LINE_THICKNESS = 3;
 export const POINT_SIZE = 8;
 export const NUM_TRAJECTORY_STEPS = 100;
+
+export const MAX_NUM_SAMPLES = 5000;
+export const NUM_SAMPLES = 1000;
+
+export const SCHEDULE_LINE_COLOR = '#aaa';
+export const SCHEDULE_DOT_COLOR = '#888';

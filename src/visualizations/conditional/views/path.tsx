@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-import { getAlpha, getBeta } from '../../../math/schedules/alpha-beta';
+import { type AlphaBetaScheduleName, getAlpha, getBeta } from '../../../math/schedules/alpha-beta';
 import { type Point2D } from '../../../types';
 import { clearWebGl } from '../../../webgl';
 import {
@@ -8,7 +8,9 @@ import {
   type GaussianPdfRenderer
 } from '../../../webgl/renderers/gaussian-pdf';
 import { createPointRenderer, type PointRenderer } from '../../../webgl/renderers/point';
+import { ViewContainer } from '../../components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from '../../components/pointer-canvas';
+import { ProbPathVisualizationControls } from '../../components/prob-path-visualization-controls';
 import { COLORS, DOT_SIZE, X_DOMAIN, Y_DOMAIN } from '../../constants';
 import { useEngine } from '../../engine';
 import { type CondPathActions, type CondPathParams } from '../index';
@@ -49,7 +51,7 @@ export function CondPathView(): React.ReactElement {
 
       // P(x_t | x_1) = N(alpha_t * x_1, beta_t^2 * I)
       const t = frame.clock.t;
-      const schedule = 'linear';
+      const schedule: AlphaBetaScheduleName = frame.state.schedule;
 
       const alpha = getAlpha(t, schedule);
       const beta = getBeta(t, schedule);
@@ -88,11 +90,16 @@ export function CondPathView(): React.ReactElement {
   }, [engine, dotPoints]);
 
   return (
-    <PointerCanvas
-      ref={pointerCanvasRef}
-      onPositionChange={(pos: Point2D) => { engine.actions.setZ(pos); }}
-      xDomain={X_DOMAIN}
-      yDomain={Y_DOMAIN}
-    />
+    <>
+      <ViewContainer>
+        <ProbPathVisualizationControls />
+        <PointerCanvas
+          ref={pointerCanvasRef}
+          onPositionChange={(pos: Point2D) => { engine.actions.setZ(pos); }}
+          xDomain={X_DOMAIN}
+          yDomain={Y_DOMAIN}
+        />
+      </ViewContainer>
+    </>
   );
 }
