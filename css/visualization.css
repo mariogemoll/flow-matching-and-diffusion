@@ -1,12 +1,48 @@
+/* ==========================================================================
+   CSS Variables
+   ========================================================================== */
+
 :root {
-  --control-font-size: 12px;
-  --control-text-color: #7a7a7a;
+  /* Typography */
+  --viz-font-mono: ui-monospace, sfmono-regular, menlo, monaco, consolas, "Liberation Mono", "Courier New", monospace;
+  --viz-control: #7a7a7a;
+  --viz-value: #a1a1aa;
+  --viz-muted: #999;
+  --viz-border: #e2e2e7;
+  --viz-border-hover: #bbb;
+  --viz-border-active: #888;
+  --viz-border-strong: #6a6a6a;
+  --viz-track: #c4c4c4;
+  --viz-track-light: #f4f4f5;
+  --viz-surface: #fff;
+  --viz-surface-muted: #f6f6f6;
+  --viz-canvas: #333;
+
+  /* Spacing */
+  --viz-gap-sm: 6px;
+  --viz-gap-md: 8px;
+  --viz-gap-lg: 12px;
+  --viz-radius-sm: 3px;
+  --viz-radius-md: 8px;
+
+  /* Controls */
+  --viz-thumb-size: 12px;
+  --viz-thumb-size-lg: 14px;
+  --viz-track-height: 2px;
 }
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   text-align: center;
 }
+
+/* ==========================================================================
+   Visualization Container
+   ========================================================================== */
 
 .visualization {
   display: none;
@@ -17,16 +53,408 @@ body {
 }
 
 .placeholder {
-  border: 1px dashed #d0d0d0;
-  border-radius: 8px;
+  border: 1px dashed var(--viz-track);
+  border-radius: var(--viz-radius-md);
   padding: 48px 16px;
-  color: #9a9a9a;
-  background: #f6f6f6;
+  color: var(--viz-muted);
+  background: var(--viz-surface-muted);
 }
 
 .view-container canvas {
-  background-color: #333;
-  border-radius: 8px;
+  background-color: var(--viz-canvas);
+  border-radius: var(--viz-radius-md);
   display: block;
   margin: 0 auto;
+}
+
+/* ==========================================================================
+   Control Layouts
+   ========================================================================== */
+
+.view-controls {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  padding: 10px 12px 12px;
+  border-radius: 0 0 var(--viz-radius-md) var(--viz-radius-md);
+  box-sizing: border-box;
+}
+
+.visualization-controls {
+  display: flex;
+  flex-flow: row wrap;
+  gap: var(--viz-gap-lg);
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.view-controls-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--viz-gap-lg);
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 100%;
+  width: 100%;
+}
+
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 0;
+  width: min(100%, 400px);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.controls-row.visualization-controls-row {
+  width: min(100%, 720px);
+}
+
+.controls label {
+  display: flex;
+  align-items: center;
+  gap: var(--viz-gap-md);
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--viz-control);
+}
+
+/* ==========================================================================
+   Checkbox
+   ========================================================================== */
+
+.viz-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--viz-gap-sm);
+}
+
+.viz-checkbox span {
+  font-size: 12px;
+  color: var(--viz-control);
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--viz-border);
+  border-radius: var(--viz-radius-sm);
+  background: var(--viz-surface);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.1s ease;
+  margin: 0;
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--viz-border-hover);
+}
+
+input[type="checkbox"]:checked {
+  background: var(--viz-surface);
+  border-color: var(--viz-border-active);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3.5px;
+  top: 1px;
+  width: 3px;
+  height: 6px;
+  border: solid var(--viz-border-active);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* ==========================================================================
+   Range Input (Base)
+   ========================================================================== */
+
+input[type="range"] {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  margin: 0;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+input[type="range"]:focus {
+  outline: none;
+}
+
+/* Track */
+input[type="range"]::-webkit-slider-runnable-track {
+  background-color: var(--viz-track);
+  border-radius: 9999px;
+  height: var(--viz-track-height);
+}
+
+input[type="range"]::-moz-range-track {
+  background-color: var(--viz-track);
+  border-radius: 9999px;
+  height: var(--viz-track-height);
+}
+
+/* Thumb */
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  margin-top: calc((var(--viz-track-height) - var(--viz-thumb-size)) / 2);
+  background-color: var(--viz-surface);
+  border: 1px solid var(--viz-border);
+  border-radius: 50%;
+  height: var(--viz-thumb-size);
+  width: var(--viz-thumb-size);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 10%);
+  transition: all 0.15s ease-in-out;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background-color: var(--viz-surface);
+  border: 1px solid var(--viz-border);
+  border-radius: 50%;
+  height: var(--viz-thumb-size);
+  width: var(--viz-thumb-size);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 10%);
+  transition: all 0.15s ease-in-out;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  border-color: var(--viz-value);
+}
+
+input[type="range"]:hover::-moz-range-thumb {
+  border-color: var(--viz-value);
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.05);
+}
+
+input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.05);
+}
+
+/* ==========================================================================
+   Slider Component
+   ========================================================================== */
+
+.viz-slider {
+  display: flex;
+  align-items: center;
+  gap: var(--viz-gap-md);
+  min-width: 160px;
+}
+
+.view-controls .viz-slider {
+  gap: var(--viz-gap-sm);
+}
+
+.viz-slider input[type="range"] {
+  flex: 0 1 90px;
+  width: 0;
+  margin: 0;
+}
+
+.viz-slider-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--viz-control);
+  white-space: nowrap;
+}
+
+.viz-slider-value {
+  font-size: 12px;
+  color: var(--viz-value);
+  font-family: var(--viz-font-mono);
+  min-width: 3.5ch;
+  text-align: right;
+}
+
+/* Slider with stacked header */
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 180px;
+  margin: 0 auto;
+}
+
+.controls .slider-container,
+.view-controls .slider-container,
+.visualization-controls .slider-container {
+  margin: 0;
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.slider-container .label-text {
+  min-width: 0;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--viz-control);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 4px;
+}
+
+.slider-container span {
+  font-size: 12px;
+  color: var(--viz-value);
+  font-family: var(--viz-font-mono);
+}
+
+/* ==========================================================================
+   Time Slider Component
+   ========================================================================== */
+
+.time-slider {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 12px;
+  gap: 15px;
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+}
+
+.controls-row .time-slider {
+  margin: 0;
+  width: min(600px, 100%);
+  flex: 1 1 320px;
+}
+
+.time-slider button {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--viz-control);
+  color: white;
+  font-size: 12px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.time-slider button:hover {
+  background: var(--viz-control);
+  transform: scale(1.05);
+}
+
+.time-slider button:active {
+  transform: scale(0.95);
+}
+
+.time-slider span {
+  flex-shrink: 0;
+  min-width: 45px;
+  color: var(--viz-control);
+}
+
+.time-slider input[type="range"] {
+  flex-grow: 1;
+  width: 0;
+  overflow: hidden;
+  height: 20px;
+
+  --progress: 0%;
+}
+
+/* Time slider track with progress fill */
+.time-slider input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(var(--viz-control), var(--viz-control)) 0/var(--progress) 100% no-repeat, var(--viz-track-light);
+  height: var(--viz-track-height);
+  border-radius: 1px;
+  transition: height 0.1s ease;
+}
+
+.time-slider:hover input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+}
+
+.time-slider input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  height: var(--viz-thumb-size-lg);
+  width: var(--viz-thumb-size-lg);
+  background: var(--viz-control);
+  border: 1px solid var(--viz-border-strong);
+  border-radius: 50%;
+  margin-top: -5px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+  transition: transform 0.1s ease;
+}
+
+.time-slider:hover input[type="range"]::-webkit-slider-thumb {
+  margin-top: -4px;
+  transform: scale(1.2);
+}
+
+/* Firefox support */
+.time-slider input[type="range"]::-moz-range-progress {
+  background-color: var(--viz-control);
+  height: 4px;
+}
+
+.time-slider:hover input[type="range"]::-moz-range-progress {
+  height: 6px;
+}
+
+.time-slider input[type="range"]::-moz-range-track {
+  background-color: var(--viz-track-light);
+  height: var(--viz-track-height);
+}
+
+.time-slider:hover input[type="range"]::-moz-range-track {
+  height: 4px;
+}
+
+.time-slider input[type="range"]::-moz-range-thumb {
+  height: var(--viz-thumb-size-lg);
+  width: var(--viz-thumb-size-lg);
+  background: var(--viz-control);
+  border: 1px solid var(--viz-border-strong);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+}
+
+/* ==========================================================================
+   Utility: Monospace values in controls
+   ========================================================================== */
+
+.controls span {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--viz-font-mono);
+  font-size: 12px;
+  min-width: 2.5em;
+  display: inline-block;
+  color: var(--viz-value);
 }
