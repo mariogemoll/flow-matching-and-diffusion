@@ -20,7 +20,7 @@ export function createWebGl(
   canvas.style.height = `${String(logicalHeight)}px`;
 
   const gl = canvas.getContext('webgl2') as WebGLRenderingContext | null;
-  if (gl === null) {throw new Error('Failed to get WebGL2 context');}
+  if (gl === null) { throw new Error('Failed to get WebGL2 context'); }
 
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);

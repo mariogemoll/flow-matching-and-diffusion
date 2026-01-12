@@ -7,8 +7,8 @@ import React, {
   useRef
 } from 'react';
 
+import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../../constants';
 import { createWebGl, type WebGl } from '../../webgl';
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../constants';
 
 export interface WebGlCanvasReadyEvent<T extends WebGl = WebGl> {
   canvas: HTMLCanvasElement;

@@ -1,14 +1,14 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
-import { type Point2D } from '../../types';
-import { clamp01 } from '../../util/misc';
-import { createWebGl, type WebGl } from '../../webgl';
 import {
   CANVAS_HEIGHT,
   CANVAS_WIDTH,
   X_DOMAIN,
   Y_DOMAIN
-} from '../constants';
+} from '../../constants';
+import { type Point2D } from '../../types';
+import { clamp01 } from '../../util/misc';
+import { createWebGl, type WebGl } from '../../webgl';
 
 export interface PointerCanvasHandle {
   webGl: WebGl | null;
@@ -64,7 +64,7 @@ export const PointerCanvas = forwardRef<PointerCanvasHandle, PointerCanvasProps>
     // Convert pointer event to data coordinates
     const pointerToData = (e: React.PointerEvent<HTMLCanvasElement>): Point2D => {
       const canvas = canvasRef.current;
-      if (!canvas) {return [0, 0];}
+      if (!canvas) { return [0, 0]; }
 
       const rect = canvas.getBoundingClientRect();
       const xCss = e.clientX - rect.left;
@@ -84,7 +84,7 @@ export const PointerCanvas = forwardRef<PointerCanvasHandle, PointerCanvasProps>
     // Initialize WebGL
     useEffect((): (() => void) | undefined => {
       const canvas = canvasRef.current;
-      if (!canvas) {return;}
+      if (!canvas) { return; }
       const webGl = createWebGl(canvas, width, height, xDomain, yDomain);
       webGlRef.current = webGl;
       return () => {
@@ -101,7 +101,7 @@ export const PointerCanvas = forwardRef<PointerCanvasHandle, PointerCanvasProps>
     };
 
     const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>): void => {
-      if (e.buttons !== 1) {return;}
+      if (e.buttons !== 1) { return; }
       onPositionChange(pointerToData(e));
     };
 
