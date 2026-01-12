@@ -1,0 +1,116 @@
+.time-slider {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 12px;
+  gap: 15px;
+  padding: 10px 0;
+  display: flex;
+  align-items: center;
+}
+
+.time-slider button {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--control-text-color);
+  color: white;
+  font-size: 12px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.time-slider button:hover {
+  background: var(--control-text-color);
+  transform: scale(1.05);
+}
+
+.time-slider button:active {
+  transform: scale(0.95);
+}
+
+.time-slider input[type="range"] {
+  flex-grow: 1;
+  width: 0; /* Allow flex-grow to take over */
+  overflow: hidden; /* For the progress bar hack */
+  height: 20px;
+
+  --progress: 0%;
+}
+
+.time-slider input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(var(--control-text-color), var(--control-text-color)) 0/var(--progress) 100% no-repeat, #f4f4f5;
+  height: 2px;
+  border-radius: 1px;
+  transition: height 0.1s ease;
+}
+
+.time-slider:hover input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+}
+
+.time-slider input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  height: 14px;
+  width: 14px;
+  background: var(--control-text-color);
+  border: 1px solid #6a6a6a;
+  border-radius: 50%;
+  margin-top: -5px; /* (4/2) - (14/2) = -5 */
+  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+  transition: transform 0.1s ease;
+}
+
+.time-slider:hover input[type="range"]::-webkit-slider-thumb {
+  margin-top: -4px; /* (6/2) - (14/2) = -4 */
+  transform: scale(1.2);
+}
+
+/* Firefox support for progress bar */
+.time-slider input[type="range"]::-moz-range-progress {
+  background-color: var(--control-text-color);
+  height: 4px;
+}
+
+.time-slider:hover input[type="range"]::-moz-range-progress {
+  height: 6px;
+}
+
+.time-slider input[type="range"]::-moz-range-track {
+  background-color: #f4f4f5;
+  height: 2px;
+}
+
+.time-slider:hover input[type="range"]::-moz-range-track {
+  height: 4px;
+}
+
+.time-slider input[type="range"]::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  background: var(--control-text-color);
+  border: 1px solid #6a6a6a;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+}
+
+.time-slider span {
+  flex-shrink: 0;
+  min-width: 45px;
+  color: var(--control-text-color);
+}
+
+.controls span {
+  font-variant-numeric: tabular-nums;
+  font-family: monospace;
+  font-size: 11px;
+  min-width: 2.5em;
+  display: inline-block;
+  color: #999;
+}

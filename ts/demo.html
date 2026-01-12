@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19.2.3",
+          "react-dom": "https://esm.sh/react-dom@19.2.3",
+          "react-dom/client": "https://esm.sh/react-dom@19.2.3/client",
+          "react/jsx-runtime": "https://esm.sh/react@19.2.3/jsx-runtime",
+          "react/jsx-dev-runtime": "https://esm.sh/react@19.2.3/jsx-dev-runtime"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="css/visualization.css">
+    <link rel="stylesheet" href="css/time-slider.css">
+</head>
+<body>
+    <div id="container">
+        <div class="visualization-container" data-visualization="demo"></div>
+    </div>
+    <script type="module" src="dist/demo.js"></script>
+</body>
+</html>

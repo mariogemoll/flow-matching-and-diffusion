@@ -23,3 +23,6 @@ jobs:
       - name: "Run type checks"
         working-directory: ts
         run: pnpm tsc
+      - name: "Build"
+        working-directory: ts
+        run: pnpm build
