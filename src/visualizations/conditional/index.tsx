@@ -2,10 +2,10 @@ import React from 'react';
 
 import { type AlphaBetaScheduleName } from '../../math/schedules/alpha-beta';
 import { type Point2D } from '../../types';
+import { randomPosition } from '../../util/misc';
 import { TimelineControls } from '../components/timeline-controls';
 import { type Model } from '../engine';
 import { VisualizationProvider } from '../provider';
-
 
 export interface CondPathParams {
   z: Point2D;
@@ -21,7 +21,7 @@ export interface CondPathActions {
 
 export const condPathModel: Model<CondPathParams, CondPathActions> = {
   initState: (): CondPathParams => ({
-    z: [0, 0],
+    z: randomPosition(),
     schedule: 'linear',
     numSamples: 1000
   }),

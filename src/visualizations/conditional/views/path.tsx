@@ -14,7 +14,7 @@ import { EllipsisToggle } from '../../components/ellipsis-toggle';
 import { ViewContainer, ViewControls } from '../../components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from '../../components/pointer-canvas';
 import { ResampleButton, SampleFrequencySlider } from '../../components/standard-controls';
-import { COLORS, DOT_SIZE, POINT_SIZE, X_DOMAIN, Y_DOMAIN } from '../../constants';
+import { COLORS, DOT_SIZE, MAX_NUM_SAMPLES, POINT_SIZE, X_DOMAIN, Y_DOMAIN } from '../../constants';
 import { useEngine } from '../../engine';
 import { type CondPathActions, type CondPathParams } from '../index';
 
@@ -42,8 +42,7 @@ export function CondPathView(): React.ReactElement {
     resampleRequested: true
   });
 
-  // Samples
-  const samplePointsRef = useRef<Points2D>(makePoints2D(0));
+  const samplePointsRef = useRef<Points2D>(makePoints2D(MAX_NUM_SAMPLES));
 
   // Sync params ref with state
   useEffect(() => {
@@ -154,11 +153,6 @@ export function CondPathView(): React.ReactElement {
         COLORS.pdf
       );
 
-      // Update samples if needed
-      if (samplePointsRef.current.xs.length !== numSamples) {
-        samplePointsRef.current = makePoints2D(numSamples);
-        shouldUpdate = true; // Force update if size changed
-      }
       const samples = samplePointsRef.current;
 
       if (shouldUpdate) {
@@ -168,8 +162,7 @@ export function CondPathView(): React.ReactElement {
         }
 
         // 2. Transform to N(mean, beta^2 I)
-        // We need to re-transform even if noise didn't change, but mean/beta did.
-        for (let i = 0; i < numSamples; i++) {
+        for (let i = 0; i < samples.xs.length; i++) {
           samples.xs[i] = mean[0] + beta * samples.xs[i];
           samples.ys[i] = mean[1] + beta * samples.ys[i];
         }
@@ -187,7 +180,8 @@ export function CondPathView(): React.ReactElement {
         webGl.dataToClipMatrix,
         samples,
         COLORS.point,
-        POINT_SIZE
+        POINT_SIZE,
+        numSamples // Only draw the requested amount
       );
 
       // Update dot buffer
