@@ -8,4 +8,19 @@ export interface Points2D {
   version: number;
 }
 
+/**
+ * Structure of Arrays for multiple trajectories with uniform length.
+ * All trajectories have the same number of points.
+ */
+export interface Trajectories {
+  xs: Float32Array;
+  ys: Float32Array;
+  /** Number of trajectories */
+  count: number;
+  /** Points per trajectory (uniform) */
+  pointsPerTrajectory: number;
+  /** Bump when xs/ys are mutated in-place to refresh GPU buffers. */
+  version: number;
+}
+
 export type RGBA = [number, number, number, number];
