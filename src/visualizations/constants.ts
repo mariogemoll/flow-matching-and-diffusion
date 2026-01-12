@@ -8,7 +8,7 @@ export const Y_DOMAIN: [number, number] = [-1.5, 1.5];
 
 export const COLORS: Record<string, RGBA> = {
   background: [0.1, 0.1, 0.1, 1.0],
-  point: [0.9, 0.9, 0.9, 1.0],
+  point: [0.0, 1.0, 0.2, 0.4],
   highlightPoint: [0.0, 1.0, 0.2, 1.0],
   vectorFieldArrow: [1.0, 1.0, 1.0, 0.35],
   vectorField: [1.0, 1.0, 1.0, 0.2],
