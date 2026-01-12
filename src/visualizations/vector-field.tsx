@@ -6,6 +6,7 @@ import {
   randomStartPos
 } from '../math/demo-vector-field';
 import { type Point2D, type Trajectories } from '../types';
+import { interpolateTrajectory } from '../util/trajectories';
 import { createLineRenderer, type LineRenderer } from '../webgl/renderers/line';
 import { createPointRenderer, type PointRenderer } from '../webgl/renderers/point';
 import { createThickLineRenderer, type ThickLineRenderer } from '../webgl/renderers/thick-line';
@@ -56,29 +57,6 @@ export const vectorFieldModel: Model<VectorFieldState, VectorFieldActions> = {
     }
   })
 };
-
-
-function interpolateTrajectory(trajectory: Trajectories, trajIndex: number, t: number): Point2D {
-  if (trajectory.count === 0 || trajectory.pointsPerTrajectory === 0) {
-    return [0, 0];
-  }
-
-  const ppt = trajectory.pointsPerTrajectory;
-  const scaledT = Math.max(0, Math.min(1, t)) * (ppt - 1);
-  const index = Math.floor(scaledT);
-  const fract = scaledT - index;
-
-  const nextIndex = Math.min(index + 1, ppt - 1);
-
-  const offset = trajIndex * ppt;
-  const i = offset + index;
-  const nextI = offset + nextIndex;
-
-  const x = trajectory.xs[i] * (1 - fract) + trajectory.xs[nextI] * fract;
-  const y = trajectory.ys[i] * (1 - fract) + trajectory.ys[nextI] * fract;
-
-  return [x, y];
-}
 
 
 export function VectorFieldVisualization(): React.JSX.Element {

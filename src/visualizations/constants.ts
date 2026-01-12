@@ -10,7 +10,9 @@ export const COLORS: Record<string, RGBA> = {
   background: [0.1, 0.1, 0.1, 1.0],
   point: [0.9, 0.9, 0.9, 1.0],
   highlightPoint: [0.0, 1.0, 0.2, 1.0],
-  vectorFieldArrow: [1.0, 1.0, 1.0, 0.35]
+  vectorFieldArrow: [1.0, 1.0, 1.0, 0.35],
+  vectorField: [1.0, 1.0, 1.0, 0.2],
+  trajectorySecondary: [1.0, 1.0, 1.0, 0.4]
 };
 
 export const DOT_SIZE = 10;
