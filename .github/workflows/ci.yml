@@ -20,6 +20,6 @@ jobs:
       - name: "ESLint"
         working-directory: ts
         run: pnpm eslint src
-      - name: "Compile TypeScript"
+      - name: "Run type checks"
         working-directory: ts
         run: pnpm tsc
