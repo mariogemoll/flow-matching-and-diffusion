@@ -60,5 +60,3 @@ export function CondPathVisualization({
     </VisualizationProvider>
   );
 }
-
-export { CondPathView } from './views/path';
