@@ -82,9 +82,10 @@ button:active {
 }
 
 .placeholder {
+  display: block;
+  margin: 0 auto;
   border: 1px dashed var(--viz-track);
   border-radius: var(--viz-radius-md);
-  padding: 48px 16px;
   color: var(--viz-muted);
   background: var(--viz-surface-muted);
 }
