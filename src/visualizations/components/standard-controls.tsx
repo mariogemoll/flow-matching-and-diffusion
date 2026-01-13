@@ -17,6 +17,14 @@ export function ResampleTrajectoriesButton(props: ButtonBaseProps): React.ReactE
   return <Button {...props}>Resample</Button>;
 }
 
+export function ResampleSdeButton(props: ButtonBaseProps): React.ReactElement {
+  return <Button {...props}>Resample</Button>;
+}
+
+export function ResampleDiffusionNoiseButton(props: ButtonBaseProps): React.ReactElement {
+  return <Button {...props}>Resample diffusion noise</Button>;
+}
+
 interface CheckboxControlProps {
   checked: boolean;
   onChange: (checked: boolean) => void;

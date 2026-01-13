@@ -24,5 +24,6 @@ export function fillWithSamplesFromStdGaussian(out: Points2D): void {
     ys[i] = ny;
   }
 
+  out.version++;
   return;
 }

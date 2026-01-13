@@ -6,6 +6,10 @@ import {
   getAlpha,
   getBeta
 } from '../../math/schedules/alpha-beta';
+import {
+  SIGMA_SCHEDULES,
+  type SigmaScheduleName
+} from '../../math/schedules/sigma';
 import { makeScale } from '../../util/misc';
 import { SCHEDULE_DOT_COLOR, SCHEDULE_LINE_COLOR } from '../constants';
 import { useEngine } from '../engine';
@@ -121,6 +125,14 @@ function AlphaBetaChart({
   );
 }
 
+function SigmaChart({
+  schedule,
+  ...props
+}: ChartProps & { schedule: SigmaScheduleName }): React.ReactElement {
+  const sigmaFn = SIGMA_SCHEDULES[schedule].sigma;
+  return <GenericChart {...props} functions={[(t): number => sigmaFn(t, 1)]} />;
+}
+
 /* ------------------------------ Selections ------------------------------ */
 
 interface ScheduleSelectionProps<T> {
@@ -170,6 +182,20 @@ export function AlphaBetaScheduleSelection({
       onChange={onChange}
       scheduleMap={ALPHA_BETA_SCHEDULES}
       ChartComponent={AlphaBetaChart}
+    />
+  );
+}
+
+export function SigmaScheduleSelection({
+  value,
+  onChange
+}: ScheduleSelectionProps<SigmaScheduleName>): React.ReactElement {
+  return (
+    <ScheduleSelectionComponent
+      value={value}
+      onChange={onChange}
+      scheduleMap={SIGMA_SCHEDULES}
+      ChartComponent={SigmaChart}
     />
   );
 }

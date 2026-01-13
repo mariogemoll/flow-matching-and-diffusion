@@ -1,3 +1,4 @@
+import { type SigmaScheduleName } from '../math/schedules/sigma';
 import type { RGBA } from '../types';
 
 export const DEFAULT_ANIMATION_SPEED = 1 / 3;
@@ -20,11 +21,16 @@ export const COLORS: Record<string, RGBA> = {
 
 export const DOT_SIZE = 10;
 export const THICK_LINE_THICKNESS = 3;
-export const POINT_SIZE = 8;
+export const POINT_SIZE = 6;
 export const NUM_TRAJECTORY_STEPS = 100;
 
 export const MAX_NUM_SAMPLES = 5000;
 export const NUM_SAMPLES = 1000;
+export const MAX_NUM_SDE_STEPS = 100;
 
 export const SCHEDULE_LINE_COLOR = '#aaa';
 export const SCHEDULE_DOT_COLOR = '#888';
+
+export const DEFAULT_SIGMA_SCHEDULE: SigmaScheduleName = 'constant';
+export const DEFAULT_NUM_SDE_STEPS = 50;
+export const DEFAULT_MAX_SIGMA = 0.8;

@@ -1,6 +1,7 @@
 import { el } from './util/dom';
 import { initConditionalPathVisualization } from './visualizations/conditional/path';
 import { initConditionalPathOdeVisualization } from './visualizations/conditional/path-ode';
+import { initConditionalPathOdeSdeVisualization } from './visualizations/conditional/path-ode-sde';
 import { initDemoVisualization } from './visualizations/demo';
 import { initDraggableDotDemoVisualization } from './visualizations/draggable-dot-demo';
 import { initEulerMethodVisualization } from './visualizations/euler-method';
@@ -15,4 +16,7 @@ initEulerMethodVisualization(el('[data-visualization="euler-method"]') as HTMLEl
 initConditionalPathVisualization(el('[data-visualization="conditional-path"]') as HTMLElement);
 initConditionalPathOdeVisualization(
   el('[data-visualization="conditional-path-ode"]') as HTMLElement
+);
+initConditionalPathOdeSdeVisualization(
+  el('[data-visualization="conditional-path-ode-sde"]') as HTMLElement
 );

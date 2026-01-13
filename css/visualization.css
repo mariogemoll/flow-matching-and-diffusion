@@ -115,6 +115,16 @@ button:active {
   color: var(--viz-value);
 }
 
+.view-container {
+  width: 400px;
+}
+
+/* A view container as a direct child of a visualization (no row) */
+.visualization>.view-container {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .view-container canvas {
   background-color: var(--viz-canvas);
   border-radius: var(--viz-radius-md);
