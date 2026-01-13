@@ -1,6 +1,8 @@
 import React, { type ReactNode, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
+import { ErrorBoundary } from './error-boundary';
+
 const DEFAULT_PLACEHOLDER_SELECTOR = '.placeholder';
 const DEFAULT_ROOT_SELECTOR = '.visualization';
 
@@ -66,7 +68,10 @@ export function mountVisualization(
       React.createElement(
         VisualizationRootContext.Provider,
         { value: rootEl },
-        React.createElement(MountGate, { container, name, children: element })
+        React.createElement(ErrorBoundary, {
+          name,
+          children: React.createElement(MountGate, { container, name, children: element })
+        })
       )
     );
   };

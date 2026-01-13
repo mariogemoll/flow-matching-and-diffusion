@@ -70,6 +70,7 @@ export function VectorFieldVisualization(): React.JSX.Element {
 
   // Register draw function
   useEffect(() => {
+
     return engine.register((frame) => {
       const webGl = pointerCanvasRef.current?.webGl;
       if (!webGl) { return; }

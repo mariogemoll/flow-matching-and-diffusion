@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { mountVisualization } from '../react-root';
 import { CondPathVisualization } from './index';
 import { CondPathView } from './views/path';
