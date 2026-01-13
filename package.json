@@ -20,5 +20,10 @@
     "stylelint-config-standard": "^39.0.1",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.52.0"
+  },
+  "exports": {
+    "./visualizations/conditional/path": "./src/visualizations/conditional/path.tsx",
+    "./visualizations/euler-method": "./src/visualizations/euler-method.tsx",
+    "./visualizations/vector-field": "./src/visualizations/vector-field.tsx"
   }
 }
