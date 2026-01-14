@@ -40,7 +40,7 @@ export const SIGMA_SCHEDULES: Record<SigmaScheduleName, SigmaSchedule> = {
   },
 
   step: {
-    displayName: 'σ(t) = σ_max · (⌊5t⌋ % 2)',
+    displayName: 'σ(t) = σ_max if ⌊5t⌋ even, else 0',
     sigma: (t, maxSigma) => {
       const step = Math.floor(clamp01(t) * 5);
       return step % 2 === 0 ? maxSigma : 0;
