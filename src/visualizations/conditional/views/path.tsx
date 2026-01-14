@@ -14,7 +14,15 @@ import { EllipsisToggle } from '../../components/ellipsis-toggle';
 import { ViewContainer, ViewControls } from '../../components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from '../../components/pointer-canvas';
 import { ResampleButton, SampleFrequencySlider } from '../../components/standard-controls';
-import { COLORS, DOT_SIZE, MAX_NUM_SAMPLES, POINT_SIZE, X_DOMAIN, Y_DOMAIN } from '../../constants';
+import {
+  COLORS,
+  DEFAULT_LOOP_PAUSE,
+  DOT_SIZE,
+  MAX_NUM_SAMPLES,
+  POINT_SIZE,
+  X_DOMAIN,
+  Y_DOMAIN
+} from '../../constants';
 import { useEngine } from '../../engine';
 import { type CondPathActions, type CondPathParams } from '../index';
 
@@ -66,7 +74,7 @@ export function CondPathView(): React.ReactElement {
   });
 
   useEffect(() => {
-    engine.setLoopPause(0);
+    engine.setLoopPause(DEFAULT_LOOP_PAUSE);
   }, [engine]);
 
   useEffect(() => {
