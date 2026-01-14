@@ -5,6 +5,7 @@ import { initConditionalPathOdeSdeVisualization } from './visualizations/conditi
 import { initDemoVisualization } from './visualizations/demo';
 import { initDraggableDotDemoVisualization } from './visualizations/draggable-dot-demo';
 import { initEulerMethodVisualization } from './visualizations/euler-method';
+import { initMarginalPathVisualization } from './visualizations/marginal/path';
 import { initVectorFieldVisualization } from './visualizations/vector-field';
 import { initWebGlDemoVisualization } from './visualizations/webgl-demo';
 
@@ -20,3 +21,4 @@ initConditionalPathOdeVisualization(
 initConditionalPathOdeSdeVisualization(
   el('[data-visualization="conditional-path-ode-sde"]') as HTMLElement
 );
+initMarginalPathVisualization(el('[data-visualization="marginal-path"]') as HTMLElement);
