@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { X_DOMAIN, Y_DOMAIN } from '../constants';
 import type { Points2D } from '../types';
 import { clearWebGl, type WebGl } from '../webgl';
 import { createPointRenderer, type PointRenderer } from '../webgl/renderers/point';
@@ -92,7 +93,7 @@ function WebGlDemoVisualization(): React.JSX.Element {
   return (
     <>
       <div className="view-container">
-        <WebGlCanvas webGlRef={webGlRef} />
+        <WebGlCanvas webGlRef={webGlRef} xDomain={X_DOMAIN} yDomain={Y_DOMAIN} />
       </div>
       <TimelineControls />
     </>

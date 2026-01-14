@@ -27,8 +27,8 @@ export interface WebGlCanvasProps<T extends WebGl = WebGl>
   webGlRef?: { current: T | null };
   onReady?: (event: WebGlCanvasReadyEvent<T>) => void;
   onCleanup?: (event: WebGlCanvasReadyEvent<T>) => void;
-  xDomain?: [number, number];
-  yDomain?: [number, number];
+  xDomain: [number, number];
+  yDomain: [number, number];
   /**
    * Optional function to setup the WebGL context with additional renderers or state.
    * Returns the specialized WebGl type T.
@@ -36,8 +36,7 @@ export interface WebGlCanvasProps<T extends WebGl = WebGl>
   setup?: (webGl: WebGl) => T;
 }
 
-const DEFAULT_X_DOMAIN: [number, number] = [-1, 1];
-const DEFAULT_Y_DOMAIN: [number, number] = [-1, 1];
+
 
 function WebGlCanvasInner<T extends WebGl = WebGl>(
   {
@@ -47,8 +46,8 @@ function WebGlCanvasInner<T extends WebGl = WebGl>(
     webGlRef: externalWebGlRef,
     onReady,
     onCleanup,
-    xDomain = DEFAULT_X_DOMAIN,
-    yDomain = DEFAULT_Y_DOMAIN,
+    xDomain,
+    yDomain,
     setup,
     ...rest
   }: WebGlCanvasProps<T>,
