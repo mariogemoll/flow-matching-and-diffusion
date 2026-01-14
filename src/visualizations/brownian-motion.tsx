@@ -103,7 +103,7 @@ function drawBrownianMotion(
   thickLineRenderer.renderThickTrajectories(
     webGl.dataToClipMatrix,
     trajectory,
-    COLORS.trajectory,
+    COLORS.singleTrajectory,
     THICK_LINE_THICKNESS,
     t
   );

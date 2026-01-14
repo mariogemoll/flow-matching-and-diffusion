@@ -113,7 +113,7 @@ export function VectorFieldVisualization(): React.JSX.Element {
         thickLineRenderer.renderThickTrajectories(
           webGl.dataToClipMatrix,
           trajectory,
-          COLORS.point,
+          COLORS.singleTrajectory,
           THICK_LINE_THICKNESS,
           1.0 // Show full trajectory
         );

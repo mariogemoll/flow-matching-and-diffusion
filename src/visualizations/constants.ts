@@ -15,7 +15,8 @@ export const COLORS: Record<string, RGBA> = {
   vectorFieldArrow: [1.0, 1.0, 1.0, 0.35],
   vectorField: [1.0, 1.0, 1.0, 0.2],
   trajectory: [0.5, 0.5, 0.5, 0.2],
-  trajectorySecondary: [1.0, 1.0, 1.0, 0.4],
+  singleTrajectory: [1.0, 1.0, 1.0, 0.8],
+  singleTrajectorySecondary: [1.0, 1.0, 1.0, 0.2],
   pdf: [1.0, 1.0, 1.0, 0.8],
   dot: [0.2, 0.8, 0.2, 1.0]
 };

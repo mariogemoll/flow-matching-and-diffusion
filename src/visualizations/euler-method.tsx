@@ -180,7 +180,7 @@ export function EulerMethodVisualization(): React.JSX.Element {
         thickLineRenderer.renderThickTrajectories(
           webGl.dataToClipMatrix,
           groundTruthTrajectory,
-          COLORS.trajectorySecondary,
+          COLORS.singleTrajectorySecondary,
           THICK_LINE_THICKNESS,
           1.0
         );
@@ -191,7 +191,7 @@ export function EulerMethodVisualization(): React.JSX.Element {
         thickLineRenderer.renderThickTrajectories(
           webGl.dataToClipMatrix,
           eulerTrajectory,
-          COLORS.point,
+          COLORS.singleTrajectory,
           THICK_LINE_THICKNESS,
           1.0
         );

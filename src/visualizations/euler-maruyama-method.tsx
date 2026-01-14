@@ -245,7 +245,7 @@ export function EulerMaruyamaMethodVisualization(
         thickLineRenderer.renderThickTrajectories(
           webGl.dataToClipMatrix,
           deterministicTrajectory,
-          COLORS.trajectorySecondary,
+          COLORS.singleTrajectorySecondary,
           THICK_LINE_THICKNESS,
           1.0
         );
@@ -255,7 +255,7 @@ export function EulerMaruyamaMethodVisualization(
         thickLineRenderer.renderThickTrajectories(
           webGl.dataToClipMatrix,
           stochasticTrajectory,
-          COLORS.point,
+          COLORS.singleTrajectory,
           THICK_LINE_THICKNESS,
           1.0
         );
