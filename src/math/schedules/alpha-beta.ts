@@ -19,7 +19,7 @@ export const ALPHA_BETA_SCHEDULES: Record<AlphaBetaScheduleName, AlphaBetaSchedu
     betaDerivative: () => -1.0
   },
   cosine: {
-    displayName: 'α(t) = sin(πt/2)',
+    displayName: 'α(t) = sin(πt/2), β(t) = cos(πt/2)',
     alpha: (t) => Math.sin((Math.PI / 2) * clamp01(t)),
     beta: (t) => Math.cos((Math.PI / 2) * clamp01(t)),
     alphaDerivative: (t) => (Math.PI / 2) * Math.cos((Math.PI / 2) * clamp01(t)),
@@ -39,7 +39,7 @@ export const ALPHA_BETA_SCHEDULES: Record<AlphaBetaScheduleName, AlphaBetaSchedu
     }
   },
   sigmoid: {
-    displayName: 'α(t) = σ(-6(t-0.5))',
+    displayName: 'α(t) = σ(6(t-0.5)), β(t) = σ(-6(t-0.5))',
     alpha: (t) => {
       const x = 6 * (clamp01(t) - 0.5);
       return 1 / (1 + Math.exp(-x));
