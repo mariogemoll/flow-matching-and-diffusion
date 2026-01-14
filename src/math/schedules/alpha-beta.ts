@@ -12,7 +12,7 @@ export interface AlphaBetaSchedule {
 
 export const ALPHA_BETA_SCHEDULES: Record<AlphaBetaScheduleName, AlphaBetaSchedule> = {
   constant: {
-    displayName: 'Constant (Arc)',
+    displayName: 'α(t) = t, β(t) = √(1 - t²)',
     alpha: (t) => clamp01(t),
     beta: (t) => Math.sqrt(Math.max(0, 1 - clamp01(t) * clamp01(t))),
     alphaDerivative: () => 1.0,
@@ -23,14 +23,14 @@ export const ALPHA_BETA_SCHEDULES: Record<AlphaBetaScheduleName, AlphaBetaSchedu
     }
   },
   linear: {
-    displayName: 'Linear',
+    displayName: 'α(t) = t, β(t) = 1 - t',
     alpha: (t) => clamp01(t),
     beta: (t) => 1 - clamp01(t),
     alphaDerivative: () => 1.0,
     betaDerivative: () => -1.0
   },
   cosine: {
-    displayName: 'Cosine',
+    displayName: 'α(t) = sin(πt/2), β(t) = cos(πt/2)',
     alpha: (t) => Math.sin((Math.PI / 2) * clamp01(t)),
     beta: (t) => Math.cos((Math.PI / 2) * clamp01(t)),
     alphaDerivative: (t) => (Math.PI / 2) * Math.cos((Math.PI / 2) * clamp01(t)),

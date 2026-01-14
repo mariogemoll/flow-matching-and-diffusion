@@ -9,19 +9,19 @@ export interface SigmaSchedule {
 
 export const SIGMA_SCHEDULES: Record<SigmaScheduleName, SigmaSchedule> = {
   constant: {
-    displayName: 'Constant',
+    displayName: 'σ(t) = σ_max',
     sigma: (_, maxSigma) => maxSigma
   },
   linear: {
-    displayName: 'Linear',
+    displayName: 'σ(t) = σ_max · t',
     sigma: (t, maxSigma) => maxSigma * clamp01(t)
   },
   'linear-reverse': {
-    displayName: 'Linear (Reverse)',
+    displayName: 'σ(t) = σ_max · (1 - t)',
     sigma: (t, maxSigma) => maxSigma * (1 - clamp01(t))
   },
   'sine-bump': {
-    displayName: 'Sine Bump',
+    displayName: 'σ(t) = σ_max · sin(πt)',
     sigma: (t, maxSigma) => maxSigma * Math.sin(Math.PI * clamp01(t))
   }
 };
