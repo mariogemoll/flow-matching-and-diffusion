@@ -1,5 +1,39 @@
 import type { Pair } from '../types';
 
+export interface Matrix2x2 {
+  data: [[number, number], [number, number]];
+}
+
+export function matScale(m: Matrix2x2, s: number): Matrix2x2 {
+  return {
+    data: [
+      [m.data[0][0] * s, m.data[0][1] * s],
+      [m.data[1][0] * s, m.data[1][1] * s]
+    ]
+  };
+}
+
+export function matAddScalarDiagonal(m: Matrix2x2, s: number): Matrix2x2 {
+  return {
+    data: [
+      [m.data[0][0] + s, m.data[0][1]],
+      [m.data[1][0], m.data[1][1] + s]
+    ]
+  };
+}
+
+export function invertMatrix2x2(m: Matrix2x2): Matrix2x2 {
+  const [[a, b], [c, d]] = m.data;
+  const det = a * d - b * c;
+  const invDet = 1 / det;
+  return {
+    data: [
+      [d * invDet, -b * invDet],
+      [-c * invDet, a * invDet]
+    ]
+  };
+}
+
 // Convert orthogonal axis vectors into a covariance matrix.
 // Axis lengths represent sqrt(variance) along each principal direction.
 export function axisToCovariance(
