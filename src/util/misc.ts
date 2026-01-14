@@ -23,8 +23,13 @@ export function makeScale(
   return scale;
 }
 
-export function randomPosition(): Point2D {
-  const x = X_DOMAIN[0] + Math.random() * (X_DOMAIN[1] - X_DOMAIN[0]);
-  const y = Y_DOMAIN[0] + Math.random() * (Y_DOMAIN[1] - Y_DOMAIN[0]);
+export function randomPosition(margin = 0): Point2D {
+  const xMin = X_DOMAIN[0] + margin;
+  const xMax = X_DOMAIN[1] - margin;
+  const yMin = Y_DOMAIN[0] + margin;
+  const yMax = Y_DOMAIN[1] - margin;
+
+  const x = xMin + Math.random() * (xMax - xMin);
+  const y = yMin + Math.random() * (yMax - yMin);
   return [x, y];
 }
