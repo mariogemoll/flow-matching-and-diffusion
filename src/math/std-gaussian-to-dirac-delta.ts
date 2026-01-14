@@ -1,8 +1,6 @@
 // Conditional probability path from standard Gaussian to Dirac delta (single point z)
 
 import type { Point2D, Points2D, Trajectories } from '../types';
-import { makePoints2D } from '../util/points';
-import { fillWithSamplesFromStdGaussian } from './gaussian';
 import {
   type AlphaBetaScheduleName,
   getAlpha,
@@ -11,6 +9,7 @@ import {
   getBetaDerivative
 } from './schedules/alpha-beta';
 import { getSigma, type SigmaScheduleName } from './schedules/sigma';
+import { type SdeNoises } from './sde';
 
 // Flow map: Where are the points x0 at time t?
 export function writePositions(
@@ -85,18 +84,6 @@ export function writeVelocities(
     vxs[i] = alphaDot * z[0] + betaDot * x0x;
     vys[i] = alphaDot * z[1] + betaDot * x0y;
   }
-}
-
-export interface SdeNoises extends Points2D {
-  count: number;
-  stepsPerSample: number;
-}
-
-export function createSdeNoises(count: number, stepsPerSample: number): SdeNoises {
-  const totalNoise = count * stepsPerSample;
-  const noises = makePoints2D(totalNoise);
-  fillWithSamplesFromStdGaussian(noises);
-  return { xs: noises.xs, ys: noises.ys, count, stepsPerSample, version: 0 };
 }
 
 // Helper: Performs a stabilized update step using local OU integration

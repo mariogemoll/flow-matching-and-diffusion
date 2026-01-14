@@ -6,7 +6,8 @@ import {
   invertMatrix2x2,
   matAddScalarDiagonal,
   type Matrix2x2,
-  matScale } from './linalg';
+  matScale
+} from './linalg';
 import {
   type AlphaBetaScheduleName,
   getAlpha,
@@ -14,6 +15,8 @@ import {
   getBeta,
   getBetaDerivative
 } from './schedules/alpha-beta';
+import { getSigma, type SigmaScheduleName } from './schedules/sigma';
+import { type SdeNoises } from './sde';
 
 export function writeGmm(
   targetGmm: GaussianMixture,
@@ -129,7 +132,7 @@ export function writeVelocities(
   const vys = v.ys;
 
   const alpha = getAlpha(t, schedule);
-  const beta = getBeta(t, schedule);
+  const beta = Math.max(getBeta(t, schedule), 1e-8); // Prevent division by zero at t=1
   const alphaDot = getAlphaDerivative(t, schedule);
   const betaDot = getBetaDerivative(t, schedule);
 
@@ -297,6 +300,307 @@ export function writeTrajectories(
       xxs[i] += vxs[i] * dt;
       xys[i] += vys[i] * dt;
       const idx = i * numSteps + step;
+      trajectoryXs[idx] = xxs[i];
+      trajectoryYs[idx] = xys[i];
+    }
+  }
+  trajectories.version += 1;
+}
+
+// Computes the score (gradient of log density) for a GMM at time t
+export function writeScores(
+  schedule: AlphaBetaScheduleName,
+  components: GaussianComponent[],
+  t: number,
+  x: Points2D,
+  score: Points2D
+): void {
+  const n = x.xs.length;
+  const xs = x.xs;
+  const ys = x.ys;
+  const scoreXs = score.xs;
+  const scoreYs = score.ys;
+
+  const alpha = getAlpha(t, schedule);
+  const beta = Math.max(getBeta(t, schedule), 1e-8); // Prevent division by zero at t=1
+
+  const K = components.length;
+  const epsilon = 1e-6;
+  const logLikelihoods = new Float32Array(n * K);
+
+  // Pre-calculate per-component constants
+  const compConstants = components.map((comp) => {
+    const mu_k = comp.mean;
+    const Sigma_k_arr = comp.covariance;
+    const Sigma_k: Matrix2x2 = { data: Sigma_k_arr };
+
+    // m_k(t)
+    const m_k_t_x = mu_k[0] * alpha;
+    const m_k_t_y = mu_k[1] * alpha;
+
+    // S_k(t)
+    const S_k_t: Matrix2x2 = matAddScalarDiagonal(
+      matScale(Sigma_k, alpha * alpha),
+      beta * beta + epsilon
+    );
+
+    // Invert S_k(t)
+    const S_k_inv = invertMatrix2x2(S_k_t);
+    const [[invxx, invxy], [, invyy]] = S_k_inv.data;
+
+    // Determinant for PDF normalization
+    const [[sxx, sxy], [syx, syy]] = S_k_t.data;
+    const det = sxx * syy - sxy * syx;
+    const normConst = comp.weight / (2 * Math.PI * Math.sqrt(Math.abs(det)));
+    const logNormConst = Math.log(normConst);
+
+    return {
+      m_k_t_x,
+      m_k_t_y,
+      invxx,
+      invxy,
+      invyy,
+      logNormConst
+    };
+  });
+
+  // Pass 1: Compute log-likelihoods
+  for (let k = 0; k < K; k++) {
+    const c = compConstants[k];
+    for (let i = 0; i < n; i++) {
+      const dx = xs[i] - c.m_k_t_x;
+      const dy = ys[i] - c.m_k_t_y;
+
+      // Mahalanobis
+      const distSq =
+        dx * (c.invxx * dx + c.invxy * dy) + dy * (c.invxy * dx + c.invyy * dy);
+      logLikelihoods[i * K + k] = c.logNormConst - 0.5 * distSq;
+    }
+  }
+
+  // Pass 2: Accumulate score
+  for (let i = 0; i < n; i++) {
+    const xi = xs[i];
+    const yi = ys[i];
+
+    let maxLog = -Infinity;
+    for (let k = 0; k < K; k++) {
+      const val = logLikelihoods[i * K + k];
+      if (val > maxLog) { maxLog = val; }
+    }
+
+    let sumExp = 0;
+    for (let k = 0; k < K; k++) {
+      const p = Math.exp(logLikelihoods[i * K + k] - maxLog);
+      logLikelihoods[i * K + k] = p;
+      sumExp += p;
+    }
+
+    const invSumExp = 1.0 / sumExp;
+
+    let s_x = 0;
+    let s_y = 0;
+
+    for (let k = 0; k < K; k++) {
+      const c = compConstants[k];
+      const gamma = logLikelihoods[i * K + k] * invSumExp;
+
+      const dx = xi - c.m_k_t_x;
+      const dy = yi - c.m_k_t_y;
+
+      // score_k = -S_k^-1 * (x - m_k)
+      const sk_x = -(c.invxx * dx + c.invxy * dy);
+      const sk_y = -(c.invxy * dx + c.invyy * dy);
+
+      s_x += gamma * sk_x;
+      s_y += gamma * sk_y;
+    }
+
+    scoreXs[i] = s_x;
+    scoreYs[i] = s_y;
+  }
+}
+
+// Calculate marginal SDE trajectories using Euler-Maruyama integration
+export function writeSdeTrajectories(
+  samplePool: Points2D,
+  noises: SdeNoises,
+  schedule: AlphaBetaScheduleName,
+  sigmaSchedule: SigmaScheduleName,
+  components: GaussianComponent[],
+  numSamples: number,
+  numSteps: number,
+  maxSigma: number,
+  trajectories: Trajectories,
+  x: Points2D,
+  v: Points2D,
+  score: Points2D
+): void {
+  const n = numSamples;
+  const steps = numSteps;
+  const pointsPerTrajectory = steps + 1;
+
+  trajectories.count = n;
+  trajectories.pointsPerTrajectory = pointsPerTrajectory;
+
+  const trajectoryXs = trajectories.xs;
+  const trajectoryYs = trajectories.ys;
+
+  const xxs = x.xs;
+  const xys = x.ys;
+
+  const vxs = v.xs;
+  const vys = v.ys;
+
+  const scoreXs = score.xs;
+  const scoreYs = score.ys;
+
+  const dt = 1.0 / steps;
+  const sqrtDt = Math.sqrt(dt);
+
+  // Initialize trajectories at t=0
+  for (let i = 0; i < n; i++) {
+    xxs[i] = samplePool.xs[i];
+    xys[i] = samplePool.ys[i];
+    trajectoryXs[i * pointsPerTrajectory] = xxs[i];
+    trajectoryYs[i * pointsPerTrajectory] = xys[i];
+  }
+
+  for (let step = 0; step < steps; step++) {
+    const t = step * dt;
+
+    const sigma = getSigma(t, sigmaSchedule, maxSigma);
+    const sigma2 = sigma * sigma;
+
+    // Compute velocity and score at current position
+    writeVelocities(schedule, components, t, x, v);
+    writeScores(schedule, components, t, x, score);
+
+    for (let i = 0; i < n; i++) {
+      // Standard Euler-Maruyama: dX_t = [u_t + (σ²/2)∇log p_t] dt + σ dW_t
+      const driftX = vxs[i] + (sigma2 * scoreXs[i]) / 2;
+      const driftY = vys[i] + (sigma2 * scoreYs[i]) / 2;
+
+      const noiseIndex = i * noises.stepsPerSample + step;
+      const zx = noises.xs[noiseIndex];
+      const zy = noises.ys[noiseIndex];
+
+      xxs[i] += driftX * dt + sigma * zx * sqrtDt;
+      xys[i] += driftY * dt + sigma * zy * sqrtDt;
+
+      const idx = i * pointsPerTrajectory + step + 1;
+      trajectoryXs[idx] = xxs[i];
+      trajectoryYs[idx] = xys[i];
+    }
+  }
+
+  trajectories.version += 1;
+}
+
+// Calculate marginal SDE trajectories using Heun's method
+export function writeSdeTrajectoriesHeun(
+  samplePool: Points2D,
+  noises: SdeNoises,
+  schedule: AlphaBetaScheduleName,
+  sigmaSchedule: SigmaScheduleName,
+  components: GaussianComponent[],
+  numSamples: number,
+  numSteps: number,
+  maxSigma: number,
+  trajectories: Trajectories,
+  x: Points2D,
+  v: Points2D,
+  score: Points2D
+): void {
+  const n = numSamples;
+  const steps = numSteps;
+  const pointsPerTrajectory = steps + 1;
+
+  trajectories.count = n;
+  trajectories.pointsPerTrajectory = pointsPerTrajectory;
+
+  const trajectoryXs = trajectories.xs;
+  const trajectoryYs = trajectories.ys;
+
+  const xxs = x.xs;
+  const xys = x.ys;
+
+  const vxs = v.xs;
+  const vys = v.ys;
+
+  const scoreXs = score.xs;
+  const scoreYs = score.ys;
+
+  // Temporary buffers for predicted state
+  const xPredicted = makePoints2D(n);
+  const vPredicted = makePoints2D(n);
+  const scorePredicted = makePoints2D(n);
+
+  const dt = 1.0 / steps;
+  const sqrtDt = Math.sqrt(dt);
+
+  // Initialize trajectories at t=0
+  for (let i = 0; i < n; i++) {
+    xxs[i] = samplePool.xs[i];
+    xys[i] = samplePool.ys[i];
+    trajectoryXs[i * pointsPerTrajectory] = xxs[i];
+    trajectoryYs[i * pointsPerTrajectory] = xys[i];
+  }
+
+  for (let step = 0; step < steps; step++) {
+    const t = step * dt;
+    const tNext = (step + 1) * dt;
+
+    const sigma = getSigma(t, sigmaSchedule, maxSigma);
+    const sigma2 = sigma * sigma;
+
+    // Step 1: Compute drift at current position
+    writeVelocities(schedule, components, t, x, v);
+    writeScores(schedule, components, t, x, score);
+
+    // Generate noise (same for predictor and corrector)
+    const noiseXs = new Float32Array(n);
+    const noiseYs = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const noiseIndex = i * noises.stepsPerSample + step;
+      noiseXs[i] = noises.xs[noiseIndex];
+      noiseYs[i] = noises.ys[noiseIndex];
+    }
+
+    // Step 2: Predictor step (full Euler step)
+    for (let i = 0; i < n; i++) {
+      const drift1X = vxs[i] + (sigma2 * scoreXs[i]) / 2;
+      const drift1Y = vys[i] + (sigma2 * scoreYs[i]) / 2;
+
+      xPredicted.xs[i] = xxs[i] + drift1X * dt + sigma * noiseXs[i] * sqrtDt;
+      xPredicted.ys[i] = xys[i] + drift1Y * dt + sigma * noiseYs[i] * sqrtDt;
+    }
+
+    // Step 3: Compute drift at predicted position
+    // Clamp tNext to avoid t=1.0 exactly where beta=0 causes singularities
+    const tNextClamped = Math.min(tNext, 1.0 - 1e-6);
+    const sigmaNext = getSigma(tNextClamped, sigmaSchedule, maxSigma);
+    const sigma2Next = sigmaNext * sigmaNext;
+
+    writeVelocities(schedule, components, tNextClamped, xPredicted, vPredicted);
+    writeScores(schedule, components, tNextClamped, xPredicted, scorePredicted);
+
+    // Step 4: Corrector step (average of drifts at current and predicted)
+    for (let i = 0; i < n; i++) {
+      const drift1X = vxs[i] + (sigma2 * scoreXs[i]) / 2;
+      const drift1Y = vys[i] + (sigma2 * scoreYs[i]) / 2;
+
+      const drift2X = vPredicted.xs[i] + (sigma2Next * scorePredicted.xs[i]) / 2;
+      const drift2Y = vPredicted.ys[i] + (sigma2Next * scorePredicted.ys[i]) / 2;
+
+      // Average the drifts
+      const avgDriftX = (drift1X + drift2X) / 2;
+      const avgDriftY = (drift1Y + drift2Y) / 2;
+
+      xxs[i] += avgDriftX * dt + sigma * noiseXs[i] * sqrtDt;
+      xys[i] += avgDriftY * dt + sigma * noiseYs[i] * sqrtDt;
+
+      const idx = i * pointsPerTrajectory + step + 1;
       trajectoryXs[idx] = xxs[i];
       trajectoryYs[idx] = xys[i];
     }

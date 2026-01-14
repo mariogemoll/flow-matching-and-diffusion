@@ -3,11 +3,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
 import { type AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import { type SigmaScheduleName } from '../../../math/schedules/sigma';
-import {
-  createSdeNoises,
-  type SdeNoises,
-  writeSdeTrajectories
-} from '../../../math/std-gaussian-to-dirac-delta';
+import { createSdeNoises,type SdeNoises } from '../../../math/sde';
+import { writeSdeTrajectories } from '../../../math/std-gaussian-to-dirac-delta';
 import { type Point2D, type Points2D, type Trajectories } from '../../../types';
 import { makePoints2D } from '../../../util/points';
 import { interpolateTrajectory, makeTrajectories } from '../../../util/trajectories';
