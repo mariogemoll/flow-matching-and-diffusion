@@ -33,7 +33,7 @@ export const MAX_NUM_SDE_STEPS = 100;
 export const SCHEDULE_LINE_COLOR = '#aaa';
 export const SCHEDULE_DOT_COLOR = '#888';
 
-export const DEFAULT_ALPHA_BETA_SCHEDULE: AlphaBetaScheduleName = 'ddpm';
-export const DEFAULT_SIGMA_SCHEDULE: SigmaScheduleName = 'linear-decay';
+export const DEFAULT_ALPHA_BETA_SCHEDULE: AlphaBetaScheduleName = 'cosine';
+export const DEFAULT_SIGMA_SCHEDULE: SigmaScheduleName = 'sine';
 export const DEFAULT_NUM_SDE_STEPS = 50;
 export const DEFAULT_MAX_SIGMA = 0.8;
