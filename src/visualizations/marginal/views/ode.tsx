@@ -1,11 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import {
+  NUM_TRAJECTORY_STEPS,
+  X_DOMAIN,
+  Y_DOMAIN
+} from '../../../constants';
 import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
 import type { AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import { writeTrajectories, writeVelocities } from '../../../math/std-gaussian-to-gmm';
 import type { Points2D, Trajectories } from '../../../types';
 import { makePoints2D } from '../../../util/points';
-import { interpolateTrajectory,makeTrajectories } from '../../../util/trajectories';
+import { interpolateTrajectory, makeTrajectories } from '../../../util/trajectories';
 import { clearWebGl, type WebGl } from '../../../webgl';
 import { createLineRenderer, type LineRenderer } from '../../../webgl/renderers/line';
 import { createPointRenderer, type PointRenderer } from '../../../webgl/renderers/point';
@@ -20,10 +25,7 @@ import { WebGlCanvas } from '../../components/webgl-canvas';
 import {
   COLORS,
   MAX_NUM_SAMPLES,
-  NUM_TRAJECTORY_STEPS,
-  POINT_SIZE,
-  X_DOMAIN,
-  Y_DOMAIN
+  POINT_SIZE
 } from '../../constants';
 import { useEngine } from '../../engine';
 import { drawVectorField } from '../../webgl/vector-field';

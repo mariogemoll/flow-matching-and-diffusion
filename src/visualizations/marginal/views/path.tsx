@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../../../constants';
+import { CANVAS_HEIGHT, CANVAS_WIDTH, X_DOMAIN, Y_DOMAIN } from '../../../constants';
 import { makeGmm } from '../../../math/gmm';
 import { type AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import { sampleFromGmmMargProbPath, writeGmm } from '../../../math/std-gaussian-to-gmm';
@@ -23,7 +23,7 @@ import {
   ShowSamplesCheckbox
 } from '../../components/standard-controls';
 import { WebGlCanvas } from '../../components/webgl-canvas';
-import { COLORS, MAX_NUM_SAMPLES, POINT_SIZE, X_DOMAIN, Y_DOMAIN } from '../../constants';
+import { COLORS, MAX_NUM_SAMPLES, POINT_SIZE } from '../../constants';
 import { useEngine } from '../../engine';
 import { type MargPathActions, type MargPathState } from '../index';
 

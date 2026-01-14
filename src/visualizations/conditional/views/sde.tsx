@@ -1,9 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import {
+  X_DOMAIN,
+  Y_DOMAIN
+} from '../../../constants';
 import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
 import { type AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import { type SigmaScheduleName } from '../../../math/schedules/sigma';
-import { createSdeNoises,type SdeNoises } from '../../../math/sde';
+import { createSdeNoises, type SdeNoises } from '../../../math/sde';
 import { writeSdeTrajectories } from '../../../math/std-gaussian-to-dirac-delta';
 import { type Point2D, type Points2D, type Trajectories } from '../../../types';
 import { makePoints2D } from '../../../util/points';
@@ -31,9 +35,7 @@ import {
   DOT_SIZE,
   MAX_NUM_SAMPLES,
   MAX_NUM_SDE_STEPS,
-  POINT_SIZE,
-  X_DOMAIN,
-  Y_DOMAIN
+  POINT_SIZE
 } from '../../constants';
 import { useEngine } from '../../engine';
 import { type CondPathActions, type CondPathParams } from '../index';

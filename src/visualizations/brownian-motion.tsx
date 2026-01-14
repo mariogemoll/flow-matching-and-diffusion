@@ -1,5 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 
+import {
+  NUM_TRAJECTORY_STEPS,
+  X_DOMAIN,
+  Y_DOMAIN
+} from '../constants';
 import { brownianMotionTrajectory } from '../math/brownian-motion';
 import type { Pair, RGBA, Trajectories } from '../types';
 import { interpolateTrajectory, makeTrajectories } from '../util/trajectories';
@@ -14,10 +19,7 @@ import { WebGlCanvas } from './components/webgl-canvas';
 import {
   COLORS,
   DOT_SIZE,
-  NUM_TRAJECTORY_STEPS,
-  THICK_LINE_THICKNESS,
-  X_DOMAIN,
-  Y_DOMAIN
+  THICK_LINE_THICKNESS
 } from './constants';
 import { type Model, useEngine } from './engine';
 import { VisualizationProvider } from './provider';

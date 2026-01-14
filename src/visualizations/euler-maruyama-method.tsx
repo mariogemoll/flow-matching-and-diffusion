@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import { X_DOMAIN, Y_DOMAIN } from '../constants';
 import {
   demoVectorField,
   demoVectorFieldBatch,
@@ -21,7 +22,7 @@ import { PointerCanvas, type PointerCanvasHandle } from './components/pointer-ca
 import { Slider } from './components/slider';
 import { SpeedControl } from './components/speed-control';
 import { TimelineControls } from './components/timeline-controls';
-import { COLORS, DOT_SIZE, THICK_LINE_THICKNESS, X_DOMAIN, Y_DOMAIN } from './constants';
+import { COLORS, DOT_SIZE, THICK_LINE_THICKNESS } from './constants';
 import { type Model, useEngine } from './engine';
 import { VisualizationProvider } from './provider';
 import { mountVisualization } from './react-root';

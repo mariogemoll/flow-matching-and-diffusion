@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import {
+  X_DOMAIN,
+  Y_DOMAIN
+} from '../../../constants';
 import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
 import type { AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import { type SigmaScheduleName } from '../../../math/schedules/sigma';
@@ -30,9 +34,7 @@ import {
   DEFAULT_SIGMA_SCHEDULE,
   MAX_NUM_SAMPLES,
   MAX_NUM_SDE_STEPS,
-  POINT_SIZE,
-  X_DOMAIN,
-  Y_DOMAIN
+  POINT_SIZE
 } from '../../constants';
 import { useEngine } from '../../engine';
 import type { MargPathActions, MargPathState } from '../index';

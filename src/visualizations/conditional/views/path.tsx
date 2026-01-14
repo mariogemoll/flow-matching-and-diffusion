@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+import {
+  X_DOMAIN,
+  Y_DOMAIN
+} from '../../../constants';
 import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
 import { type AlphaBetaScheduleName, getAlpha, getBeta } from '../../../math/schedules/alpha-beta';
 import { type Point2D, type Points2D } from '../../../types';
@@ -19,9 +23,7 @@ import {
   DEFAULT_LOOP_PAUSE,
   DOT_SIZE,
   MAX_NUM_SAMPLES,
-  POINT_SIZE,
-  X_DOMAIN,
-  Y_DOMAIN
+  POINT_SIZE
 } from '../../constants';
 import { useEngine } from '../../engine';
 import { type CondPathActions, type CondPathParams } from '../index';

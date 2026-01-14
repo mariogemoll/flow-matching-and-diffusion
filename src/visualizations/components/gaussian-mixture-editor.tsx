@@ -1,13 +1,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { axisToCovariance, covarianceToAxes } from '../../math/linalg';
-import type { GaussianComponent, Point2D } from '../../types';
-import { makeScale } from '../../util/misc';
 import {
   X_DOMAIN,
   Y_DOMAIN
-} from '../constants';
+} from '../../constants';
+import { axisToCovariance, covarianceToAxes } from '../../math/linalg';
+import type { GaussianComponent, Point2D } from '../../types';
+import { makeScale } from '../../util/misc';
 import { useEngine } from '../engine';
 
 // Constants
