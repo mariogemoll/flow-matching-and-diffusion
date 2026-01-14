@@ -23,4 +23,15 @@ export interface Trajectories {
   version: number;
 }
 
+export interface GaussianComponent {
+  mean: Point2D;
+  weight: number;
+  covariance: [[number, number], [number, number]];
+}
+
+export interface GaussianMixture {
+  components: GaussianComponent[];
+  version: number;
+}
+
 export type RGBA = [number, number, number, number];
