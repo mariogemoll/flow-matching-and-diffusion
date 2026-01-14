@@ -30,11 +30,11 @@ export const ALPHA_BETA_SCHEDULES: Record<AlphaBetaScheduleName, AlphaBetaSchedu
     alpha: (t) => Math.sqrt(Math.max(0, clamp01(t))),
     beta: (t) => Math.sqrt(Math.max(0, 1 - clamp01(t))),
     alphaDerivative: (t) => {
-      const tC = Math.max(1e-5, clamp01(t));
+      const tC = Math.max(1e-3, clamp01(t));
       return 0.5 / Math.sqrt(tC);
     },
     betaDerivative: (t) => {
-      const tC = Math.min(1 - 1e-5, clamp01(t));
+      const tC = Math.min(1 - 1e-3, clamp01(t));
       return -0.5 / Math.sqrt(1 - tC);
     }
   },
