@@ -5,7 +5,7 @@ import { type AlphaBetaScheduleName } from '../../math/schedules/alpha-beta';
 import type { GaussianComponent } from '../../types';
 import { ProbPathVisualizationControls } from '../components/prob-path-visualization-controls';
 import { TimelineControls } from '../components/timeline-controls';
-import { NUM_SAMPLES } from '../constants';
+import { DEFAULT_ALPHA_BETA_SCHEDULE, NUM_SAMPLES } from '../constants';
 import { type Model } from '../engine';
 import { VisualizationProvider } from '../provider';
 
@@ -29,7 +29,7 @@ export interface MargPathActions {
 function createInitialState(): MargPathState {
   return {
     components: makeRandomGmm(3).components,
-    schedule: 'linear',
+    schedule: DEFAULT_ALPHA_BETA_SCHEDULE,
     numSamples: NUM_SAMPLES,
     editMode: false,
     wasPlayingBeforeEdit: false

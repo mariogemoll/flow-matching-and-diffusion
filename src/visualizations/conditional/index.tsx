@@ -22,7 +22,7 @@ export interface CondPathActions {
 export const condPathModel: Model<CondPathParams, CondPathActions> = {
   initState: (): CondPathParams => ({
     z: randomPosition(),
-    schedule: 'linear',
+    schedule: DEFAULT_ALPHA_BETA_SCHEDULE,
     numSamples: 1000
   }),
   actions: (engine): CondPathActions => ({
@@ -42,6 +42,7 @@ export const condPathModel: Model<CondPathParams, CondPathActions> = {
 };
 
 import { ProbPathVisualizationControls } from '../components/prob-path-visualization-controls';
+import { DEFAULT_ALPHA_BETA_SCHEDULE } from '../constants';
 
 export function CondPathVisualization({
   name,
