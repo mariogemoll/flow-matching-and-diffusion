@@ -29,6 +29,14 @@
   --viz-thumb-size: 12px;
   --viz-thumb-size-lg: 14px;
   --viz-track-height: 2px;
+
+  /* GMM Editor */
+  --gmm-default-fill: #b0b0b0;
+  --gmm-default-stroke: #dcdcdc;
+  --gmm-hover-fill: #c8c8c8;
+  --gmm-hover-stroke: #fff;
+  --gmm-selected-fill: #b4b400;
+  --gmm-selected-stroke: #ff0;
 }
 
 /* ==========================================================================
@@ -116,6 +124,7 @@ button:active {
 }
 
 .view-container {
+  position: relative;
   width: 400px;
 }
 
@@ -656,4 +665,108 @@ button.ellipsis-toggle {
 
 button.ellipsis-toggle svg {
   display: block;
+}
+
+/* ==========================================================================
+   GMM Editor
+   ========================================================================== */
+
+.gmm-component line {
+  stroke: var(--gmm-default-stroke);
+  stroke-width: 1.5;
+  transition: stroke 0.1s;
+}
+
+.gmm-component circle {
+  fill: var(--gmm-default-fill);
+  stroke: var(--gmm-default-stroke);
+  stroke-width: 1.5;
+  transition: fill 0.1s, stroke 0.1s, stroke-width 0.1s;
+}
+
+.gmm-weight-group line {
+  stroke: var(--gmm-default-stroke);
+  stroke-width: 2;
+  stroke-linecap: round;
+  transition: stroke 0.1s;
+}
+
+.gmm-weight-group circle {
+  fill: var(--gmm-default-fill);
+  stroke: var(--gmm-default-stroke);
+  stroke-width: 2;
+  cursor: ns-resize;
+  transition: fill 0.1s, stroke 0.1s;
+}
+
+.gmm-button line {
+  stroke: var(--gmm-default-stroke);
+  stroke-width: 2;
+}
+
+.gmm-button rect {
+  fill: var(--gmm-default-fill);
+  stroke: var(--gmm-default-stroke);
+  stroke-width: 1.5;
+}
+
+.gmm-component.is-hovered circle {
+  fill: var(--gmm-hover-fill);
+  stroke: var(--gmm-hover-stroke);
+}
+
+.gmm-component.is-hovered line {
+  stroke: var(--gmm-hover-stroke);
+}
+
+.gmm-component.is-selected line {
+  stroke: var(--gmm-selected-stroke);
+}
+
+.gmm-component.is-selected circle {
+  fill: var(--gmm-selected-fill);
+  stroke: var(--gmm-selected-stroke);
+}
+
+.gmm-handle-center {
+  cursor: move;
+  stroke-width: 2 !important;
+}
+
+.gmm-handle-point {
+  cursor: pointer;
+}
+
+/* Weight Slider */
+.gmm-weight-group.is-hovered circle {
+  fill: var(--gmm-hover-fill);
+  stroke: var(--gmm-hover-stroke);
+}
+
+.gmm-weight-group.is-hovered line {
+  stroke: var(--gmm-hover-stroke);
+}
+
+.gmm-weight-group.is-selected line {
+  stroke: var(--gmm-selected-stroke);
+}
+
+.gmm-weight-group.is-selected circle {
+  fill: var(--gmm-selected-fill);
+  stroke: var(--gmm-selected-stroke);
+}
+
+/* Buttons */
+.gmm-button {
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.gmm-button:hover rect {
+  fill: var(--gmm-hover-fill);
+  stroke: var(--gmm-hover-stroke);
+}
+
+.gmm-button:hover line {
+  stroke: var(--gmm-hover-stroke);
 }

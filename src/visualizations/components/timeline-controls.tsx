@@ -14,7 +14,6 @@ export function TimelineControls(): React.ReactElement {
   useEffect(() => {
     return engine.register((frame) => {
       if (scrubbingRef.current) { return; }
-      if (!frame.clock.playing) { return; }
 
       const newPlaying = frame.clock.playing;
       if (playing !== newPlaying) { setPlaying(newPlaying); }

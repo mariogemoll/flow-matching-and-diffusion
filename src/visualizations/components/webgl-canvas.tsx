@@ -36,6 +36,9 @@ export interface WebGlCanvasProps<T extends WebGl = WebGl>
   setup?: (webGl: WebGl) => T;
 }
 
+const DEFAULT_X_DOMAIN: [number, number] = [-1, 1];
+const DEFAULT_Y_DOMAIN: [number, number] = [-1, 1];
+
 function WebGlCanvasInner<T extends WebGl = WebGl>(
   {
     width = CANVAS_WIDTH,
@@ -44,8 +47,8 @@ function WebGlCanvasInner<T extends WebGl = WebGl>(
     webGlRef: externalWebGlRef,
     onReady,
     onCleanup,
-    xDomain = [-1, 1],
-    yDomain = [-1, 1],
+    xDomain = DEFAULT_X_DOMAIN,
+    yDomain = DEFAULT_Y_DOMAIN,
     setup,
     ...rest
   }: WebGlCanvasProps<T>,

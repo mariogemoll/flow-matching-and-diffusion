@@ -7,13 +7,20 @@ export function clamp01(x: number): number {
 
 export const range = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
 
+interface Scale {
+  (x: number): number;
+  inverse(y: number): number;
+}
+
 export function makeScale(
   domain: [number, number],
   range: [number, number]
-): (x: number) => number {
+): Scale {
   const [d0, d1] = domain;
   const [r0, r1] = range;
-  return (x: number) => r0 + ((x - d0) / (d1 - d0)) * (r1 - r0);
+  const scale = (x: number): number => r0 + ((x - d0) / (d1 - d0)) * (r1 - r0);
+  scale.inverse = (y: number): number => d0 + ((y - r0) / (r1 - r0)) * (d1 - d0);
+  return scale;
 }
 
 export function randomPosition(): Point2D {
