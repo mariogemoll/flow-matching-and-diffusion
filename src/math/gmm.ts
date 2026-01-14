@@ -27,15 +27,19 @@ export function makeRandomGmm(numComponents: number): GaussianMixture {
   }
   const components: GaussianComponent[] = [];
 
+  const rawWeights = Array.from({ length: numComponents }, () => Math.random());
+  const totalWeight = rawWeights.reduce((sum, w) => sum + w, 0);
+  const weights = rawWeights.map((w) => w / totalWeight);
+
   for (let i = 0; i < numComponents; i++) {
-    const mean = randomPosition();
+    const mean = randomPosition(0.8);
 
     const angle = Math.random() * 2 * Math.PI;
     const cos = Math.cos(angle);
     const sin = Math.sin(angle);
 
-    const majorScale = Math.sqrt(0.1 + Math.random() * 0.4);
-    const minorScale = Math.sqrt(0.1 + Math.random() * 0.4);
+    const majorScale = Math.sqrt(0.1 + Math.random() * 2.5);
+    const minorScale = Math.sqrt(0.1 + Math.random() * 2.5);
 
     const majorAxis: Pair<number> = [majorScale * cos, majorScale * sin];
     const minorAxis: Pair<number> = [minorScale * -sin, minorScale * cos];
@@ -44,7 +48,7 @@ export function makeRandomGmm(numComponents: number): GaussianMixture {
 
     components.push({
       mean,
-      weight: 1.0 / numComponents,
+      weight: weights[i],
       covariance
     });
   }
