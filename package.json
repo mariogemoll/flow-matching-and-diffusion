@@ -22,6 +22,7 @@
     "typescript-eslint": "^8.52.0"
   },
   "exports": {
+    "./visualizations/brownian-motion": "./src/visualizations/brownian-motion.tsx",
     "./visualizations/conditional/path": "./src/visualizations/conditional/path.tsx",
     "./visualizations/conditional/path-ode": "./src/visualizations/conditional/path-ode.tsx",
     "./visualizations/conditional/path-ode-sde": "./src/visualizations/conditional/path-ode-sde.tsx",

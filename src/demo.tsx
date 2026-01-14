@@ -1,4 +1,5 @@
 import { el } from './util/dom';
+import { initBrownianMotionVisualization } from './visualizations/brownian-motion';
 import { initConditionalPathVisualization } from './visualizations/conditional/path';
 import { initConditionalPathOdeVisualization } from './visualizations/conditional/path-ode';
 import { initConditionalPathOdeSdeVisualization } from './visualizations/conditional/path-ode-sde';
@@ -16,6 +17,7 @@ initWebGlDemoVisualization(el('[data-visualization="webgl-demo"]') as HTMLElemen
 initDraggableDotDemoVisualization(el('[data-visualization="draggable-dot-demo"]') as HTMLElement);
 initVectorFieldVisualization(el('[data-visualization="vector-field"]') as HTMLElement);
 initEulerMethodVisualization(el('[data-visualization="euler-method"]') as HTMLElement);
+initBrownianMotionVisualization(el('[data-visualization="brownian-motion"]') as HTMLElement);
 initConditionalPathVisualization(el('[data-visualization="conditional-path"]') as HTMLElement);
 initConditionalPathOdeVisualization(
   el('[data-visualization="conditional-path-ode"]') as HTMLElement
