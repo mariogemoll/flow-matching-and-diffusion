@@ -1,42 +1,27 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 
 import { X_DOMAIN, Y_DOMAIN } from '../constants';
 import {
   demoVectorField,
-  demoVectorFieldBatch,
   demoVectorFieldTrajectory,
   randomStartPos
 } from '../math/demo-vector-field';
 import { eulerMethodTrajectory } from '../math/vector-field';
 import type { Point2D, Trajectories } from '../types';
-import { interpolateTrajectory } from '../util/trajectories';
-import { createLineRenderer, type LineRenderer } from '../webgl/renderers/line';
-import { createPointRenderer, type PointRenderer } from '../webgl/renderers/point';
-import { createThickLineRenderer, type ThickLineRenderer } from '../webgl/renderers/thick-line';
 import { Checkbox } from './components/checkbox';
 import { ViewContainer, ViewControls, ViewControlsGroup } from './components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from './components/pointer-canvas';
 import { Slider } from './components/slider';
 import { SpeedControl } from './components/speed-control';
 import { TimelineControls } from './components/timeline-controls';
-import { COLORS, DOT_SIZE, THICK_LINE_THICKNESS } from './constants';
 import { type Model, useEngine } from './engine';
 import { VisualizationProvider } from './provider';
 import { mountVisualization } from './react-root';
 import { clear } from './webgl';
-import { drawVectorField } from './webgl/vector-field';
+import { createEulerMethodRenderer, type EulerMethodRenderer } from './webgl/euler-method';
 
-const DEFAULT_EULER_STEPS = 10;
-const MAX_EULER_STEPS = 50;
-
-function segmentStartTime(t: number, numSteps: number): number {
-  const safeSteps = Math.max(1, Math.floor(numSteps));
-  const segmentIndex = Math.min(Math.floor(t * safeSteps), safeSteps - 1);
-  return segmentIndex / safeSteps;
-}
-
-
-export interface EulerMethodState {
+interface EulerMethodState {
   startPos: Point2D;
   groundTruthTrajectory: Trajectories;
   eulerTrajectory: Trajectories;
@@ -45,13 +30,20 @@ export interface EulerMethodState {
   showEuler: boolean;
 }
 
-export interface EulerMethodActions {
+export type { EulerMethodState };
+
+interface EulerMethodActions {
   regenerate: () => void;
   setTrajectoryStart: (pos: Point2D) => void;
   setNumSteps: (steps: number) => void;
   setShowGroundTruth: (show: boolean) => void;
   setShowEuler: (show: boolean) => void;
 }
+
+export type { EulerMethodActions };
+
+const DEFAULT_EULER_STEPS = 10;
+const MAX_EULER_STEPS = 50;
 
 
 function createTrajectories(startPos: Point2D, numSteps: number): {
@@ -128,9 +120,8 @@ export const eulerMethodModel: Model<EulerMethodState, EulerMethodActions> = {
 export function EulerMethodVisualization(): React.JSX.Element {
   const engine = useEngine<EulerMethodState, EulerMethodActions>();
   const pointerCanvasRef = useRef<PointerCanvasHandle>(null);
-  const lineRendererRef = useRef<LineRenderer | null>(null);
-  const thickLineRendererRef = useRef<ThickLineRenderer | null>(null);
-  const pointRendererRef = useRef<PointRenderer | null>(null);
+  const rendererRef = useRef<EulerMethodRenderer | null>(null);
+
   const [showGroundTruth, setShowGroundTruth] = useState(engine.frame.state.showGroundTruth);
   const [showEuler, setShowEuler] = useState(engine.frame.state.showEuler);
   const [numSteps, setNumSteps] = useState(engine.frame.state.numSteps);
@@ -142,76 +133,12 @@ export function EulerMethodVisualization(): React.JSX.Element {
       const webGl = pointerCanvasRef.current?.webGl;
       if (!webGl) { return; }
 
-      if (lineRendererRef.current?.gl !== webGl.gl) {
-        if (lineRendererRef.current) { lineRendererRef.current.destroy(); }
-        lineRendererRef.current = createLineRenderer(webGl.gl);
-      }
-      const lineRenderer = lineRendererRef.current;
+      rendererRef.current ??= createEulerMethodRenderer(webGl.gl);
+      const renderer = rendererRef.current;
 
-      if (thickLineRendererRef.current?.gl !== webGl.gl) {
-        if (thickLineRendererRef.current) { thickLineRendererRef.current.destroy(); }
-        thickLineRendererRef.current = createThickLineRenderer(webGl.gl);
-      }
-      const thickLineRenderer = thickLineRendererRef.current;
-
-      if (pointRendererRef.current?.gl !== webGl.gl) {
-        if (pointRendererRef.current) { pointRendererRef.current.destroy(); }
-        pointRendererRef.current = createPointRenderer(webGl.gl);
-      }
-      const pointRenderer = pointRendererRef.current;
-
+      renderer.update(frame);
       clear(webGl);
-
-      const vectorFieldTime = segmentStartTime(frame.clock.t, frame.state.numSteps);
-      drawVectorField(
-        lineRenderer,
-        webGl.dataToClipMatrix,
-        demoVectorFieldBatch,
-        X_DOMAIN,
-        Y_DOMAIN,
-        vectorFieldTime,
-        undefined,
-        COLORS.vectorField
-      );
-
-      const { groundTruthTrajectory, eulerTrajectory, showGroundTruth, showEuler } = frame.state;
-
-      // Draw ground truth trajectory (dimmer)
-      if (showGroundTruth && groundTruthTrajectory.count > 0) {
-        thickLineRenderer.renderThickTrajectories(
-          webGl.dataToClipMatrix,
-          groundTruthTrajectory,
-          COLORS.singleTrajectorySecondary,
-          THICK_LINE_THICKNESS,
-          1.0
-        );
-      }
-
-      // Draw Euler trajectory (brighter)
-      if (showEuler && eulerTrajectory.count > 0) {
-        thickLineRenderer.renderThickTrajectories(
-          webGl.dataToClipMatrix,
-          eulerTrajectory,
-          COLORS.singleTrajectory,
-          THICK_LINE_THICKNESS,
-          1.0
-        );
-      }
-
-      // Draw current position dot (using Euler trajectory)
-      if (eulerTrajectory.count > 0) {
-        const currentPos = interpolateTrajectory(eulerTrajectory, 0, frame.clock.t);
-        pointRenderer.render(
-          webGl.dataToClipMatrix,
-          {
-            xs: new Float32Array([currentPos[0]]),
-            ys: new Float32Array([currentPos[1]]),
-            version: 0
-          },
-          COLORS.highlightPoint,
-          DOT_SIZE
-        );
-      }
+      renderer.render(webGl);
     });
   }, [engine]);
 
@@ -257,6 +184,8 @@ export function EulerMethodVisualization(): React.JSX.Element {
           onPositionChange={handleDrag}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          xDomain={X_DOMAIN}
+          yDomain={Y_DOMAIN}
         />
         <ViewControls>
           <ViewControlsGroup>

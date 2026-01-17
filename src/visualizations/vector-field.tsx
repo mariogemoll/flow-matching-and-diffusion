@@ -1,39 +1,37 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 
 import { X_DOMAIN, Y_DOMAIN } from '../constants';
 import {
-  demoVectorFieldBatch,
   demoVectorFieldTrajectory,
   randomStartPos
 } from '../math/demo-vector-field';
-import { type Point2D, type Trajectories } from '../types';
-import { interpolateTrajectory } from '../util/trajectories';
-import { createLineRenderer, type LineRenderer } from '../webgl/renderers/line';
-import { createPointRenderer, type PointRenderer } from '../webgl/renderers/point';
-import { createThickLineRenderer, type ThickLineRenderer } from '../webgl/renderers/thick-line';
+import type { Point2D, Trajectories } from '../types';
 import { Checkbox } from './components/checkbox';
 import { ViewContainer, ViewControls, ViewControlsGroup } from './components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from './components/pointer-canvas';
 import { SpeedControl } from './components/speed-control';
 import { TimelineControls } from './components/timeline-controls';
-import { COLORS, DOT_SIZE, THICK_LINE_THICKNESS } from './constants';
 import { type Model, useEngine } from './engine';
 import { VisualizationProvider } from './provider';
 import { mountVisualization } from './react-root';
 import { clear } from './webgl';
-import { drawVectorField } from './webgl/vector-field';
+import { createVectorFieldRenderer, type VectorFieldRenderer } from './webgl/vector-field';
 
-
-export interface VectorFieldState {
+interface VectorFieldState {
   trajectory: Trajectories;
   showTrajectory: boolean;
 }
 
-export interface VectorFieldActions {
+export type { VectorFieldState };
+
+interface VectorFieldActions {
   regenerate: () => void;
   setTrajectoryStart: (pos: Point2D) => void;
   setShowTrajectory: (show: boolean) => void;
 }
+
+export type { VectorFieldActions };
 
 
 export const vectorFieldModel: Model<VectorFieldState, VectorFieldActions> = {
@@ -63,74 +61,23 @@ export const vectorFieldModel: Model<VectorFieldState, VectorFieldActions> = {
 export function VectorFieldVisualization(): React.JSX.Element {
   const engine = useEngine<VectorFieldState, VectorFieldActions>();
   const pointerCanvasRef = useRef<PointerCanvasHandle>(null);
-  const lineRendererRef = useRef<LineRenderer | null>(null);
-  const thickLineRendererRef = useRef<ThickLineRenderer | null>(null);
-  const pointRendererRef = useRef<PointRenderer | null>(null);
+  const rendererRef = useRef<VectorFieldRenderer | null>(null);
+
   const [showTrajectory, setShowTrajectory] = useState(engine.frame.state.showTrajectory);
   const wasPlayingRef = useRef(false);
 
   // Register draw function
   useEffect(() => {
-
     return engine.register((frame) => {
       const webGl = pointerCanvasRef.current?.webGl;
       if (!webGl) { return; }
 
-      if (lineRendererRef.current?.gl !== webGl.gl) {
-        if (lineRendererRef.current) { lineRendererRef.current.destroy(); }
-        lineRendererRef.current = createLineRenderer(webGl.gl);
-      }
-      const lineRenderer = lineRendererRef.current;
+      rendererRef.current ??= createVectorFieldRenderer(webGl.gl);
+      const renderer = rendererRef.current;
 
-      if (thickLineRendererRef.current?.gl !== webGl.gl) {
-        if (thickLineRendererRef.current) { thickLineRendererRef.current.destroy(); }
-        thickLineRendererRef.current = createThickLineRenderer(webGl.gl);
-      }
-      const thickLineRenderer = thickLineRendererRef.current;
-
-      if (pointRendererRef.current?.gl !== webGl.gl) {
-        if (pointRendererRef.current) { pointRendererRef.current.destroy(); }
-        pointRendererRef.current = createPointRenderer(webGl.gl);
-      }
-      const pointRenderer = pointRendererRef.current;
-
+      renderer.update(frame);
       clear(webGl);
-
-      drawVectorField(
-        lineRenderer,
-        webGl.dataToClipMatrix,
-        demoVectorFieldBatch,
-        X_DOMAIN,
-        Y_DOMAIN,
-        frame.clock.t,
-        undefined,
-        COLORS.vectorField
-      );
-
-      const { trajectory, showTrajectory } = frame.state;
-      if (trajectory.count === 0) { return; }
-
-      if (showTrajectory) {
-        thickLineRenderer.renderThickTrajectories(
-          webGl.dataToClipMatrix,
-          trajectory,
-          COLORS.singleTrajectory,
-          THICK_LINE_THICKNESS,
-          1.0 // Show full trajectory
-        );
-      }
-      const currentPos = interpolateTrajectory(trajectory, 0, frame.clock.t);
-      pointRenderer.render(
-        webGl.dataToClipMatrix,
-        {
-          xs: new Float32Array([currentPos[0]]),
-          ys: new Float32Array([currentPos[1]]),
-          version: 0
-        },
-        COLORS.highlightPoint, // Use highlight color for the dot
-        DOT_SIZE
-      );
-
+      renderer.render(webGl);
     });
   }, [engine]);
 
@@ -165,6 +112,8 @@ export function VectorFieldVisualization(): React.JSX.Element {
           onPositionChange={handleDrag}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          xDomain={X_DOMAIN}
+          yDomain={Y_DOMAIN}
         />
         <ViewControls>
           <ViewControlsGroup>

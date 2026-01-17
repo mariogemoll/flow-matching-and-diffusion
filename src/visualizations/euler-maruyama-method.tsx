@@ -1,9 +1,9 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 
 import { X_DOMAIN, Y_DOMAIN } from '../constants';
 import {
   demoVectorField,
-  demoVectorFieldBatch,
   demoVectorFieldTrajectory,
   randomStartPos
 } from '../math/demo-vector-field';
@@ -11,10 +11,6 @@ import { fillWithSamplesFromStdGaussian } from '../math/gaussian';
 import { eulerMaruyamaTrajectory } from '../math/vector-field';
 import type { Point2D, Points2D, Trajectories } from '../types';
 import { makePoints2D } from '../util/points';
-import { interpolateTrajectory } from '../util/trajectories';
-import { createLineRenderer, type LineRenderer } from '../webgl/renderers/line';
-import { createPointRenderer, type PointRenderer } from '../webgl/renderers/point';
-import { createThickLineRenderer, type ThickLineRenderer } from '../webgl/renderers/thick-line';
 import { Button } from './components/button';
 import { Checkbox } from './components/checkbox';
 import { ViewContainer, ViewControls, ViewControlsGroup } from './components/layout';
@@ -22,19 +18,16 @@ import { PointerCanvas, type PointerCanvasHandle } from './components/pointer-ca
 import { Slider } from './components/slider';
 import { SpeedControl } from './components/speed-control';
 import { TimelineControls } from './components/timeline-controls';
-import { COLORS, DOT_SIZE, THICK_LINE_THICKNESS } from './constants';
 import { type Model, useEngine } from './engine';
 import { VisualizationProvider } from './provider';
 import { mountVisualization } from './react-root';
 import { clear } from './webgl';
-import { drawVectorField } from './webgl/vector-field';
+import {
+  createEulerMaruyamaMethodRenderer,
+  type EulerMaruyamaMethodRenderer
+} from './webgl/euler-maruyama-method';
 
-const DEFAULT_EULER_MARUYAMA_STEPS = 60;
-const MAX_EULER_MARUYAMA_STEPS = 300;
-const DEFAULT_SIGMA = 0.15;
-const MAX_SIGMA = 2;
-
-export interface EulerMaruyamaMethodState {
+interface EulerMaruyamaMethodState {
   startPos: Point2D;
   deterministicTrajectory: Trajectories;
   stochasticTrajectory: Trajectories;
@@ -45,7 +38,9 @@ export interface EulerMaruyamaMethodState {
   showStochastic: boolean;
 }
 
-export interface EulerMaruyamaMethodActions {
+export type { EulerMaruyamaMethodState };
+
+interface EulerMaruyamaMethodActions {
   regenerate: () => void;
   regenerateNoise: () => void;
   setTrajectoryStart: (pos: Point2D) => void;
@@ -54,6 +49,13 @@ export interface EulerMaruyamaMethodActions {
   setShowDeterministic: (show: boolean) => void;
   setShowStochastic: (show: boolean) => void;
 }
+
+export type { EulerMaruyamaMethodActions };
+
+const DEFAULT_EULER_MARUYAMA_STEPS = 60;
+const MAX_EULER_MARUYAMA_STEPS = 300;
+const DEFAULT_SIGMA = 0.15;
+const MAX_SIGMA = 2;
 
 function createTrajectories(
   startPos: Point2D,
@@ -187,9 +189,8 @@ export function EulerMaruyamaMethodVisualization(
 ): React.JSX.Element {
   const engine = useEngine<EulerMaruyamaMethodState, EulerMaruyamaMethodActions>();
   const pointerCanvasRef = useRef<PointerCanvasHandle>(null);
-  const lineRendererRef = useRef<LineRenderer | null>(null);
-  const thickLineRendererRef = useRef<ThickLineRenderer | null>(null);
-  const pointRendererRef = useRef<PointRenderer | null>(null);
+  const rendererRef = useRef<EulerMaruyamaMethodRenderer | null>(null);
+
   const [showDeterministic, setShowDeterministic] = useState(
     engine.frame.state.showDeterministic
   );
@@ -205,76 +206,12 @@ export function EulerMaruyamaMethodVisualization(
       const webGl = pointerCanvasRef.current?.webGl;
       if (!webGl) { return; }
 
-      if (lineRendererRef.current?.gl !== webGl.gl) {
-        if (lineRendererRef.current) { lineRendererRef.current.destroy(); }
-        lineRendererRef.current = createLineRenderer(webGl.gl);
-      }
-      const lineRenderer = lineRendererRef.current;
+      rendererRef.current ??= createEulerMaruyamaMethodRenderer(webGl.gl);
+      const renderer = rendererRef.current;
 
-      if (thickLineRendererRef.current?.gl !== webGl.gl) {
-        if (thickLineRendererRef.current) { thickLineRendererRef.current.destroy(); }
-        thickLineRendererRef.current = createThickLineRenderer(webGl.gl);
-      }
-      const thickLineRenderer = thickLineRendererRef.current;
-
-      if (pointRendererRef.current?.gl !== webGl.gl) {
-        if (pointRendererRef.current) { pointRendererRef.current.destroy(); }
-        pointRendererRef.current = createPointRenderer(webGl.gl);
-      }
-      const pointRenderer = pointRendererRef.current;
-
+      renderer.update(frame);
       clear(webGl);
-      drawVectorField(
-        lineRenderer,
-        webGl.dataToClipMatrix,
-        demoVectorFieldBatch,
-        X_DOMAIN,
-        Y_DOMAIN,
-        frame.clock.t,
-        undefined,
-        COLORS.vectorField
-      );
-
-      const {
-        deterministicTrajectory,
-        stochasticTrajectory,
-        showDeterministic,
-        showStochastic
-      } = frame.state;
-
-      if (showDeterministic && deterministicTrajectory.count > 0) {
-        thickLineRenderer.renderThickTrajectories(
-          webGl.dataToClipMatrix,
-          deterministicTrajectory,
-          COLORS.singleTrajectorySecondary,
-          THICK_LINE_THICKNESS,
-          1.0
-        );
-      }
-
-      if (showStochastic && stochasticTrajectory.count > 0) {
-        thickLineRenderer.renderThickTrajectories(
-          webGl.dataToClipMatrix,
-          stochasticTrajectory,
-          COLORS.singleTrajectory,
-          THICK_LINE_THICKNESS,
-          1.0
-        );
-      }
-
-      if (stochasticTrajectory.count > 0) {
-        const currentPos = interpolateTrajectory(stochasticTrajectory, 0, frame.clock.t);
-        pointRenderer.render(
-          webGl.dataToClipMatrix,
-          {
-            xs: new Float32Array([currentPos[0]]),
-            ys: new Float32Array([currentPos[1]]),
-            version: 0
-          },
-          COLORS.highlightPoint,
-          DOT_SIZE
-        );
-      }
+      renderer.render(webGl);
     });
   }, [engine]);
 
@@ -325,6 +262,8 @@ export function EulerMaruyamaMethodVisualization(
           onPositionChange={handleDrag}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
+          xDomain={X_DOMAIN}
+          yDomain={Y_DOMAIN}
         />
         <ViewControls>
           <ViewControlsGroup>

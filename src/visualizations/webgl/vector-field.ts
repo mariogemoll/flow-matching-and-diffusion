@@ -1,6 +1,18 @@
+import {
+  X_DOMAIN,
+  Y_DOMAIN
+} from '../../constants';
+import { demoVectorFieldBatch } from '../../math/demo-vector-field';
 import type { Pair, Point2D, Points2D, RGBA } from '../../types';
-import type { LineRenderer } from '../../webgl/renderers/line';
-import { COLORS } from '../constants';
+import { interpolateTrajectory } from '../../util/trajectories';
+import type { WebGl } from '../../webgl';
+import { createLineRenderer, type LineRenderer } from '../../webgl/renderers/line';
+import { createPointRenderer } from '../../webgl/renderers/point';
+import { createThickLineRenderer } from '../../webgl/renderers/thick-line';
+import { COLORS, DOT_SIZE, THICK_LINE_THICKNESS } from '../constants';
+import type { Frame } from '../engine';
+import type { VectorFieldState } from '../vector-field';
+import type { WebGlRenderer } from './types';
 
 
 type LineSegment = [Point2D, Point2D];
@@ -151,4 +163,81 @@ export function drawVectorField(
   if (segments.length === 0) { return; }
 
   lineRenderer.renderPolylines(dataToClipMatrix, segments, arrowColor);
+}
+
+export interface VectorFieldRenderer extends WebGlRenderer<VectorFieldState> {
+  // Currently empty, but kept for consistency and future extensibility
+  _placeholder?: never;
+}
+
+export function createVectorFieldRenderer(gl: WebGLRenderingContext): VectorFieldRenderer {
+  const lineRenderer = createLineRenderer(gl);
+  const thickLineRenderer = createThickLineRenderer(gl);
+  const pointRenderer = createPointRenderer(gl);
+
+  let state: VectorFieldState | null = null;
+  let t = 0;
+
+  // Scratch buffer for point
+  const pointBuffer = {
+    xs: new Float32Array(1),
+    ys: new Float32Array(1),
+    version: 0
+  };
+
+  function update(frame: Frame<VectorFieldState>): boolean {
+    state = frame.state;
+    t = frame.clock.t;
+    return true;
+  }
+
+  function render(webGl: WebGl): void {
+    if (!state) { return; }
+
+    drawVectorField(
+      lineRenderer,
+      webGl.dataToClipMatrix,
+      demoVectorFieldBatch,
+      X_DOMAIN,
+      Y_DOMAIN,
+      t,
+      undefined,
+      COLORS.vectorField
+    );
+
+    const { trajectory, showTrajectory } = state;
+    if (trajectory.count === 0) { return; }
+
+    if (showTrajectory) {
+      thickLineRenderer.renderThickTrajectories(
+        webGl.dataToClipMatrix,
+        trajectory,
+        COLORS.singleTrajectory,
+        THICK_LINE_THICKNESS,
+        1.0
+      );
+    }
+
+    const currentPos = interpolateTrajectory(trajectory, 0, t);
+    pointBuffer.xs[0] = currentPos[0];
+    pointBuffer.ys[0] = currentPos[1];
+    pointBuffer.version++;
+
+    pointRenderer.render(
+      webGl.dataToClipMatrix,
+      pointBuffer,
+      COLORS.highlightPoint,
+      DOT_SIZE
+    );
+  }
+
+  function destroy(): void {
+    // no explicit cleanup
+  }
+
+  return {
+    update,
+    render,
+    destroy
+  };
 }

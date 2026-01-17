@@ -4,17 +4,8 @@ import {
   X_DOMAIN,
   Y_DOMAIN
 } from '../../../constants';
-import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
-import type { AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import { type SigmaScheduleName } from '../../../math/schedules/sigma';
-import { createSdeNoises, type SdeNoises } from '../../../math/sde';
-import { writeSdeTrajectories, writeSdeTrajectoriesHeun } from '../../../math/std-gaussian-to-gmm';
-import type { Points2D, Trajectories } from '../../../types';
-import { makePoints2D } from '../../../util/points';
-import { interpolateTrajectory, makeTrajectories } from '../../../util/trajectories';
 import { clearWebGl, type WebGl } from '../../../webgl';
-import { createLineRenderer, type LineRenderer } from '../../../webgl/renderers/line';
-import { createPointRenderer, type PointRenderer } from '../../../webgl/renderers/point';
 import { EllipsisToggle } from '../../components/ellipsis-toggle';
 import { ViewContainer, ViewControls } from '../../components/layout';
 import { MaxSigmaSlider } from '../../components/max-sigma-slider';
@@ -31,19 +22,11 @@ import {
   COLORS,
   DEFAULT_MAX_SIGMA,
   DEFAULT_NUM_SDE_STEPS,
-  DEFAULT_SIGMA_SCHEDULE,
-  MAX_NUM_SAMPLES,
-  MAX_NUM_SDE_STEPS,
-  POINT_SIZE
+  DEFAULT_SIGMA_SCHEDULE
 } from '../../constants';
 import { useEngine } from '../../engine';
+import { createMargSdeRenderer, type MargSdeRenderer } from '../../webgl/marginal/sde';
 import type { MargPathActions, MargPathState } from '../index';
-
-function createGaussianSamples(count: number): Points2D {
-  const points = makePoints2D(count);
-  fillWithSamplesFromStdGaussian(points);
-  return points;
-}
 
 export interface MargSdeViewProps {
   compact?: boolean;
@@ -57,77 +40,50 @@ export function MargSdeView({
   const engine = useEngine<MargPathState, MargPathActions>();
 
   const webGlRef = useRef<WebGl | null>(null);
-  const lineRendererRef = useRef<LineRenderer | null>(null);
-  const pointRendererRef = useRef<PointRenderer | null>(null);
+  const rendererRef = useRef<MargSdeRenderer | null>(null);
 
   // Local UI state
   const [showSdeTrajectories, setShowSdeTrajectories] = useState(true);
   const [showSamples, setShowSamples] = useState(true);
+  const [useHeun, setUseHeun] = useState(initialUseHeun);
+
   const [sigmaSchedule, setSigmaSchedule] = useState<SigmaScheduleName>(DEFAULT_SIGMA_SCHEDULE);
   const [sdeNumSteps, setSdeNumSteps] = useState(DEFAULT_NUM_SDE_STEPS);
   const [maxSigma, setMaxSigma] = useState(DEFAULT_MAX_SIGMA);
-  const [useHeun, setUseHeun] = useState(initialUseHeun);
   const [showAdditionalControls, setShowAdditionalControls] = useState(false);
 
   const paramsRef = useRef({
     showSdeTrajectories,
     showSamples,
+    useHeun,
     sigmaSchedule,
     sdeNumSteps,
-    maxSigma,
-    useHeun,
-    numSamples: engine.frame.state.numSamples,
-    recalcRequested: true
+    maxSigma
   });
-
-  const samplePoolRef = useRef<Points2D>(createGaussianSamples(MAX_NUM_SAMPLES));
-  const noisesRef = useRef<SdeNoises>(createSdeNoises(MAX_NUM_SAMPLES, MAX_NUM_SDE_STEPS));
-  const trajectoriesRef = useRef<Trajectories | null>(null);
-  const currentPointsRef = useRef<Points2D>(makePoints2D(MAX_NUM_SAMPLES));
-  const velocityRef = useRef<Points2D>(makePoints2D(MAX_NUM_SAMPLES));
-  const scoreRef = useRef<Points2D>(makePoints2D(MAX_NUM_SAMPLES));
 
   // Sync local UI state into ref and trigger render
   useEffect(() => {
     paramsRef.current.showSdeTrajectories = showSdeTrajectories;
     paramsRef.current.showSamples = showSamples;
+    paramsRef.current.useHeun = useHeun;
+    paramsRef.current.sigmaSchedule = sigmaSchedule;
+    paramsRef.current.sdeNumSteps = sdeNumSteps;
+    paramsRef.current.maxSigma = maxSigma;
 
-    // If SDE settings changed, request recalc
-    if (
-      paramsRef.current.sigmaSchedule !== sigmaSchedule ||
-      paramsRef.current.sdeNumSteps !== sdeNumSteps ||
-      paramsRef.current.maxSigma !== maxSigma ||
-      paramsRef.current.useHeun !== useHeun
-    ) {
-      paramsRef.current.sigmaSchedule = sigmaSchedule;
-      paramsRef.current.sdeNumSteps = sdeNumSteps;
-      paramsRef.current.maxSigma = maxSigma;
-      paramsRef.current.useHeun = useHeun;
-      paramsRef.current.recalcRequested = true;
+    // Trigger re-render if needed
+    if (rendererRef.current) {
+      rendererRef.current.setUseHeun(useHeun);
+      engine.renderOnce();
     }
-
-    if (paramsRef.current.numSamples !== engine.frame.state.numSamples) {
-      paramsRef.current.numSamples = engine.frame.state.numSamples;
-      paramsRef.current.recalcRequested = true;
-    }
-    engine.renderOnce();
   }, [
     showSdeTrajectories,
     showSamples,
+    useHeun,
     sigmaSchedule,
     sdeNumSteps,
     maxSigma,
-    useHeun,
-    engine.frame.state.numSamples,
     engine
   ]);
-
-  // Track last state used for trajectory computation
-  const lastScheduleRef = useRef<AlphaBetaScheduleName>(engine.frame.state.schedule);
-  const lastNumSamplesRef = useRef<number>(engine.frame.state.numSamples);
-  const lastComponentsRef = useRef<typeof engine.frame.state.components>(
-    engine.frame.state.components
-  );
 
   // Register render loop
   useEffect(() => {
@@ -135,130 +91,36 @@ export function MargSdeView({
       const webGl = webGlRef.current;
       if (!webGl) { return; }
 
-      if (lineRendererRef.current?.gl !== webGl.gl) {
-        lineRendererRef.current = createLineRenderer(webGl.gl);
-      }
-      if (pointRendererRef.current?.gl !== webGl.gl) {
-        pointRendererRef.current = createPointRenderer(webGl.gl);
-      }
-
+      // Pass initial useHeun to constructor if needed, or set it immediately
+      rendererRef.current ??= createMargSdeRenderer(webGl.gl, paramsRef.current.useHeun);
+      const renderer = rendererRef.current;
       const params = paramsRef.current;
 
-      // Detect state changes that require recomputing trajectories
-      if (
-        frame.state.schedule !== lastScheduleRef.current ||
-        frame.state.numSamples !== lastNumSamplesRef.current ||
-        frame.state.components !== lastComponentsRef.current
-      ) {
-        lastScheduleRef.current = frame.state.schedule;
-        lastNumSamplesRef.current = frame.state.numSamples;
-        lastComponentsRef.current = frame.state.components;
-        params.numSamples = frame.state.numSamples;
-        params.recalcRequested = true;
-      }
+      renderer.setShowSdeTrajectories(params.showSdeTrajectories);
+      renderer.setShowSamples(params.showSamples);
+      renderer.setSigmaSchedule(params.sigmaSchedule);
+      renderer.setSdeNumSteps(params.sdeNumSteps);
+      renderer.setMaxSigma(params.maxSigma);
+      renderer.setUseHeun(params.useHeun);
 
-      if (params.recalcRequested) {
-        const n = params.numSamples;
-        const pointsPerTrajectory = params.sdeNumSteps + 1;
-
-        if (
-          trajectoriesRef.current?.count !== n ||
-          trajectoriesRef.current.pointsPerTrajectory !== pointsPerTrajectory
-        ) {
-          trajectoriesRef.current = makeTrajectories(pointsPerTrajectory, n);
-        }
-
-        const writeTrajectories = params.useHeun
-          ? writeSdeTrajectoriesHeun
-          : writeSdeTrajectories;
-
-        writeTrajectories(
-          samplePoolRef.current,
-          noisesRef.current,
-          frame.state.schedule,
-          params.sigmaSchedule,
-          frame.state.components,
-          params.numSamples,
-          params.sdeNumSteps,
-          params.maxSigma,
-          trajectoriesRef.current,
-          currentPointsRef.current,
-          velocityRef.current,
-          scoreRef.current
-        );
-        params.recalcRequested = false;
-      }
-
-      // Draw
+      renderer.update(frame);
       clearWebGl(webGl, COLORS.background);
-
-      if (
-        params.showSdeTrajectories &&
-        trajectoriesRef.current &&
-        trajectoriesRef.current.count > 0
-      ) {
-        lineRendererRef.current.renderTrajectories(
-          webGl.dataToClipMatrix,
-          trajectoriesRef.current,
-          COLORS.trajectory
-        );
-      }
-
-      // Draw moving dots along trajectories at current time
-      if (
-        params.showSamples &&
-        trajectoriesRef.current &&
-        trajectoriesRef.current.count > 0
-      ) {
-        const traj = trajectoriesRef.current;
-        const numSamples = params.numSamples;
-        const interpolatedPoints = makePoints2D(numSamples);
-
-        if (frame.clock.t >= 0.99) {
-          console.log(
-            't=', frame.clock.t,
-            'traj.count=', traj.count,
-            'numSamples=', numSamples,
-            'ppt=', traj.pointsPerTrajectory
-          );
-        }
-
-        for (let i = 0; i < numSamples; i++) {
-          const [px, py] = interpolateTrajectory(traj, i, frame.clock.t);
-          interpolatedPoints.xs[i] = px;
-          interpolatedPoints.ys[i] = py;
-        }
-
-        if (frame.clock.t >= 0.99) {
-          console.log('First point:', interpolatedPoints.xs[0], interpolatedPoints.ys[0]);
-        }
-
-        pointRendererRef.current.render(
-          webGl.dataToClipMatrix,
-          interpolatedPoints,
-          COLORS.point,
-          POINT_SIZE,
-          numSamples
-        );
-      }
+      renderer.render(webGl);
     });
   }, [engine]);
 
   const handleResample = (): void => {
-    fillWithSamplesFromStdGaussian(samplePoolRef.current);
-    // Regenerate the noise pool content
-    const noises = noisesRef.current;
-    fillWithSamplesFromStdGaussian(noises);
-    paramsRef.current.recalcRequested = true;
-    engine.renderOnce();
+    if (rendererRef.current) {
+      rendererRef.current.resample();
+      engine.renderOnce();
+    }
   };
 
   const handleResampleNoise = (): void => {
-    // Regenerate just the noise pool content
-    const noises = noisesRef.current;
-    fillWithSamplesFromStdGaussian(noises);
-    paramsRef.current.recalcRequested = true;
-    engine.renderOnce();
+    if (rendererRef.current) {
+      rendererRef.current.resampleNoise();
+      engine.renderOnce();
+    }
   };
 
   const checkboxControls = (
