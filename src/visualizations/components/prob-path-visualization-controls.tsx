@@ -20,7 +20,13 @@ export interface ProbPathActions {
   setNumSamples: (n: number) => void;
 }
 
-export function ProbPathVisualizationControls(): React.ReactElement {
+export interface ProbPathVisualizationControlsProps {
+  children?: React.ReactNode;
+}
+
+export function ProbPathVisualizationControls({
+  children
+}: ProbPathVisualizationControlsProps = {}): React.ReactElement {
   const engine = useEngine<ProbPathParams, ProbPathActions>();
   const { state } = engine.frame;
 
@@ -52,6 +58,7 @@ export function ProbPathVisualizationControls(): React.ReactElement {
             }}
           />
           <SpeedControl />
+          {children}
         </>
       ) : null}
       <EllipsisToggle

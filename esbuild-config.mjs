@@ -17,11 +17,13 @@ const config = {
     'process.env.NODE_ENV': isWatch ? '"development"' : '"production"'
   },
   external: [
+    'file-saver',
+    'jszip',
     'react',
     'react-dom',
     'react-dom/client',
-    'react/jsx-runtime',
-    'react/jsx-dev-runtime'
+    'react/jsx-dev-runtime',
+    'react/jsx-runtime'
   ],
   loader: {
     '.glsl': 'text',

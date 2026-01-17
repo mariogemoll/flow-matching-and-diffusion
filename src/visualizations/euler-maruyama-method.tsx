@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 
 import { X_DOMAIN, Y_DOMAIN } from '../constants';
@@ -13,12 +12,14 @@ import type { Point2D, Points2D, Trajectories } from '../types';
 import { makePoints2D } from '../util/points';
 import { Button } from './components/button';
 import { Checkbox } from './components/checkbox';
+import { EllipsisToggle } from './components/ellipsis-toggle';
+import { FrameExporter } from './components/frame-exporter';
 import { ViewContainer, ViewControls, ViewControlsGroup } from './components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from './components/pointer-canvas';
 import { Slider } from './components/slider';
 import { SpeedControl } from './components/speed-control';
 import { TimelineControls } from './components/timeline-controls';
-import { type Model, useEngine } from './engine';
+import { type Frame, type Model, useEngine } from './engine';
 import { VisualizationProvider } from './provider';
 import { mountVisualization } from './react-root';
 import { clear } from './webgl';
@@ -180,6 +181,34 @@ export const eulerMaruyamaMethodModel: Model<
   })
 };
 
+const eulerMaruyamaViewExporter = {
+  name: 'frames',
+  createRenderer: createEulerMaruyamaMethodRenderer,
+  configureRenderer: (): void => { /* no configuration needed */ }
+};
+
+function createFrame(
+  t: number,
+  state: EulerMaruyamaMethodState
+): Frame<EulerMaruyamaMethodState> {
+  return {
+    state: { ...state },
+    clock: { t, playing: true, speed: 1, scrubbing: false, loopPause: 0 }
+  };
+}
+
+function EulerMaruyamaMethodFrameExporter(): React.ReactElement {
+  const engine = useEngine<EulerMaruyamaMethodState, EulerMaruyamaMethodActions>();
+
+  return (
+    <FrameExporter<EulerMaruyamaMethodState>
+      view={eulerMaruyamaViewExporter}
+      state={engine.frame.state}
+      createFrame={createFrame}
+    />
+  );
+}
+
 interface EulerMaruyamaMethodVisualizationProps {
   withTimeline?: boolean;
 }
@@ -199,6 +228,7 @@ export function EulerMaruyamaMethodVisualization(
   );
   const [numSteps, setNumSteps] = useState(engine.frame.state.numSteps);
   const [sigma, setSigma] = useState(engine.frame.state.sigma);
+  const [showAdditionalControls, setShowAdditionalControls] = useState(false);
   const wasPlayingRef = useRef(false);
 
   useEffect(() => {
@@ -298,6 +328,13 @@ export function EulerMaruyamaMethodVisualization(
               formatValue={(v): string => v.toFixed(2)}
             />
             <SpeedControl />
+            {showAdditionalControls ? (
+              <EulerMaruyamaMethodFrameExporter />
+            ) : null}
+            <EllipsisToggle
+              expanded={showAdditionalControls}
+              onToggle={() => { setShowAdditionalControls((current) => !current); }}
+            />
           </ViewControlsGroup>
         </ViewControls>
       </ViewContainer>

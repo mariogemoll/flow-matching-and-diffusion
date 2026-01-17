@@ -6,7 +6,7 @@ import { Slider } from './slider';
 
 type ButtonBaseProps = Pick<
   React.ComponentProps<typeof Button>,
-  'onClick' | 'className' | 'style'
+  'onClick' | 'className'
 >;
 
 export function ResampleButton(props: ButtonBaseProps): React.ReactElement {

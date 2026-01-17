@@ -14,6 +14,7 @@ import {
 } from '../constants';
 import { type Model } from '../engine';
 import { VisualizationProvider } from '../provider';
+import { ConditionalFrameExporter } from './frame-exporter';
 
 export interface CondPathViewConfig {
   sampleFrequency: number;
@@ -113,7 +114,9 @@ export function CondPathVisualization({
       <div className="row">
         {children}
       </div>
-      <ProbPathVisualizationControls />
+      <ProbPathVisualizationControls>
+        <ConditionalFrameExporter />
+      </ProbPathVisualizationControls>
       <TimelineControls />
     </VisualizationProvider>
   );

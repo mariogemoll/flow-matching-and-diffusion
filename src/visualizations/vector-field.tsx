@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 
 import { X_DOMAIN, Y_DOMAIN } from '../constants';
@@ -8,11 +7,13 @@ import {
 } from '../math/demo-vector-field';
 import type { Point2D, Trajectories } from '../types';
 import { Checkbox } from './components/checkbox';
+import { EllipsisToggle } from './components/ellipsis-toggle';
+import { FrameExporter } from './components/frame-exporter';
 import { ViewContainer, ViewControls, ViewControlsGroup } from './components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from './components/pointer-canvas';
 import { SpeedControl } from './components/speed-control';
 import { TimelineControls } from './components/timeline-controls';
-import { type Model, useEngine } from './engine';
+import { type Frame, type Model, useEngine } from './engine';
 import { VisualizationProvider } from './provider';
 import { mountVisualization } from './react-root';
 import { clear } from './webgl';
@@ -58,12 +59,38 @@ export const vectorFieldModel: Model<VectorFieldState, VectorFieldActions> = {
 };
 
 
+const vectorFieldViewExporter = {
+  name: 'frames',
+  createRenderer: createVectorFieldRenderer,
+  configureRenderer: (): void => { /* no configuration needed */ }
+};
+
+function createFrame(t: number, state: VectorFieldState): Frame<VectorFieldState> {
+  return {
+    state: { ...state },
+    clock: { t, playing: true, speed: 1, scrubbing: false, loopPause: 0 }
+  };
+}
+
+function VectorFieldFrameExporter(): React.ReactElement {
+  const engine = useEngine<VectorFieldState, VectorFieldActions>();
+
+  return (
+    <FrameExporter<VectorFieldState>
+      view={vectorFieldViewExporter}
+      state={engine.frame.state}
+      createFrame={createFrame}
+    />
+  );
+}
+
 export function VectorFieldVisualization(): React.JSX.Element {
   const engine = useEngine<VectorFieldState, VectorFieldActions>();
   const pointerCanvasRef = useRef<PointerCanvasHandle>(null);
   const rendererRef = useRef<VectorFieldRenderer | null>(null);
 
   const [showTrajectory, setShowTrajectory] = useState(engine.frame.state.showTrajectory);
+  const [showAdditionalControls, setShowAdditionalControls] = useState(false);
   const wasPlayingRef = useRef(false);
 
   // Register draw function
@@ -123,6 +150,13 @@ export function VectorFieldVisualization(): React.JSX.Element {
               onChange={handleShowTrajectoryChange}
             />
             <SpeedControl />
+            {showAdditionalControls ? (
+              <VectorFieldFrameExporter />
+            ) : null}
+            <EllipsisToggle
+              expanded={showAdditionalControls}
+              onToggle={() => { setShowAdditionalControls((current) => !current); }}
+            />
           </ViewControlsGroup>
         </ViewControls>
       </ViewContainer>
@@ -131,7 +165,6 @@ export function VectorFieldVisualization(): React.JSX.Element {
   );
 }
 
-/* ------------------------------ Mount Function ------------------------------ */
 
 export function initVectorFieldVisualization(container: HTMLElement): () => void {
   const name = 'vector';

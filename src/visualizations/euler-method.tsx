@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 
 import { X_DOMAIN, Y_DOMAIN } from '../constants';
@@ -10,12 +9,14 @@ import {
 import { eulerMethodTrajectory } from '../math/vector-field';
 import type { Point2D, Trajectories } from '../types';
 import { Checkbox } from './components/checkbox';
+import { EllipsisToggle } from './components/ellipsis-toggle';
+import { FrameExporter } from './components/frame-exporter';
 import { ViewContainer, ViewControls, ViewControlsGroup } from './components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from './components/pointer-canvas';
 import { Slider } from './components/slider';
 import { SpeedControl } from './components/speed-control';
 import { TimelineControls } from './components/timeline-controls';
-import { type Model, useEngine } from './engine';
+import { type Frame, type Model, useEngine } from './engine';
 import { VisualizationProvider } from './provider';
 import { mountVisualization } from './react-root';
 import { clear } from './webgl';
@@ -117,6 +118,31 @@ export const eulerMethodModel: Model<EulerMethodState, EulerMethodActions> = {
 };
 
 
+const eulerMethodViewExporter = {
+  name: 'frames',
+  createRenderer: createEulerMethodRenderer,
+  configureRenderer: (): void => { /* no configuration needed */ }
+};
+
+function createFrame(t: number, state: EulerMethodState): Frame<EulerMethodState> {
+  return {
+    state: { ...state },
+    clock: { t, playing: true, speed: 1, scrubbing: false, loopPause: 0 }
+  };
+}
+
+function EulerMethodFrameExporter(): React.ReactElement {
+  const engine = useEngine<EulerMethodState, EulerMethodActions>();
+
+  return (
+    <FrameExporter<EulerMethodState>
+      view={eulerMethodViewExporter}
+      state={engine.frame.state}
+      createFrame={createFrame}
+    />
+  );
+}
+
 export function EulerMethodVisualization(): React.JSX.Element {
   const engine = useEngine<EulerMethodState, EulerMethodActions>();
   const pointerCanvasRef = useRef<PointerCanvasHandle>(null);
@@ -125,6 +151,7 @@ export function EulerMethodVisualization(): React.JSX.Element {
   const [showGroundTruth, setShowGroundTruth] = useState(engine.frame.state.showGroundTruth);
   const [showEuler, setShowEuler] = useState(engine.frame.state.showEuler);
   const [numSteps, setNumSteps] = useState(engine.frame.state.numSteps);
+  const [showAdditionalControls, setShowAdditionalControls] = useState(false);
   const wasPlayingRef = useRef(false);
 
   // Register draw function
@@ -208,6 +235,13 @@ export function EulerMethodVisualization(): React.JSX.Element {
               onChange={handleNumStepsChange}
             />
             <SpeedControl />
+            {showAdditionalControls ? (
+              <EulerMethodFrameExporter />
+            ) : null}
+            <EllipsisToggle
+              expanded={showAdditionalControls}
+              onToggle={() => { setShowAdditionalControls((current) => !current); }}
+            />
           </ViewControlsGroup>
         </ViewControls>
       </ViewContainer>

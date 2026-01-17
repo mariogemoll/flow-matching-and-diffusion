@@ -46,7 +46,7 @@ export function TimelineControls(): React.ReactElement {
 
   return (
     <div className="time-slider">
-      <button onClick={toggle} style={{ minWidth: '30px', padding: '0 4px' }}>
+      <button onClick={toggle}>
         {playing ? '⏸' : '▶'}
       </button>
       <input
@@ -58,9 +58,9 @@ export function TimelineControls(): React.ReactElement {
         onPointerDown={scrubStart}
         onPointerUp={scrubEnd}
         onChange={(e) => { scrub(e.target.value); }}
-        style={{ flex: 1, '--progress': `${(scrubT * 100).toFixed(1)}%` } as React.CSSProperties}
+        style={{ '--progress': `${(scrubT * 100).toFixed(1)}%` } as React.CSSProperties}
       />
-      <span style={{ minWidth: '45px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+      <span>
         {scrubT.toFixed(2)}
       </span>
     </div>

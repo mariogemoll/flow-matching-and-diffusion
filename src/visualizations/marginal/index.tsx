@@ -15,6 +15,7 @@ import {
 } from '../constants';
 import { type Model } from '../engine';
 import { VisualizationProvider } from '../provider';
+import { MarginalFrameExporter } from './frame-exporter';
 
 export interface MargPathViewConfig {
   showPdf: boolean;
@@ -151,7 +152,9 @@ export function MarginalPathVisualization({
       <div className="row">
         {children}
       </div>
-      <ProbPathVisualizationControls />
+      <ProbPathVisualizationControls>
+        <MarginalFrameExporter />
+      </ProbPathVisualizationControls>
       <TimelineControls />
     </VisualizationProvider>
   );
