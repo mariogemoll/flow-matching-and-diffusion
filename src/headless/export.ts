@@ -2,20 +2,15 @@ import saveAs from 'file-saver';
 import JSZip from 'jszip';
 
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../constants';
+import { DEFAULT_NUM_EXPORT_FRAMES } from '../visualizations/constants';
 import type { Frame } from '../visualizations/engine';
 import type { WebGlRenderer } from '../visualizations/webgl/types';
 import { HeadlessRunner } from './runner';
 
-const NUM_FRAMES = 300;
-
-type BivariantCallback<Args extends unknown[], Result> = {
-  bivarianceHack(...args: Args): Result;
-}['bivarianceHack'];
-
 export interface ViewExportConfig<S, R extends WebGlRenderer<S> = WebGlRenderer<S>> {
   name: string;
   createRenderer: (gl: WebGLRenderingContext) => R;
-  configureRenderer: BivariantCallback<[R, S], void>;
+  configureRenderer(renderer: R, state: S): void;
 }
 
 export interface ExportOptions<S> {
@@ -24,6 +19,7 @@ export interface ExportOptions<S> {
   createFrame: (t: number, state: S) => Frame<S>;
   fileName: string;
   onProgress: (progress: ExportProgress) => void;
+  numFrames?: number;
   pixelRatio?: number;
 }
 
@@ -40,13 +36,13 @@ export async function exportViews<S>(options: ExportOptions<S>): Promise<void> {
     state,
     createFrame,
     fileName,
+    numFrames = DEFAULT_NUM_EXPORT_FRAMES,
     onProgress,
     pixelRatio = 1
   } = options;
 
   const width = CANVAS_WIDTH;
   const height = CANVAS_HEIGHT;
-  const numFrames = NUM_FRAMES;
 
   const zip = new JSZip();
   const canvas = document.createElement('canvas');
@@ -97,12 +93,13 @@ export async function exportViews<S>(options: ExportOptions<S>): Promise<void> {
 
 export interface SingleViewExportOptions<S, R extends WebGlRenderer<S> = WebGlRenderer<S>> {
   createRenderer: (gl: WebGLRenderingContext) => R;
-  configureRenderer?: BivariantCallback<[R, S], void>;
   state: S;
   createFrame: (t: number, state: S) => Frame<S>;
   fileName: string;
+  numFrames?: number;
   onProgress: (progress: ExportProgress) => void;
   pixelRatio?: number;
+  configureRenderer?(renderer: R, state: S): void;
 }
 
 export async function exportSingleView<S, R extends WebGlRenderer<S>>(
@@ -110,25 +107,24 @@ export async function exportSingleView<S, R extends WebGlRenderer<S>>(
 ): Promise<void> {
   const {
     createRenderer,
-    configureRenderer,
     state,
     createFrame,
     fileName,
+    numFrames = DEFAULT_NUM_EXPORT_FRAMES,
     onProgress,
     pixelRatio = 1
   } = options;
 
   const width = CANVAS_WIDTH;
   const height = CANVAS_HEIGHT;
-  const numFrames = NUM_FRAMES;
 
   const zip = new JSZip();
   const canvas = document.createElement('canvas');
 
   const runner = new HeadlessRunner(canvas, width, height, pixelRatio);
   const renderer = createRenderer(runner.getGl());
-  if (configureRenderer) {
-    configureRenderer(renderer, state);
+  if (options.configureRenderer) {
+    options.configureRenderer(renderer, state);
   }
 
   await runner.run({

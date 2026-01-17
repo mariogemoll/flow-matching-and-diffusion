@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { type ExportProgress, exportViews, type ViewExportConfig } from '../../headless/export';
 import type { Frame } from '../engine';
 import { Button } from './button';
+import { ExportConfigModal } from './export-config-modal';
 
 export interface MultiViewFrameExporterProps<S> {
   views: ViewExportConfig<S>[];
@@ -22,8 +23,9 @@ export function MultiViewFrameExporter<S>({
     phase: 'rendering',
     percent: 0
   });
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleExport = async(): Promise<void> => {
+  const handleExport = async(numFrames: number): Promise<void> => {
     setIsExporting(true);
     setProgress({ phase: 'rendering', percent: 0 });
 
@@ -33,6 +35,7 @@ export function MultiViewFrameExporter<S>({
         state,
         createFrame,
         fileName,
+        numFrames,
         onProgress: setProgress
       });
     } catch (e) {
@@ -44,11 +47,19 @@ export function MultiViewFrameExporter<S>({
   };
 
   return (
-    <Button onClick={() => { void handleExport(); }} disabled={isExporting}>
-      {isExporting
-        ? `${progress.phase === 'rendering' ? 'Rendering' : 'Zipping'}... ` +
-          `${String(progress.percent)}%`
-        : 'Export frames'}
-    </Button>
+    <>
+      <Button onClick={() => { setIsModalOpen(true); }} disabled={isExporting}>
+        {isExporting
+          ? `${progress.phase === 'rendering' ? 'Rendering' : 'Zipping'}... ` +
+            `${String(progress.percent)}%`
+          : 'Export frames'}
+      </Button>
+
+      <ExportConfigModal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); }}
+        onConfirm={(config) => { void handleExport(config.numFrames); }}
+      />
+    </>
   );
 }

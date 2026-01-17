@@ -34,3 +34,5 @@ export const DEFAULT_ALPHA_BETA_SCHEDULE: AlphaBetaScheduleName = 'cosine';
 export const DEFAULT_SIGMA_SCHEDULE: SigmaScheduleName = 'sine';
 export const DEFAULT_NUM_SDE_STEPS = 50;
 export const DEFAULT_MAX_SIGMA = 0.8;
+
+export const DEFAULT_NUM_EXPORT_FRAMES = 180;
