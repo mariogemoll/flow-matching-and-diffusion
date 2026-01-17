@@ -2,10 +2,7 @@ import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
 import type { AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import type { SigmaScheduleName } from '../../../math/schedules/sigma';
 import { createSdeNoises } from '../../../math/sde';
-import {
-  writeSdeTrajectories,
-  writeSdeTrajectoriesHeun
-} from '../../../math/std-gaussian-to-gmm';
+import { writeSdeTrajectoriesHeun } from '../../../math/std-gaussian-to-gmm';
 import type { Points2D, Trajectories } from '../../../types';
 import { makePoints2D } from '../../../util/points';
 import { interpolateTrajectory, makeTrajectories } from '../../../util/trajectories';
@@ -37,21 +34,18 @@ export interface MargSdeRenderer extends WebGlRenderer<MargPathState> {
   setSigmaSchedule(schedule: SigmaScheduleName): void;
   setSdeNumSteps(steps: number): void;
   setMaxSigma(sigma: number): void;
-  setUseHeun(useHeun: boolean): void;
   resample(): void;
   resampleNoise(): void;
 }
 
 export function createMargSdeRenderer(
-  gl: WebGLRenderingContext,
-  initialUseHeun = true
+  gl: WebGLRenderingContext
 ): MargSdeRenderer {
   const lineRenderer = createLineRenderer(gl);
   const pointRenderer = createPointRenderer(gl);
 
   let showSdeTrajectories = true;
   let showSamples = true;
-  let useHeun = initialUseHeun;
 
   let sigmaSchedule: SigmaScheduleName = DEFAULT_SIGMA_SCHEDULE;
   let sdeNumSteps = DEFAULT_NUM_SDE_STEPS;
@@ -102,13 +96,6 @@ export function createMargSdeRenderer(
     }
   }
 
-  function setUseHeun(u: boolean): void {
-    if (useHeun !== u) {
-      useHeun = u;
-      recalcRequested = true;
-    }
-  }
-
   function resample(): void {
     fillWithSamplesFromStdGaussian(samplePool);
     fillWithSamplesFromStdGaussian(noises);
@@ -148,11 +135,7 @@ export function createMargSdeRenderer(
         trajectories = makeTrajectories(pointsPerTrajectory, n);
       }
 
-      const writeFn = useHeun
-        ? writeSdeTrajectoriesHeun
-        : writeSdeTrajectories;
-
-      writeFn(
+      writeSdeTrajectoriesHeun(
         samplePool,
         noises,
         state.schedule,
@@ -218,7 +201,6 @@ export function createMargSdeRenderer(
     setSigmaSchedule,
     setSdeNumSteps,
     setMaxSigma,
-    setUseHeun,
     resample,
     resampleNoise,
     update,

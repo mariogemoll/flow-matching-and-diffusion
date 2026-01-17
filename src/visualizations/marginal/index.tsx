@@ -34,7 +34,6 @@ export interface MargSdeViewConfig {
   sigmaSchedule: SigmaScheduleName;
   sdeNumSteps: number;
   maxSigma: number;
-  useHeun: boolean;
 }
 
 export interface MargPathState {
@@ -82,8 +81,7 @@ function createInitialState(): MargPathState {
       showSamples: true,
       sigmaSchedule: DEFAULT_SIGMA_SCHEDULE,
       sdeNumSteps: DEFAULT_NUM_SDE_STEPS,
-      maxSigma: DEFAULT_MAX_SIGMA,
-      useHeun: true
+      maxSigma: DEFAULT_MAX_SIGMA
     }
   };
 }

@@ -41,8 +41,7 @@ export function MargSdeView({ compact = true }: MargSdeViewProps): React.ReactEl
     showSamples,
     sigmaSchedule,
     sdeNumSteps,
-    maxSigma,
-    useHeun
+    maxSigma
   } = engine.frame.state.sdeConfig;
 
   // Register render loop
@@ -52,7 +51,7 @@ export function MargSdeView({ compact = true }: MargSdeViewProps): React.ReactEl
       if (!webGl) { return; }
 
       const { sdeConfig } = frame.state;
-      rendererRef.current ??= createMargSdeRenderer(webGl.gl, sdeConfig.useHeun);
+      rendererRef.current ??= createMargSdeRenderer(webGl.gl);
       const renderer = rendererRef.current;
 
       renderer.setShowSdeTrajectories(sdeConfig.showTrajectories);
@@ -60,7 +59,6 @@ export function MargSdeView({ compact = true }: MargSdeViewProps): React.ReactEl
       renderer.setSigmaSchedule(sdeConfig.sigmaSchedule);
       renderer.setSdeNumSteps(sdeConfig.sdeNumSteps);
       renderer.setMaxSigma(sdeConfig.maxSigma);
-      renderer.setUseHeun(sdeConfig.useHeun);
 
       renderer.update(frame);
       clearWebGl(webGl, COLORS.background);
@@ -92,14 +90,6 @@ export function MargSdeView({ compact = true }: MargSdeViewProps): React.ReactEl
         checked={showSamples}
         onChange={(v) => { engine.actions.setSdeConfig({ showSamples: v }); }}
       />
-      <label className="viz-checkbox">
-        <input
-          type="checkbox"
-          checked={useHeun}
-          onChange={(e) => { engine.actions.setSdeConfig({ useHeun: e.target.checked }); }}
-        />
-        <span>Heun</span>
-      </label>
     </>
   );
 
