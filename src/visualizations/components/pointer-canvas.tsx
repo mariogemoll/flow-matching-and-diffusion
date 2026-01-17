@@ -6,6 +6,7 @@ import {
   X_DOMAIN,
   Y_DOMAIN
 } from '../../constants';
+import { useDevicePixelRatio } from '../../hooks/use-device-pixel-ratio';
 import { type Point2D } from '../../types';
 import { clamp01 } from '../../util/misc';
 import { createWebGl, type WebGl } from '../../webgl';
@@ -82,16 +83,16 @@ export const PointerCanvas = forwardRef<PointerCanvasHandle, PointerCanvasProps>
     };
 
     // Initialize WebGL
+    const dpr = useDevicePixelRatio();
     useEffect((): (() => void) | undefined => {
       const canvas = canvasRef.current;
       if (!canvas) { return; }
       const webGl = createWebGl(canvas, width, height, xDomain, yDomain);
       webGlRef.current = webGl;
       return () => {
-        webGl.gl.getExtension('WEBGL_lose_context')?.loseContext();
         webGlRef.current = null;
       };
-    }, []);
+    }, [dpr]);
 
     const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>): void => {
       canvasRef.current?.setPointerCapture(e.pointerId);

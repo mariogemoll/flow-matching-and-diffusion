@@ -99,7 +99,10 @@ export function createPointRenderer(gl: WebGLRenderingContext): PointRenderer {
     ): void {
       if (points.xs.length === 0) { return; }
 
-      const dpr = window.devicePixelRatio || 1;
+      const canvas = gl.canvas as HTMLCanvasElement;
+      const dpr = (canvas.width && canvas.clientWidth)
+        ? canvas.width / canvas.clientWidth
+        : 1;
 
       // 1. Upload X and Y coordinates (Only if changed!)
       if (

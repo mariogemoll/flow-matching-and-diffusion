@@ -27,11 +27,7 @@ export function createWebGl(
 
   const dataToClipMatrix = createDataToClipMatrix(
     xDomain,
-    yDomain,
-    logicalWidth,
-    logicalHeight,
-    canvas.width,
-    canvas.height
+    yDomain
   );
 
   return {

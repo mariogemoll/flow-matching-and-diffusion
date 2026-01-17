@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 
 import { CANVAS_HEIGHT, CANVAS_WIDTH } from '../../constants';
+import { useDevicePixelRatio } from '../../hooks/use-device-pixel-ratio';
 import { createWebGl, type WebGl } from '../../webgl';
 
 export interface WebGlCanvasReadyEvent<T extends WebGl = WebGl> {
@@ -73,6 +74,8 @@ function WebGlCanvasInner<T extends WebGl = WebGl>(
     })
   );
 
+  const dpr = useDevicePixelRatio();
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) { return; }
@@ -96,17 +99,13 @@ function WebGlCanvasInner<T extends WebGl = WebGl>(
       const current = webGlRef.current;
       if (current) {
         handlersRef.current.onCleanup?.({ canvas, webGl: current });
-        // Only lose context if it's the valid context we created?
-        // createWebGl doesn't return the context directly, it returns the object wrapper.
-        // Assuming we can just call loseContext on it.
-        current.gl.getExtension('WEBGL_lose_context')?.loseContext();
       }
       webGlRef.current = null;
       if (externalWebGlRef) {
         externalWebGlRef.current = null;
       }
     };
-  }, [externalWebGlRef, width, height, xDomain, yDomain, setup]);
+  }, [externalWebGlRef, width, height, xDomain, yDomain, setup, dpr]);
 
   return (
     <canvas

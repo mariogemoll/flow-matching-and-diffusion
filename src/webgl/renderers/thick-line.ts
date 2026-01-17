@@ -82,14 +82,16 @@ export function createThickLineRenderer(
 
       const canvasWidth = gl.canvas.width;
       const canvasHeight = gl.canvas.height;
+      const canvas = gl.canvas as HTMLCanvasElement;
+      const logicalWidth = canvas.clientWidth || canvasWidth; // Fallback for headless
 
       const scaledT = Math.max(0, Math.min(1, t)) * (ppt - 1);
       const numSegmentsPerTraj = Math.floor(scaledT);
       if (numSegmentsPerTraj <= 0) { return; }
 
-      const dpr = window.devicePixelRatio || 1;
       const positions: number[] = [];
-      const halfThickness = (thicknessPx * dpr * 0.5);
+      const pixelRatio = canvasWidth / logicalWidth;
+      const halfThickness = (thicknessPx * pixelRatio * 0.5);
 
       for (let i = 0; i < traj.count; i++) {
         const offset = i * ppt;
