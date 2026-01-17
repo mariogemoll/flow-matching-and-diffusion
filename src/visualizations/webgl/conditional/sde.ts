@@ -9,7 +9,7 @@ import { interpolateTrajectory, makeTrajectories } from '../../../util/trajector
 import type { WebGl } from '../../../webgl';
 import { createLineRenderer } from '../../../webgl/renderers/line';
 import { createPointRenderer } from '../../../webgl/renderers/point';
-import type { CondPathParams } from '../../conditional';
+import type { CondPathState } from '../../conditional';
 import {
   COLORS,
   DEFAULT_MAX_SIGMA,
@@ -23,7 +23,7 @@ import {
 import type { Frame } from '../../engine';
 import type { WebGlRenderer } from '../types';
 
-export interface CondSdeRenderer extends WebGlRenderer<CondPathParams> {
+export interface CondSdeRenderer extends WebGlRenderer<CondPathState> {
   setShowSdeTrajectories(show: boolean): void;
   setShowSamples(show: boolean): void;
   setSigmaSchedule(schedule: SigmaScheduleName): void;
@@ -108,7 +108,7 @@ export function createCondSdeRenderer(gl: WebGLRenderingContext): CondSdeRendere
     recalcRequested = true;
   }
 
-  function update(frame: Frame<CondPathParams>): boolean {
+  function update(frame: Frame<CondPathState>): boolean {
     const state = frame.state;
     t = frame.clock.t;
 

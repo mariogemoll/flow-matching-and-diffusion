@@ -16,7 +16,7 @@ import { makeTrajectories } from '../../../util/trajectories';
 import type { WebGl } from '../../../webgl';
 import { createLineRenderer } from '../../../webgl/renderers/line';
 import { createPointRenderer } from '../../../webgl/renderers/point';
-import type { CondPathParams } from '../../conditional';
+import type { CondPathState } from '../../conditional';
 import {
   COLORS,
   DOT_SIZE,
@@ -27,7 +27,7 @@ import type { Frame } from '../../engine';
 import type { WebGlRenderer } from '../types';
 import { drawVectorField } from '../vector-field';
 
-export interface CondOdeRenderer extends WebGlRenderer<CondPathParams> {
+export interface CondOdeRenderer extends WebGlRenderer<CondPathState> {
   setShowTrajectories(show: boolean): void;
   setShowVectorField(show: boolean): void;
   setShowSamples(show: boolean): void;
@@ -87,7 +87,7 @@ export function createCondOdeRenderer(gl: WebGLRenderingContext): CondOdeRendere
     recalcRequested = true;
   }
 
-  function update(frame: Frame<CondPathParams>): boolean {
+  function update(frame: Frame<CondPathState>): boolean {
     const state = frame.state;
     t = frame.clock.t;
 

@@ -2,12 +2,40 @@ import React from 'react';
 
 import { makeRandomGmm } from '../../math/gmm';
 import { type AlphaBetaScheduleName } from '../../math/schedules/alpha-beta';
+import { type SigmaScheduleName } from '../../math/schedules/sigma';
 import type { GaussianComponent } from '../../types';
 import { ProbPathVisualizationControls } from '../components/prob-path-visualization-controls';
 import { TimelineControls } from '../components/timeline-controls';
-import { DEFAULT_ALPHA_BETA_SCHEDULE, NUM_SAMPLES } from '../constants';
+import {
+  DEFAULT_ALPHA_BETA_SCHEDULE,
+  DEFAULT_MAX_SIGMA,
+  DEFAULT_NUM_SDE_STEPS,
+  DEFAULT_SIGMA_SCHEDULE,
+  NUM_SAMPLES
+} from '../constants';
 import { type Model } from '../engine';
 import { VisualizationProvider } from '../provider';
+
+export interface MargPathViewConfig {
+  showPdf: boolean;
+  showSamples: boolean;
+  sampleFrequency: number;
+}
+
+export interface MargOdeViewConfig {
+  showTrajectories: boolean;
+  showVectorField: boolean;
+  showSamples: boolean;
+}
+
+export interface MargSdeViewConfig {
+  showTrajectories: boolean;
+  showSamples: boolean;
+  sigmaSchedule: SigmaScheduleName;
+  sdeNumSteps: number;
+  maxSigma: number;
+  useHeun: boolean;
+}
 
 export interface MargPathState {
   components: GaussianComponent[];
@@ -15,6 +43,9 @@ export interface MargPathState {
   numSamples: number;
   editMode: boolean;
   wasPlayingBeforeEdit: boolean;
+  pathConfig: MargPathViewConfig;
+  odeConfig: MargOdeViewConfig;
+  sdeConfig: MargSdeViewConfig;
 }
 
 export interface MargPathActions {
@@ -24,6 +55,9 @@ export interface MargPathActions {
   randomizeComponents: () => void;
   enterEditMode: () => void;
   exitEditMode: () => void;
+  setPathConfig: (config: Partial<MargPathViewConfig>) => void;
+  setOdeConfig: (config: Partial<MargOdeViewConfig>) => void;
+  setSdeConfig: (config: Partial<MargSdeViewConfig>) => void;
 }
 
 function createInitialState(): MargPathState {
@@ -32,7 +66,25 @@ function createInitialState(): MargPathState {
     schedule: DEFAULT_ALPHA_BETA_SCHEDULE,
     numSamples: NUM_SAMPLES,
     editMode: false,
-    wasPlayingBeforeEdit: false
+    wasPlayingBeforeEdit: false,
+    pathConfig: {
+      showPdf: true,
+      showSamples: true,
+      sampleFrequency: 15
+    },
+    odeConfig: {
+      showTrajectories: true,
+      showVectorField: false,
+      showSamples: true
+    },
+    sdeConfig: {
+      showTrajectories: true,
+      showSamples: true,
+      sigmaSchedule: DEFAULT_SIGMA_SCHEDULE,
+      sdeNumSteps: DEFAULT_NUM_SDE_STEPS,
+      maxSigma: DEFAULT_MAX_SIGMA,
+      useHeun: true
+    }
   };
 }
 
@@ -73,6 +125,18 @@ export const marginalPathModel: Model<MargPathState, MargPathActions> = {
       } else {
         engine.renderOnce();
       }
+    },
+    setPathConfig(config): void {
+      Object.assign(engine.frame.state.pathConfig, config);
+      engine.renderOnce();
+    },
+    setOdeConfig(config): void {
+      Object.assign(engine.frame.state.odeConfig, config);
+      engine.renderOnce();
+    },
+    setSdeConfig(config): void {
+      Object.assign(engine.frame.state.sdeConfig, config);
+      engine.renderOnce();
     }
   })
 };

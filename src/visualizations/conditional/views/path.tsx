@@ -16,29 +16,24 @@ import {
 } from '../../constants';
 import { useEngine } from '../../engine';
 import { type CondPathRenderer, createCondPathRenderer } from '../../webgl/conditional/path';
-import { type CondPathActions, type CondPathParams } from '../index';
+import { type CondPathActions, type CondPathState } from '../index';
 
 export function CondPathView(): React.ReactElement {
-  const engine = useEngine<CondPathParams, CondPathActions>();
+  const engine = useEngine<CondPathState, CondPathActions>();
   const pointerCanvasRef = useRef<PointerCanvasHandle>(null);
 
   const rendererRef = useRef<CondPathRenderer | null>(null);
 
-  // Local state
-  const [sampleFrequency, setSampleFrequency] = useState(15);
+  // Local UI state (controls visibility only)
   const [showAdditionalControls, setShowAdditionalControls] = useState(false);
 
-  // Use Refs for mutable state accessed in render loop
+  // Read config from global state
+  const { sampleFrequency } = engine.frame.state.pathConfig;
+
+  // Use refs for mutable state accessed in render loop
   const paramsRef = useRef({
-    sampleFrequency,
     resampleRequested: false
   });
-
-  // Sync params ref with state
-  useEffect(() => {
-    paramsRef.current.sampleFrequency = sampleFrequency;
-    engine.renderOnce();
-  }, [sampleFrequency, engine]);
 
   useEffect(() => {
     engine.setLoopPause(DEFAULT_LOOP_PAUSE);
@@ -50,14 +45,14 @@ export function CondPathView(): React.ReactElement {
       if (!webGl) { return; }
 
       const gl = webGl.gl;
-      // Re-create renderer if context lost/changed (rare but possible) or init
       rendererRef.current ??= createCondPathRenderer(gl);
 
       const renderer = rendererRef.current;
       const params = paramsRef.current;
+      const { pathConfig } = frame.state;
 
       // Sync renderer with params
-      renderer.setSampleFrequency(params.sampleFrequency);
+      renderer.setSampleFrequency(pathConfig.sampleFrequency);
       if (params.resampleRequested) {
         renderer.resample();
         params.resampleRequested = false;
@@ -90,7 +85,7 @@ export function CondPathView(): React.ReactElement {
           {showAdditionalControls ? (
             <SampleFrequencySlider
               value={sampleFrequency}
-              onChange={setSampleFrequency}
+              onChange={(v) => { engine.actions.setPathConfig({ sampleFrequency: v }); }}
             />
           ) : null}
           <EllipsisToggle

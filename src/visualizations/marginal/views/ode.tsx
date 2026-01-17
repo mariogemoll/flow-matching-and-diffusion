@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import {
   X_DOMAIN,
@@ -24,24 +24,8 @@ export function MargOdeView({ compact = true }: { compact?: boolean }): React.Re
   const webGlRef = useRef<WebGl | null>(null);
   const rendererRef = useRef<MargOdeRenderer | null>(null);
 
-  // Local UI state
-  const [showTrajectories, setShowTrajectories] = useState(true);
-  const [showVectorField, setShowVectorField] = useState(false);
-  const [showSamples, setShowSamples] = useState(true);
-
-  const paramsRef = useRef({
-    showTrajectories,
-    showVectorField,
-    showSamples
-  });
-
-  // Sync local UI state into ref and trigger render
-  useEffect(() => {
-    paramsRef.current.showTrajectories = showTrajectories;
-    paramsRef.current.showVectorField = showVectorField;
-    paramsRef.current.showSamples = showSamples;
-    engine.renderOnce();
-  }, [showTrajectories, showVectorField, showSamples, engine]);
+  // Read config from global state
+  const { showTrajectories, showVectorField, showSamples } = engine.frame.state.odeConfig;
 
   // Register render loop
   useEffect(() => {
@@ -51,12 +35,12 @@ export function MargOdeView({ compact = true }: { compact?: boolean }): React.Re
 
       rendererRef.current ??= createMargOdeRenderer(webGl.gl);
       const renderer = rendererRef.current;
-      const params = paramsRef.current;
+      const { odeConfig } = frame.state;
 
       // Update renderer configuration
-      renderer.setShowTrajectories(params.showTrajectories);
-      renderer.setShowVectorField(params.showVectorField);
-      renderer.setShowSamples(params.showSamples);
+      renderer.setShowTrajectories(odeConfig.showTrajectories);
+      renderer.setShowVectorField(odeConfig.showVectorField);
+      renderer.setShowSamples(odeConfig.showSamples);
 
       // Render
       renderer.update(frame);
@@ -76,13 +60,16 @@ export function MargOdeView({ compact = true }: { compact?: boolean }): React.Re
     <>
       <ShowTrajectoriesCheckbox
         checked={showTrajectories}
-        onChange={setShowTrajectories}
+        onChange={(v) => { engine.actions.setOdeConfig({ showTrajectories: v }); }}
       />
       <ShowVectorFieldCheckbox
         checked={showVectorField}
-        onChange={setShowVectorField}
+        onChange={(v) => { engine.actions.setOdeConfig({ showVectorField: v }); }}
       />
-      <ShowSamplesCheckbox checked={showSamples} onChange={setShowSamples} />
+      <ShowSamplesCheckbox
+        checked={showSamples}
+        onChange={(v) => { engine.actions.setOdeConfig({ showSamples: v }); }}
+      />
     </>
   );
 

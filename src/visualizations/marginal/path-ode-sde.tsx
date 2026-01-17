@@ -13,7 +13,7 @@ export function initMarginalPathOdeSdeVisualization(container: HTMLElement): () 
     <MarginalPathVisualization name={name}>
       <MargPathView compact={false} />
       <MargOdeView compact={false} />
-      <MargSdeView compact={false} useHeun />
+      <MargSdeView compact={false} />
     </MarginalPathVisualization>,
     { name }
   );

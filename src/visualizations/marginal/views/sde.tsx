@@ -4,7 +4,6 @@ import {
   X_DOMAIN,
   Y_DOMAIN
 } from '../../../constants';
-import { type SigmaScheduleName } from '../../../math/schedules/sigma';
 import { clearWebGl, type WebGl } from '../../../webgl';
 import { EllipsisToggle } from '../../components/ellipsis-toggle';
 import { ViewContainer, ViewControls } from '../../components/layout';
@@ -18,72 +17,33 @@ import {
   ShowTrajectoriesCheckbox
 } from '../../components/standard-controls';
 import { WebGlCanvas } from '../../components/webgl-canvas';
-import {
-  COLORS,
-  DEFAULT_MAX_SIGMA,
-  DEFAULT_NUM_SDE_STEPS,
-  DEFAULT_SIGMA_SCHEDULE
-} from '../../constants';
+import { COLORS } from '../../constants';
 import { useEngine } from '../../engine';
 import { createMargSdeRenderer, type MargSdeRenderer } from '../../webgl/marginal/sde';
 import type { MargPathActions, MargPathState } from '../index';
 
 export interface MargSdeViewProps {
   compact?: boolean;
-  useHeun?: boolean;
 }
 
-export function MargSdeView({
-  compact = true,
-  useHeun: initialUseHeun = true
-}: MargSdeViewProps): React.ReactElement {
+export function MargSdeView({ compact = true }: MargSdeViewProps): React.ReactElement {
   const engine = useEngine<MargPathState, MargPathActions>();
 
   const webGlRef = useRef<WebGl | null>(null);
   const rendererRef = useRef<MargSdeRenderer | null>(null);
 
-  // Local UI state
-  const [showSdeTrajectories, setShowSdeTrajectories] = useState(true);
-  const [showSamples, setShowSamples] = useState(true);
-  const [useHeun, setUseHeun] = useState(initialUseHeun);
-
-  const [sigmaSchedule, setSigmaSchedule] = useState<SigmaScheduleName>(DEFAULT_SIGMA_SCHEDULE);
-  const [sdeNumSteps, setSdeNumSteps] = useState(DEFAULT_NUM_SDE_STEPS);
-  const [maxSigma, setMaxSigma] = useState(DEFAULT_MAX_SIGMA);
+  // Local UI state (controls visibility only)
   const [showAdditionalControls, setShowAdditionalControls] = useState(false);
 
-  const paramsRef = useRef({
-    showSdeTrajectories,
+  // Read config from global state
+  const {
+    showTrajectories,
     showSamples,
-    useHeun,
-    sigmaSchedule,
-    sdeNumSteps,
-    maxSigma
-  });
-
-  // Sync local UI state into ref and trigger render
-  useEffect(() => {
-    paramsRef.current.showSdeTrajectories = showSdeTrajectories;
-    paramsRef.current.showSamples = showSamples;
-    paramsRef.current.useHeun = useHeun;
-    paramsRef.current.sigmaSchedule = sigmaSchedule;
-    paramsRef.current.sdeNumSteps = sdeNumSteps;
-    paramsRef.current.maxSigma = maxSigma;
-
-    // Trigger re-render if needed
-    if (rendererRef.current) {
-      rendererRef.current.setUseHeun(useHeun);
-      engine.renderOnce();
-    }
-  }, [
-    showSdeTrajectories,
-    showSamples,
-    useHeun,
     sigmaSchedule,
     sdeNumSteps,
     maxSigma,
-    engine
-  ]);
+    useHeun
+  } = engine.frame.state.sdeConfig;
 
   // Register render loop
   useEffect(() => {
@@ -91,17 +51,16 @@ export function MargSdeView({
       const webGl = webGlRef.current;
       if (!webGl) { return; }
 
-      // Pass initial useHeun to constructor if needed, or set it immediately
-      rendererRef.current ??= createMargSdeRenderer(webGl.gl, paramsRef.current.useHeun);
+      const { sdeConfig } = frame.state;
+      rendererRef.current ??= createMargSdeRenderer(webGl.gl, sdeConfig.useHeun);
       const renderer = rendererRef.current;
-      const params = paramsRef.current;
 
-      renderer.setShowSdeTrajectories(params.showSdeTrajectories);
-      renderer.setShowSamples(params.showSamples);
-      renderer.setSigmaSchedule(params.sigmaSchedule);
-      renderer.setSdeNumSteps(params.sdeNumSteps);
-      renderer.setMaxSigma(params.maxSigma);
-      renderer.setUseHeun(params.useHeun);
+      renderer.setShowSdeTrajectories(sdeConfig.showTrajectories);
+      renderer.setShowSamples(sdeConfig.showSamples);
+      renderer.setSigmaSchedule(sdeConfig.sigmaSchedule);
+      renderer.setSdeNumSteps(sdeConfig.sdeNumSteps);
+      renderer.setMaxSigma(sdeConfig.maxSigma);
+      renderer.setUseHeun(sdeConfig.useHeun);
 
       renderer.update(frame);
       clearWebGl(webGl, COLORS.background);
@@ -126,15 +85,18 @@ export function MargSdeView({
   const checkboxControls = (
     <>
       <ShowTrajectoriesCheckbox
-        checked={showSdeTrajectories}
-        onChange={setShowSdeTrajectories}
+        checked={showTrajectories}
+        onChange={(v) => { engine.actions.setSdeConfig({ showTrajectories: v }); }}
       />
-      <ShowSamplesCheckbox checked={showSamples} onChange={setShowSamples} />
+      <ShowSamplesCheckbox
+        checked={showSamples}
+        onChange={(v) => { engine.actions.setSdeConfig({ showSamples: v }); }}
+      />
       <label className="viz-checkbox">
         <input
           type="checkbox"
           checked={useHeun}
-          onChange={(e) => { setUseHeun(e.target.checked); }}
+          onChange={(e) => { engine.actions.setSdeConfig({ useHeun: e.target.checked }); }}
         />
         <span>Heun</span>
       </label>
@@ -144,13 +106,19 @@ export function MargSdeView({
   const restControls = (
     <>
       <ResampleSdeButton onClick={handleResample} />
-      <SigmaScheduleSelection value={sigmaSchedule} onChange={setSigmaSchedule} />
+      <SigmaScheduleSelection
+        value={sigmaSchedule}
+        onChange={(v) => { engine.actions.setSdeConfig({ sigmaSchedule: v }); }}
+      />
       {showAdditionalControls ? (
         <>
-          <NumStepsSlider value={sdeNumSteps} onChange={setSdeNumSteps} />
+          <NumStepsSlider
+            value={sdeNumSteps}
+            onChange={(v) => { engine.actions.setSdeConfig({ sdeNumSteps: v }); }}
+          />
           <MaxSigmaSlider
             value={maxSigma}
-            onChange={setMaxSigma}
+            onChange={(v) => { engine.actions.setSdeConfig({ maxSigma: v }); }}
             schedule={sigmaSchedule}
           />
           <ResampleDiffusionNoiseButton onClick={handleResampleNoise} />

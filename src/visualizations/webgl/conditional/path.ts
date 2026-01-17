@@ -8,7 +8,7 @@ import { makePoints2D } from '../../../util/points';
 import type { WebGl } from '../../../webgl';
 import { createGaussianPdfRenderer } from '../../../webgl/renderers/gaussian-pdf';
 import { createPointRenderer } from '../../../webgl/renderers/point';
-import type { CondPathParams } from '../../conditional';
+import type { CondPathState } from '../../conditional';
 import {
   COLORS,
   DOT_SIZE,
@@ -18,7 +18,7 @@ import {
 import type { Frame } from '../../engine';
 import type { WebGlRenderer } from '../types';
 
-export interface CondPathRenderer extends WebGlRenderer<CondPathParams> {
+export interface CondPathRenderer extends WebGlRenderer<CondPathState> {
   setSampleFrequency(freq: number): void;
   resample(): void;
 }
@@ -69,7 +69,7 @@ export function createCondPathRenderer(gl: WebGLRenderingContext): CondPathRende
     resampleRequested = true;
   }
 
-  function update(frame: Frame<CondPathParams>): boolean {
+  function update(frame: Frame<CondPathState>): boolean {
     const state = frame.state;
     const t = frame.clock.t;
     const now = performance.now();

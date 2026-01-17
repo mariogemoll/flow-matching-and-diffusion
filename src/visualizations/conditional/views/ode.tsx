@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import {
   X_DOMAIN,
@@ -14,38 +14,19 @@ import {
   ShowTrajectoriesCheckbox,
   ShowVectorFieldCheckbox
 } from '../../components/standard-controls';
-import {
-  COLORS
-} from '../../constants';
+import { COLORS } from '../../constants';
 import { useEngine } from '../../engine';
 import { type CondOdeRenderer, createCondOdeRenderer } from '../../webgl/conditional/ode';
-import { type CondPathActions, type CondPathParams } from '../index';
+import { type CondPathActions, type CondPathState } from '../index';
 
 export function CondOdeView(): React.ReactElement {
-  const engine = useEngine<CondPathParams, CondPathActions>();
+  const engine = useEngine<CondPathState, CondPathActions>();
   const pointerCanvasRef = useRef<PointerCanvasHandle>(null);
 
   const rendererRef = useRef<CondOdeRenderer | null>(null);
 
-  // Local state
-  const [showTrajectories, setShowTrajectories] = useState(true);
-  const [showVectorField, setShowVectorField] = useState(false);
-  const [showSamples, setShowSamples] = useState(true);
-
-  const paramsRef = useRef({
-    showTrajectories,
-    showVectorField,
-    showSamples,
-    recalcRequested: true
-  });
-
-  // Sync params ref
-  useEffect(() => {
-    paramsRef.current.showTrajectories = showTrajectories;
-    paramsRef.current.showVectorField = showVectorField;
-    paramsRef.current.showSamples = showSamples;
-    engine.renderOnce();
-  }, [showTrajectories, showVectorField, showSamples, engine]);
+  // Read config from global state
+  const { showTrajectories, showVectorField, showSamples } = engine.frame.state.odeConfig;
 
   // Register draw function
   useEffect(() => {
@@ -55,18 +36,12 @@ export function CondOdeView(): React.ReactElement {
 
       rendererRef.current ??= createCondOdeRenderer(webGl.gl);
       const renderer = rendererRef.current;
-      const params = paramsRef.current;
+      const { odeConfig } = frame.state;
 
       // Sync settings
-      renderer.setShowTrajectories(params.showTrajectories);
-      renderer.setShowVectorField(params.showVectorField);
-      renderer.setShowSamples(params.showSamples);
-
-      if (params.recalcRequested) {
-        // Only needed if we want to force resample from UI
-        // But internal renderer handles update based on state changes
-        params.recalcRequested = false;
-      }
+      renderer.setShowTrajectories(odeConfig.showTrajectories);
+      renderer.setShowVectorField(odeConfig.showVectorField);
+      renderer.setShowSamples(odeConfig.showSamples);
 
       renderer.update(frame);
       clearWebGl(webGl, COLORS.background);
@@ -78,9 +53,6 @@ export function CondOdeView(): React.ReactElement {
     if (rendererRef.current) {
       rendererRef.current.resample();
       engine.renderOnce();
-    } else {
-      // If renderer is not ready, we request recalc next frame
-      paramsRef.current.recalcRequested = true;
     }
   };
 
@@ -95,15 +67,15 @@ export function CondOdeView(): React.ReactElement {
       <ViewControls>
         <ShowTrajectoriesCheckbox
           checked={showTrajectories}
-          onChange={setShowTrajectories}
+          onChange={(v) => { engine.actions.setOdeConfig({ showTrajectories: v }); }}
         />
         <ShowVectorFieldCheckbox
           checked={showVectorField}
-          onChange={setShowVectorField}
+          onChange={(v) => { engine.actions.setOdeConfig({ showVectorField: v }); }}
         />
         <ShowSamplesCheckbox
           checked={showSamples}
-          onChange={setShowSamples}
+          onChange={(v) => { engine.actions.setOdeConfig({ showSamples: v }); }}
         />
         <ResampleTrajectoriesButton onClick={handleResample} />
       </ViewControls>
