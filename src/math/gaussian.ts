@@ -5,6 +5,18 @@
 import type { Points2D } from '../types';
 
 /**
+ * Sample two independent values from standard Gaussian N(0,1) using Box-Muller transform.
+ * Returns [sample1, sample2].
+ */
+export function sampleTwoFromStandardGaussian(): [number, number] {
+  const u1 = Math.random();
+  const u2 = Math.random();
+  const r = Math.sqrt(-2.0 * Math.log(u1));
+  const theta = 2.0 * Math.PI * u2;
+  return [r * Math.cos(theta), r * Math.sin(theta)];
+}
+
+/**
  * Fill a Points2D buffer with independent standard Gaussian samples for x/y.
  * Uses Box-Muller to generate two independent values per iteration.
  */
