@@ -21,7 +21,14 @@ export class HeadlessRunner {
   private pixelRatio: number;
   private dataToClipMatrix: Float32Array;
 
-  constructor(canvas: HTMLCanvasElement, width: number, height: number, pixelRatio: number) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    width: number,
+    height: number,
+    pixelRatio: number,
+    xDomain: [number, number] = X_DOMAIN,
+    yDomain: [number, number] = Y_DOMAIN
+  ) {
     this.width = width;
     this.height = height;
     this.pixelRatio = pixelRatio;
@@ -44,7 +51,7 @@ export class HeadlessRunner {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-    this.dataToClipMatrix = createDataToClipMatrix(X_DOMAIN, Y_DOMAIN);
+    this.dataToClipMatrix = createDataToClipMatrix(xDomain, yDomain);
   }
 
   getGl(): WebGL2RenderingContext {

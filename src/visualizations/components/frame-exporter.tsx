@@ -12,13 +12,17 @@ export interface FrameExporterProps<S> {
   state: S;
   createFrame: (t: number, state: S) => Frame<S>;
   fileName?: string;
+  xDomain?: [number, number];
+  yDomain?: [number, number];
 }
 
 export function FrameExporter<S>({
   view,
   state,
   createFrame,
-  fileName = 'frames.zip'
+  fileName = 'frames.zip',
+  xDomain,
+  yDomain
 }: FrameExporterProps<S>): React.ReactElement {
   const [isExporting, setIsExporting] = useState(false);
   const [progress, setProgress] = useState<ExportProgress>({
@@ -41,7 +45,9 @@ export function FrameExporter<S>({
         createFrame,
         fileName,
         numFrames,
-        onProgress: setProgress
+        onProgress: setProgress,
+        xDomain,
+        yDomain
       });
     } catch (e) {
       console.error(e);

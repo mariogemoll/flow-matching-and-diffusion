@@ -1,13 +1,20 @@
-import type { Trajectories } from '../types';
-import { sampleTwoFromStandardGaussian } from './gaussian';
+import type { Points2D, Trajectories } from '../types';
 
 // Fills a Brownian motion trajectory starting at origin (in-place)
 // Uses discretization: W_{t+h} = W_t + √h·ϵ_t where ϵ_t ~ N(0, I_d)
-export function brownianMotionTrajectory(out: Trajectories): void {
+// Uses pre-generated random samples from randomnessPool
+export function brownianMotionTrajectory(
+  randomnessPool: Points2D,
+  numSteps: number,
+  out: Trajectories
+): void {
   const pointsPerTraj = out.pointsPerTrajectory;
-  const numSteps = pointsPerTraj - 1;
   if (pointsPerTraj <= 1 || out.xs.length < pointsPerTraj || out.ys.length < pointsPerTraj) {
     return;
+  }
+
+  if (numSteps > randomnessPool.xs.length) {
+    throw new Error('numSteps exceeds randomness pool size');
   }
 
   // Step size h for discretization over [0,1]
@@ -22,8 +29,9 @@ export function brownianMotionTrajectory(out: Trajectories): void {
   out.ys[0] = 0;
 
   for (let step = 0; step < numSteps; step++) {
-    // Sample independent increments: ϵ ~ N(0, I_d)
-    const [epsilonX, epsilonY] = sampleTwoFromStandardGaussian();
+    // Use pre-generated random samples from pool: ϵ ~ N(0, I_d)
+    const epsilonX = randomnessPool.xs[step];
+    const epsilonY = randomnessPool.ys[step];
 
     // Update: W_{t+h} = W_t + √h·ϵ
     Wx += sqrtH * epsilonX;

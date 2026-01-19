@@ -5,3 +5,4 @@ export const X_DOMAIN: [number, number] = [-4, 4];
 export const Y_DOMAIN: [number, number] = [-3, 3];
 
 export const NUM_TRAJECTORY_STEPS = 100;
+export const MAX_NUM_TRAJECTORY_STEPS = 500;

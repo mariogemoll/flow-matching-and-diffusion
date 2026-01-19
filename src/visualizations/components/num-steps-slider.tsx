@@ -10,6 +10,7 @@ interface NumStepsSliderProps {
   min?: number;
   max?: number;
   step?: number;
+  className?: string;
 }
 
 export function NumStepsSlider({
@@ -18,7 +19,8 @@ export function NumStepsSlider({
   label = 'Steps',
   min = 1,
   max = MAX_NUM_SDE_STEPS,
-  step = 1
+  step = 1,
+  className
 }: NumStepsSliderProps): React.ReactElement {
   return (
     <Slider
@@ -28,6 +30,7 @@ export function NumStepsSlider({
       step={step}
       value={value}
       onChange={onChange}
+      className={className}
     />
   );
 }

@@ -91,13 +91,47 @@ export function createBrownianMotionRenderer(gl: WebGLRenderingContext): Brownia
     const { trajectory } = state;
     if (trajectory.count === 0) { return; }
 
-    thickLineRenderer.renderThickTrajectories(
-      webGl.dataToClipMatrix,
-      trajectory,
-      COLORS.singleTrajectory,
-      THICK_LINE_THICKNESS,
-      t
-    );
+    const ppt = trajectory.pointsPerTrajectory;
+    const scaledT = Math.max(0, Math.min(1, t)) * (ppt - 1);
+    const numCompleteSegments = Math.floor(scaledT);
+    const fractionalPart = scaledT - numCompleteSegments;
+
+    // Draw complete segments
+    if (numCompleteSegments > 0) {
+      const completeT = numCompleteSegments / (ppt - 1);
+      thickLineRenderer.renderThickTrajectories(
+        webGl.dataToClipMatrix,
+        trajectory,
+        COLORS.singleTrajectory,
+        THICK_LINE_THICKNESS,
+        completeT
+      );
+    }
+
+    // Draw partial segment in progress
+    if (fractionalPart > 0 && numCompleteSegments < ppt - 1) {
+      const x0 = trajectory.xs[numCompleteSegments];
+      const y0 = trajectory.ys[numCompleteSegments];
+      const x1 = trajectory.xs[numCompleteSegments + 1];
+      const y1 = trajectory.ys[numCompleteSegments + 1];
+
+      const partialX = x0 + (x1 - x0) * fractionalPart;
+      const partialY = y0 + (y1 - y0) * fractionalPart;
+
+      thickLineRenderer.renderThickTrajectories(
+        webGl.dataToClipMatrix,
+        {
+          xs: new Float32Array([x0, partialX]),
+          ys: new Float32Array([y0, partialY]),
+          pointsPerTrajectory: 2,
+          count: 1,
+          version: 0
+        },
+        COLORS.singleTrajectory,
+        THICK_LINE_THICKNESS,
+        1.0
+      );
+    }
 
     const currentPos = interpolateTrajectory(trajectory, 0, t);
 

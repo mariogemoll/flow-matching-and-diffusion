@@ -99,6 +99,8 @@ export interface SingleViewExportOptions<S, R extends WebGlRenderer<S> = WebGlRe
   numFrames?: number;
   onProgress: (progress: ExportProgress) => void;
   pixelRatio?: number;
+  xDomain?: [number, number];
+  yDomain?: [number, number];
   configureRenderer?(renderer: R, state: S): void;
 }
 
@@ -112,7 +114,9 @@ export async function exportSingleView<S, R extends WebGlRenderer<S>>(
     fileName,
     numFrames = DEFAULT_NUM_EXPORT_FRAMES,
     onProgress,
-    pixelRatio = 1
+    pixelRatio = 1,
+    xDomain,
+    yDomain
   } = options;
 
   const width = CANVAS_WIDTH;
@@ -121,7 +125,7 @@ export async function exportSingleView<S, R extends WebGlRenderer<S>>(
   const zip = new JSZip();
   const canvas = document.createElement('canvas');
 
-  const runner = new HeadlessRunner(canvas, width, height, pixelRatio);
+  const runner = new HeadlessRunner(canvas, width, height, pixelRatio, xDomain, yDomain);
   const renderer = createRenderer(runner.getGl());
   if (options.configureRenderer) {
     options.configureRenderer(renderer, state);
