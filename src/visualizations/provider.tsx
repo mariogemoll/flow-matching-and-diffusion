@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import React, { type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 
 import { createVisualizationEngine, type Engine,EngineContext, type Model } from './engine';

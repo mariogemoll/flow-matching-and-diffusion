@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 // Conditional probability path from standard Gaussian to Dirac delta (single point z)
 
 import type { Point2D, Points2D, Trajectories } from '../types';

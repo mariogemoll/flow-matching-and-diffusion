@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 export function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement): boolean {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();

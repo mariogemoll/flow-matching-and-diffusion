@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import type { Point2D, Trajectories } from '../types';
 
 export function makeTrajectories(pointsPerTrajectory: number, count: number): Trajectories {

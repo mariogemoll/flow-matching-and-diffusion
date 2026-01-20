@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import React from 'react';
 
 import { type AlphaBetaScheduleName } from '../../math/schedules/alpha-beta';

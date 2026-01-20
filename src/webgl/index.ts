@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import type { Pair, RGBA } from '../types';
 import { createDataToClipMatrix } from './matrix';
 

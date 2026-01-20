@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import React, { useEffect, useState } from 'react';
 
 import { useEngine } from '../engine';

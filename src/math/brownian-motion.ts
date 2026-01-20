@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import type { Points2D, Trajectories } from '../types';
 
 // Fills a Brownian motion trajectory starting at origin (in-place)

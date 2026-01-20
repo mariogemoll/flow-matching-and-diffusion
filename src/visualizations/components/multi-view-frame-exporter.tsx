@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import React, { useState } from 'react';
 
 import { type ExportProgress, exportViews, type ViewExportConfig } from '../../headless/export';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import type { GaussianMixture, RGBA } from '../../types';
 import { createProgram } from './setup';
 import fragmentSrc from './shaders/gaussian-mixture-pdf.frag';

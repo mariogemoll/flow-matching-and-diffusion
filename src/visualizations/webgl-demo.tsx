@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import { useEffect, useRef } from 'react';
 
 import { X_DOMAIN, Y_DOMAIN } from '../constants';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import type { GaussianComponent, GaussianMixture, Pair } from '../types';
 import { randomPosition } from '../util/misc';
 import { axisToCovariance } from './linalg';

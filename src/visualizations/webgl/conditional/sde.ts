@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import { fillWithSamplesFromStdGaussian } from '../../../math/gaussian';
 import type { AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import type { SigmaScheduleName } from '../../../math/schedules/sigma';

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import { makeGmm } from '../../../math/gmm';
 import type { AlphaBetaScheduleName } from '../../../math/schedules/alpha-beta';
 import { sampleFromGmmMargProbPath, writeGmm } from '../../../math/std-gaussian-to-gmm';

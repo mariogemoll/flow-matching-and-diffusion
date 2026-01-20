@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 /**
  * Demo vector field - a decorative vector field with eddies and swirls
  */

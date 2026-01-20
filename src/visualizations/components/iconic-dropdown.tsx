@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import React, { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 
 export interface IconicDropdownOption<T> {

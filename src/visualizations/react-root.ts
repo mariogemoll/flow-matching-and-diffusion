@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import React, { type ReactNode, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import { el } from './util/dom';
 import { initBrownianMotionVisualization } from './visualizations/brownian-motion';
 import { initConditionalPathVisualization } from './visualizations/conditional/path';

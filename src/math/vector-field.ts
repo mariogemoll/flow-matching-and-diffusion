@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import type { Point2D, Points2D, Trajectories } from '../types';
 import { makeTrajectories } from '../util/trajectories';
 

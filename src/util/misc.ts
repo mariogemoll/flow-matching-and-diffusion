@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Mario Gemoll
+// SPDX-License-Identifier: 0BSD
+
 import { X_DOMAIN, Y_DOMAIN } from '../constants';
 import type { Point2D } from '../types';
 
