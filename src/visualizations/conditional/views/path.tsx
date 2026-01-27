@@ -18,6 +18,7 @@ import {
   DEFAULT_LOOP_PAUSE
 } from '../../constants';
 import { useEngine } from '../../engine';
+import { useEngineConfigSync } from '../../hooks/use-engine-config';
 import { type CondPathRenderer, createCondPathRenderer } from '../../webgl/conditional/path';
 import { type CondPathActions, type CondPathState } from '../index';
 
@@ -30,8 +31,14 @@ export function CondPathView(): React.ReactElement {
   // Local UI state (controls visibility only)
   const [showAdditionalControls, setShowAdditionalControls] = useState(false);
 
-  // Read config from global state
-  const { sampleFrequency } = engine.frame.state.pathConfig;
+  const {
+    config: pathConfig,
+    updateConfig: updatePathConfig,
+    syncFromFrame: syncPathConfig
+  } = useEngineConfigSync(
+    engine.frame.state.pathConfig,
+    (config) => { engine.actions.setPathConfig(config); }
+  );
 
   // Use refs for mutable state accessed in render loop
   const paramsRef = useRef({
@@ -52,14 +59,15 @@ export function CondPathView(): React.ReactElement {
 
       const renderer = rendererRef.current;
       const params = paramsRef.current;
-      const { pathConfig } = frame.state;
+      const { pathConfig: framePathConfig } = frame.state;
 
       // Sync renderer with params
-      renderer.setSampleFrequency(pathConfig.sampleFrequency);
+      renderer.setSampleFrequency(framePathConfig.sampleFrequency);
       if (params.resampleRequested) {
         renderer.resample();
         params.resampleRequested = false;
       }
+      syncPathConfig(framePathConfig);
 
       // Update and Render
       renderer.update(frame);
@@ -87,8 +95,8 @@ export function CondPathView(): React.ReactElement {
           <ResampleButton onClick={handleResample} />
           {showAdditionalControls ? (
             <SampleFrequencySlider
-              value={sampleFrequency}
-              onChange={(v) => { engine.actions.setPathConfig({ sampleFrequency: v }); }}
+              value={pathConfig.sampleFrequency}
+              onChange={(v) => { updatePathConfig({ sampleFrequency: v }); }}
             />
           ) : null}
           <EllipsisToggle

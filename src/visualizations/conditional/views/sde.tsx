@@ -23,6 +23,7 @@ import {
 } from '../../components/standard-controls';
 import { COLORS } from '../../constants';
 import { useEngine } from '../../engine';
+import { useEngineConfigSync } from '../../hooks/use-engine-config';
 import { type CondSdeRenderer, createCondSdeRenderer } from '../../webgl/conditional/sde';
 import { type CondPathActions, type CondPathState } from '../index';
 
@@ -35,14 +36,14 @@ export function CondSdeView(): React.ReactElement {
   // Local UI state (controls visibility only)
   const [showAdditionalControls, setShowAdditionalControls] = useState(false);
 
-  // Read config from global state
   const {
-    showTrajectories,
-    showSamples,
-    sigmaSchedule,
-    sdeNumSteps,
-    maxSigma
-  } = engine.frame.state.sdeConfig;
+    config: sdeConfig,
+    updateConfig: updateSdeConfig,
+    syncFromFrame: syncSdeConfig
+  } = useEngineConfigSync(
+    engine.frame.state.sdeConfig,
+    (config) => { engine.actions.setSdeConfig(config); }
+  );
 
   // Use refs for mutable state accessed in render loop
   const paramsRef = useRef({
@@ -59,13 +60,15 @@ export function CondSdeView(): React.ReactElement {
       rendererRef.current ??= createCondSdeRenderer(webGl.gl);
       const renderer = rendererRef.current;
       const params = paramsRef.current;
-      const { sdeConfig } = frame.state;
+      const { sdeConfig: frameSdeConfig } = frame.state;
 
-      renderer.setShowSdeTrajectories(sdeConfig.showTrajectories);
-      renderer.setShowSamples(sdeConfig.showSamples);
-      renderer.setSigmaSchedule(sdeConfig.sigmaSchedule);
-      renderer.setSdeNumSteps(sdeConfig.sdeNumSteps);
-      renderer.setMaxSigma(sdeConfig.maxSigma);
+      renderer.setShowSdeTrajectories(frameSdeConfig.showTrajectories);
+      renderer.setShowSamples(frameSdeConfig.showSamples);
+      renderer.setSigmaSchedule(frameSdeConfig.sigmaSchedule);
+      renderer.setSdeNumSteps(frameSdeConfig.sdeNumSteps);
+      renderer.setMaxSigma(frameSdeConfig.maxSigma);
+
+      syncSdeConfig(frameSdeConfig);
 
       if (params.resampleRequested) {
         renderer.resample();
@@ -103,28 +106,28 @@ export function CondSdeView(): React.ReactElement {
 
       <ViewControls>
         <ShowTrajectoriesCheckbox
-          checked={showTrajectories}
-          onChange={(v) => { engine.actions.setSdeConfig({ showTrajectories: v }); }}
+          checked={sdeConfig.showTrajectories}
+          onChange={(v) => { updateSdeConfig({ showTrajectories: v }); }}
         />
         <ShowSamplesCheckbox
-          checked={showSamples}
-          onChange={(v) => { engine.actions.setSdeConfig({ showSamples: v }); }}
+          checked={sdeConfig.showSamples}
+          onChange={(v) => { updateSdeConfig({ showSamples: v }); }}
         />
         <ResampleSdeButton onClick={handleResample} />
         <SigmaScheduleSelection
-          value={sigmaSchedule}
-          onChange={(v) => { engine.actions.setSdeConfig({ sigmaSchedule: v }); }}
+          value={sdeConfig.sigmaSchedule}
+          onChange={(v) => { updateSdeConfig({ sigmaSchedule: v }); }}
         />
         {showAdditionalControls ? (
           <>
             <NumStepsSlider
-              value={sdeNumSteps}
-              onChange={(v) => { engine.actions.setSdeConfig({ sdeNumSteps: v }); }}
+              value={sdeConfig.sdeNumSteps}
+              onChange={(v) => { updateSdeConfig({ sdeNumSteps: v }); }}
             />
             <MaxSigmaSlider
-              value={maxSigma}
-              onChange={(v) => { engine.actions.setSdeConfig({ maxSigma: v }); }}
-              schedule={sigmaSchedule}
+              value={sdeConfig.maxSigma}
+              onChange={(v) => { updateSdeConfig({ maxSigma: v }); }}
+              schedule={sdeConfig.sigmaSchedule}
             />
             <ResampleDiffusionNoiseButton onClick={handleResampleNoise} />
           </>

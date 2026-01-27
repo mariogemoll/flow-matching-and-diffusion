@@ -18,6 +18,7 @@ import {
 import { WebGlCanvas } from '../../components/webgl-canvas';
 import { COLORS } from '../../constants';
 import { useEngine } from '../../engine';
+import { useEngineConfigSync } from '../../hooks/use-engine-config';
 import { createMargOdeRenderer, type MargOdeRenderer } from '../../webgl/marginal/ode';
 import type { MargPathActions, MargPathState } from '../index';
 
@@ -27,8 +28,14 @@ export function MargOdeView({ compact = true }: { compact?: boolean }): React.Re
   const webGlRef = useRef<WebGl | null>(null);
   const rendererRef = useRef<MargOdeRenderer | null>(null);
 
-  // Read config from global state
-  const { showTrajectories, showVectorField, showSamples } = engine.frame.state.odeConfig;
+  const {
+    config: odeConfig,
+    updateConfig: updateOdeConfig,
+    syncFromFrame: syncOdeConfig
+  } = useEngineConfigSync(
+    engine.frame.state.odeConfig,
+    (config) => { engine.actions.setOdeConfig(config); }
+  );
 
   // Register render loop
   useEffect(() => {
@@ -38,12 +45,14 @@ export function MargOdeView({ compact = true }: { compact?: boolean }): React.Re
 
       rendererRef.current ??= createMargOdeRenderer(webGl.gl);
       const renderer = rendererRef.current;
-      const { odeConfig } = frame.state;
+      const { odeConfig: frameOdeConfig } = frame.state;
 
       // Update renderer configuration
-      renderer.setShowTrajectories(odeConfig.showTrajectories);
-      renderer.setShowVectorField(odeConfig.showVectorField);
-      renderer.setShowSamples(odeConfig.showSamples);
+      renderer.setShowTrajectories(frameOdeConfig.showTrajectories);
+      renderer.setShowVectorField(frameOdeConfig.showVectorField);
+      renderer.setShowSamples(frameOdeConfig.showSamples);
+
+      syncOdeConfig(frameOdeConfig);
 
       // Render
       renderer.update(frame);
@@ -62,16 +71,16 @@ export function MargOdeView({ compact = true }: { compact?: boolean }): React.Re
   const checkboxControls = (
     <>
       <ShowTrajectoriesCheckbox
-        checked={showTrajectories}
-        onChange={(v) => { engine.actions.setOdeConfig({ showTrajectories: v }); }}
+        checked={odeConfig.showTrajectories}
+        onChange={(v) => { updateOdeConfig({ showTrajectories: v }); }}
       />
       <ShowVectorFieldCheckbox
-        checked={showVectorField}
-        onChange={(v) => { engine.actions.setOdeConfig({ showVectorField: v }); }}
+        checked={odeConfig.showVectorField}
+        onChange={(v) => { updateOdeConfig({ showVectorField: v }); }}
       />
       <ShowSamplesCheckbox
-        checked={showSamples}
-        onChange={(v) => { engine.actions.setOdeConfig({ showSamples: v }); }}
+        checked={odeConfig.showSamples}
+        onChange={(v) => { updateOdeConfig({ showSamples: v }); }}
       />
     </>
   );

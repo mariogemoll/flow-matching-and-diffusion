@@ -19,6 +19,7 @@ import {
 } from '../../components/standard-controls';
 import { COLORS } from '../../constants';
 import { useEngine } from '../../engine';
+import { useEngineConfigSync } from '../../hooks/use-engine-config';
 import { type CondOdeRenderer, createCondOdeRenderer } from '../../webgl/conditional/ode';
 import { type CondPathActions, type CondPathState } from '../index';
 
@@ -28,8 +29,14 @@ export function CondOdeView(): React.ReactElement {
 
   const rendererRef = useRef<CondOdeRenderer | null>(null);
 
-  // Read config from global state
-  const { showTrajectories, showVectorField, showSamples } = engine.frame.state.odeConfig;
+  const {
+    config: odeConfig,
+    updateConfig: updateOdeConfig,
+    syncFromFrame: syncOdeConfig
+  } = useEngineConfigSync(
+    engine.frame.state.odeConfig,
+    (config) => { engine.actions.setOdeConfig(config); }
+  );
 
   // Register draw function
   useEffect(() => {
@@ -39,12 +46,14 @@ export function CondOdeView(): React.ReactElement {
 
       rendererRef.current ??= createCondOdeRenderer(webGl.gl);
       const renderer = rendererRef.current;
-      const { odeConfig } = frame.state;
+      const { odeConfig: frameOdeConfig } = frame.state;
 
       // Sync settings
-      renderer.setShowTrajectories(odeConfig.showTrajectories);
-      renderer.setShowVectorField(odeConfig.showVectorField);
-      renderer.setShowSamples(odeConfig.showSamples);
+      renderer.setShowTrajectories(frameOdeConfig.showTrajectories);
+      renderer.setShowVectorField(frameOdeConfig.showVectorField);
+      renderer.setShowSamples(frameOdeConfig.showSamples);
+
+      syncOdeConfig(frameOdeConfig);
 
       renderer.update(frame);
       clearWebGl(webGl, COLORS.background);
@@ -69,16 +78,16 @@ export function CondOdeView(): React.ReactElement {
       />
       <ViewControls>
         <ShowTrajectoriesCheckbox
-          checked={showTrajectories}
-          onChange={(v) => { engine.actions.setOdeConfig({ showTrajectories: v }); }}
+          checked={odeConfig.showTrajectories}
+          onChange={(v) => { updateOdeConfig({ showTrajectories: v }); }}
         />
         <ShowVectorFieldCheckbox
-          checked={showVectorField}
-          onChange={(v) => { engine.actions.setOdeConfig({ showVectorField: v }); }}
+          checked={odeConfig.showVectorField}
+          onChange={(v) => { updateOdeConfig({ showVectorField: v }); }}
         />
         <ShowSamplesCheckbox
-          checked={showSamples}
-          onChange={(v) => { engine.actions.setOdeConfig({ showSamples: v }); }}
+          checked={odeConfig.showSamples}
+          onChange={(v) => { updateOdeConfig({ showSamples: v }); }}
         />
         <ResampleTrajectoriesButton onClick={handleResample} />
       </ViewControls>

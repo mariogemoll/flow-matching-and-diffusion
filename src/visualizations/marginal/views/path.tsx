@@ -19,6 +19,7 @@ import {
 import { WebGlCanvas } from '../../components/webgl-canvas';
 import { COLORS } from '../../constants';
 import { useEngine } from '../../engine';
+import { useEngineConfigSync } from '../../hooks/use-engine-config';
 import { createMargPathRenderer, type MargPathRenderer } from '../../webgl/marginal/path';
 import { type MargPathActions, type MargPathState } from '../index';
 
@@ -33,8 +34,14 @@ export function MargPathView({ compact = true }: { compact?: boolean }): React.R
   // Local state for components to sync with engine updates for the editor
   const [components, setComponents] = useState<GaussianComponent[]>(engine.frame.state.components);
 
-  // Read config from global state
-  const { showPdf, showSamples, sampleFrequency } = engine.frame.state.pathConfig;
+  const {
+    config: pathConfig,
+    updateConfig: updatePathConfig,
+    syncFromFrame: syncPathConfig
+  } = useEngineConfigSync(
+    engine.frame.state.pathConfig,
+    (config) => { engine.actions.setPathConfig(config); }
+  );
 
   // Sync tracking for editor UI updates
   const lastEditorSyncRef = useRef<{
@@ -54,7 +61,7 @@ export function MargPathView({ compact = true }: { compact?: boolean }): React.R
 
       rendererRef.current ??= createMargPathRenderer(webGl.gl);
       const renderer = rendererRef.current;
-      const { pathConfig } = frame.state;
+      const { pathConfig: framePathConfig } = frame.state;
       const now = performance.now();
 
       // Sync Edit Mode
@@ -87,9 +94,11 @@ export function MargPathView({ compact = true }: { compact?: boolean }): React.R
       }
 
       // Update render config
-      renderer.setShowPdf(pathConfig.showPdf);
-      renderer.setShowSamples(pathConfig.showSamples);
-      renderer.setSampleFrequency(pathConfig.sampleFrequency);
+      renderer.setShowPdf(framePathConfig.showPdf);
+      renderer.setShowSamples(framePathConfig.showSamples);
+      renderer.setSampleFrequency(framePathConfig.sampleFrequency);
+
+      syncPathConfig(framePathConfig);
 
       // Render
       renderer.update(frame);
@@ -116,12 +125,12 @@ export function MargPathView({ compact = true }: { compact?: boolean }): React.R
   const checkboxControls = (
     <>
       <ShowPdfCheckbox
-        checked={showPdf}
-        onChange={(v) => { engine.actions.setPathConfig({ showPdf: v }); }}
+        checked={pathConfig.showPdf}
+        onChange={(v) => { updatePathConfig({ showPdf: v }); }}
       />
       <ShowSamplesCheckbox
-        checked={showSamples}
-        onChange={(v) => { engine.actions.setPathConfig({ showSamples: v }); }}
+        checked={pathConfig.showSamples}
+        onChange={(v) => { updatePathConfig({ showSamples: v }); }}
       />
     </>
   );
@@ -134,8 +143,8 @@ export function MargPathView({ compact = true }: { compact?: boolean }): React.R
       </Button>
       {showAdditionalControls ? (
         <SampleFrequencySlider
-          value={sampleFrequency}
-          onChange={(v) => { engine.actions.setPathConfig({ sampleFrequency: v }); }}
+          value={pathConfig.sampleFrequency}
+          onChange={(v) => { updatePathConfig({ sampleFrequency: v }); }}
         />
       ) : null}
       <EllipsisToggle
