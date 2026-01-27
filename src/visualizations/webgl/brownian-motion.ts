@@ -23,39 +23,40 @@ import type { WebGlRenderer } from './types';
 
 const GRID_SPACING = 0.5;
 
-function buildGridPolylines(): Pair<number>[][] {
+function buildGridPolylines(xDomain: Pair<number>, yDomain: Pair<number>): Pair<number>[][] {
   const polylines: Pair<number>[][] = [];
 
-  const xStart = Math.ceil(X_DOMAIN[0] / GRID_SPACING) * GRID_SPACING;
-  for (let x = xStart; x <= X_DOMAIN[1] + 1e-6; x += GRID_SPACING) {
+  const xStart = Math.ceil(xDomain[0] / GRID_SPACING) * GRID_SPACING;
+  for (let x = xStart; x <= xDomain[1] + 1e-6; x += GRID_SPACING) {
     polylines.push([
-      [x, Y_DOMAIN[0]],
-      [x, Y_DOMAIN[1]]
+      [x, yDomain[0]],
+      [x, yDomain[1]]
     ]);
   }
 
-  const yStart = Math.ceil(Y_DOMAIN[0] / GRID_SPACING) * GRID_SPACING;
-  for (let y = yStart; y <= Y_DOMAIN[1] + 1e-6; y += GRID_SPACING) {
+  const yStart = Math.ceil(yDomain[0] / GRID_SPACING) * GRID_SPACING;
+  for (let y = yStart; y <= yDomain[1] + 1e-6; y += GRID_SPACING) {
     polylines.push([
-      [X_DOMAIN[0], y],
-      [X_DOMAIN[1], y]
+      [xDomain[0], y],
+      [xDomain[1], y]
     ]);
   }
 
   return polylines;
 }
 
-const GRID_POLYLINES = buildGridPolylines();
-const AXIS_POLYLINES: Pair<number>[][] = [
-  [
-    [X_DOMAIN[0], 0],
-    [X_DOMAIN[1], 0]
-  ],
-  [
-    [0, Y_DOMAIN[0]],
-    [0, Y_DOMAIN[1]]
-  ]
-];
+function buildAxisPolylines(xDomain: Pair<number>, yDomain: Pair<number>): Pair<number>[][] {
+  return [
+    [
+      [xDomain[0], 0],
+      [xDomain[1], 0]
+    ],
+    [
+      [0, yDomain[0]],
+      [0, yDomain[1]]
+    ]
+  ];
+}
 const AXIS_COLOR: RGBA = [1.0, 1.0, 1.0, 0.6];
 
 
@@ -87,9 +88,15 @@ export function createBrownianMotionRenderer(gl: WebGLRenderingContext): Brownia
   function render(webGl: WebGl): void {
     if (!state) { return; }
 
+    const zoom = state.zoom;
+    const xDomain: Pair<number> = [X_DOMAIN[0] / zoom, X_DOMAIN[1] / zoom];
+    const yDomain: Pair<number> = [Y_DOMAIN[0] / zoom, Y_DOMAIN[1] / zoom];
+    const gridPolylines = buildGridPolylines(xDomain, yDomain);
+    const axisPolylines = buildAxisPolylines(xDomain, yDomain);
+
     // Draw Grid and Axis
-    lineRenderer.renderPolylines(webGl.dataToClipMatrix, GRID_POLYLINES, COLORS.vectorField);
-    lineRenderer.renderPolylines(webGl.dataToClipMatrix, AXIS_POLYLINES, AXIS_COLOR);
+    lineRenderer.renderPolylines(webGl.dataToClipMatrix, gridPolylines, COLORS.vectorField);
+    lineRenderer.renderPolylines(webGl.dataToClipMatrix, axisPolylines, AXIS_COLOR);
 
     const { trajectory } = state;
     if (trajectory.count === 0) { return; }
