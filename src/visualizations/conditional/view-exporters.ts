@@ -20,6 +20,8 @@ export const condPathViewExporter: ViewExportConfig<CondPathState, CondPathRende
   name: '1_path',
   createRenderer: createCondPathRenderer,
   configureRenderer: (renderer, state): void => {
+    renderer.setShowPdf(state.pathConfig.showPdf);
+    renderer.setShowSamples(state.pathConfig.showSamples);
     renderer.setSampleFrequency(state.pathConfig.sampleFrequency);
   }
 };

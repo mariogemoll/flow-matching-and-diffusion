@@ -20,6 +20,8 @@ import { VisualizationProvider } from '../provider';
 import { ConditionalFrameExporter } from './frame-exporter';
 
 export interface CondPathViewConfig {
+  showPdf: boolean;
+  showSamples: boolean;
   sampleFrequency: number;
 }
 
@@ -61,6 +63,8 @@ export const condPathModel: Model<CondPathState, CondPathActions> = {
     schedule: DEFAULT_ALPHA_BETA_SCHEDULE,
     numSamples: 1000,
     pathConfig: {
+      showPdf: true,
+      showSamples: true,
       sampleFrequency: 15
     },
     odeConfig: {

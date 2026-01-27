@@ -22,6 +22,8 @@ import type { Frame } from '../../engine';
 import type { WebGlRenderer } from '../types';
 
 export interface CondPathRenderer extends WebGlRenderer<CondPathState> {
+  setShowPdf(show: boolean): void;
+  setShowSamples(show: boolean): void;
   setSampleFrequency(freq: number): void;
   resample(): void;
 }
@@ -31,6 +33,8 @@ export function createCondPathRenderer(gl: WebGLRenderingContext): CondPathRende
   const sampleRenderer = createPointRenderer(gl);
   const pdfRenderer = createGaussianPdfRenderer(gl);
 
+  let showPdf = true;
+  let showSamples = true;
   const dotPoints = {
     xs: new Float32Array(1),
     ys: new Float32Array(1),
@@ -68,6 +72,19 @@ export function createCondPathRenderer(gl: WebGLRenderingContext): CondPathRende
     sampleFrequency = freq;
   }
 
+  function setShowPdf(show: boolean): void {
+    showPdf = show;
+  }
+
+  function setShowSamples(show: boolean): void {
+    if (showSamples !== show) {
+      showSamples = show;
+      if (show) {
+        resampleRequested = true;
+      }
+    }
+  }
+
   function resample(): void {
     resampleRequested = true;
   }
@@ -99,65 +116,69 @@ export function createCondPathRenderer(gl: WebGLRenderingContext): CondPathRende
     pdfParams.ready = true;
 
     // Sample Update Logic
-    const zChanged = current.z !== lastSample.z;
-    const tChanged = current.t !== lastSample.t;
-    const numSamplesChanged = current.numSamples !== lastSample.numSamples;
-    const scheduleChanged = current.schedule !== lastSample.schedule;
+    if (showSamples) {
+      const zChanged = current.z !== lastSample.z;
+      const tChanged = current.t !== lastSample.t;
+      const numSamplesChanged = current.numSamples !== lastSample.numSamples;
+      const scheduleChanged = current.schedule !== lastSample.schedule;
 
-    // Check if we are "finished" (t >= 1.0)
-    const isFinished = current.t >= 1.0;
+      // Check if we are "finished" (t >= 1.0)
+      const isFinished = current.t >= 1.0;
 
-    const numSamplesChangedWhilePaused = numSamplesChanged && !tChanged;
+      const numSamplesChangedWhilePaused = numSamplesChanged && !tChanged;
 
-    let shouldUpdate =
-      resampleRequested || scheduleChanged || (isFinished && (tChanged || zChanged));
+      let shouldUpdate =
+        resampleRequested || scheduleChanged || (isFinished && (tChanged || zChanged));
 
-    // Throttled updates
-    if (
-      !shouldUpdate &&
-      (tChanged || zChanged || numSamplesChanged) &&
-      !numSamplesChangedWhilePaused
-    ) {
-      const dt = now - lastSample.timestamp;
-      const threshold = sampleFrequency >= 120 ? 0 : (1000 / sampleFrequency);
-      if (dt >= threshold) {
+      // Throttled updates
+      if (
+        !shouldUpdate &&
+        (tChanged || zChanged || numSamplesChanged) &&
+        !numSamplesChangedWhilePaused
+      ) {
+        const dt = now - lastSample.timestamp;
+        const threshold = sampleFrequency >= 120 ? 0 : (1000 / sampleFrequency);
+        if (dt >= threshold) {
+          shouldUpdate = true;
+        }
+      }
+
+      if (
+        !shouldUpdate &&
+        numSamplesChangedWhilePaused &&
+        current.numSamples > lastSample.numSamples
+      ) {
+        // If we increased samples while paused, force update to fill new samples
         shouldUpdate = true;
       }
-    }
 
-    if (
-      !shouldUpdate &&
-      numSamplesChangedWhilePaused &&
-      current.numSamples > lastSample.numSamples
-    ) {
-      // If we increased samples while paused, force update to fill new samples
-      shouldUpdate = true;
-    }
+      if (shouldUpdate) {
+        if (!numSamplesChangedWhilePaused || resampleRequested) {
+          fillWithSamplesFromStdGaussian(samplePointsBuffer);
+        }
 
-    if (shouldUpdate) {
-      if (!numSamplesChangedWhilePaused || resampleRequested) {
-        fillWithSamplesFromStdGaussian(samplePointsBuffer);
+        // Transform to N(mean, beta^2 I)
+        const n = samplePointsBuffer.xs.length;
+        for (let i = 0; i < n; i++) {
+          samplePointsBuffer.xs[i] = mean[0] + beta * samplePointsBuffer.xs[i];
+          samplePointsBuffer.ys[i] = mean[1] + beta * samplePointsBuffer.ys[i];
+        }
+        samplePointsBuffer.version++;
+
+        resampleRequested = false;
+        lastSample = {
+          z: state.z,
+          t,
+          schedule: state.schedule,
+          numSamples: state.numSamples,
+          timestamp: now
+        };
       }
 
-      // Transform to N(mean, beta^2 I)
-      const n = samplePointsBuffer.xs.length;
-      for (let i = 0; i < n; i++) {
-        samplePointsBuffer.xs[i] = mean[0] + beta * samplePointsBuffer.xs[i];
-        samplePointsBuffer.ys[i] = mean[1] + beta * samplePointsBuffer.ys[i];
-      }
-      samplePointsBuffer.version++;
-
-      resampleRequested = false;
-      lastSample = {
-        z: state.z,
-        t,
-        schedule: state.schedule,
-        numSamples: state.numSamples,
-        timestamp: now
-      };
+      numSamplesToDraw = current.numSamples;
+    } else {
+      numSamplesToDraw = 0;
     }
-
-    numSamplesToDraw = current.numSamples;
 
     // Update dot buffer
     dotPoints.xs[0] = state.z[0];
@@ -168,7 +189,7 @@ export function createCondPathRenderer(gl: WebGLRenderingContext): CondPathRende
   }
 
   function render(webGl: WebGl): void {
-    if (pdfParams.ready) {
+    if (showPdf && pdfParams.ready) {
       webGl.gl.enable(webGl.gl.BLEND);
       webGl.gl.blendFunc(webGl.gl.SRC_ALPHA, webGl.gl.ONE_MINUS_SRC_ALPHA);
 
@@ -180,7 +201,7 @@ export function createCondPathRenderer(gl: WebGLRenderingContext): CondPathRende
       );
     }
 
-    if (numSamplesToDraw > 0) {
+    if (showSamples && numSamplesToDraw > 0) {
       sampleRenderer.render(
         webGl.dataToClipMatrix,
         samplePointsBuffer,
@@ -204,6 +225,8 @@ export function createCondPathRenderer(gl: WebGLRenderingContext): CondPathRende
   }
 
   return {
+    setShowPdf,
+    setShowSamples,
     setSampleFrequency,
     resample,
     update,

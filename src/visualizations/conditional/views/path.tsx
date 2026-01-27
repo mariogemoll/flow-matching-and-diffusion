@@ -12,7 +12,12 @@ import { clearWebGl } from '../../../webgl';
 import { EllipsisToggle } from '../../components/ellipsis-toggle';
 import { ViewContainer, ViewControls } from '../../components/layout';
 import { PointerCanvas, type PointerCanvasHandle } from '../../components/pointer-canvas';
-import { ResampleButton, SampleFrequencySlider } from '../../components/standard-controls';
+import {
+  ResampleButton,
+  SampleFrequencySlider,
+  ShowPdfCheckbox,
+  ShowSamplesCheckbox
+} from '../../components/standard-controls';
 import {
   COLORS,
   DEFAULT_LOOP_PAUSE
@@ -62,6 +67,8 @@ export function CondPathView(): React.ReactElement {
       const { pathConfig: framePathConfig } = frame.state;
 
       // Sync renderer with params
+      renderer.setShowPdf(framePathConfig.showPdf);
+      renderer.setShowSamples(framePathConfig.showSamples);
       renderer.setSampleFrequency(framePathConfig.sampleFrequency);
       if (params.resampleRequested) {
         renderer.resample();
@@ -92,6 +99,14 @@ export function CondPathView(): React.ReactElement {
           yDomain={Y_DOMAIN}
         />
         <ViewControls>
+          <ShowPdfCheckbox
+            checked={pathConfig.showPdf}
+            onChange={(v) => { updatePathConfig({ showPdf: v }); }}
+          />
+          <ShowSamplesCheckbox
+            checked={pathConfig.showSamples}
+            onChange={(v) => { updatePathConfig({ showSamples: v }); }}
+          />
           <ResampleButton onClick={handleResample} />
           {showAdditionalControls ? (
             <SampleFrequencySlider
