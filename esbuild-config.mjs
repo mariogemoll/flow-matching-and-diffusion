@@ -6,10 +6,15 @@ import fs from 'fs';
 
 const isWatch = process.argv.includes('--watch');
 
+const entryPoints = [
+  { in: 'src/demo.tsx', out: 'demo' },
+  { in: 'src/flow-matching.tsx', out: 'flow-matching' }
+];
+
 const config = {
-  entryPoints: ['src/demo.tsx'],
+  entryPoints,
   bundle: true,
-  outfile: 'dist/demo.js',
+  outdir: 'dist',
   format: 'esm',
   jsx: 'automatic',
   jsxImportSource: 'react',
@@ -41,8 +46,13 @@ if (isWatch) {
   console.log('⚡ Watching for changes...');
 } else {
   esbuild.build(config).then(() => {
-    const stats = fs.statSync('dist/demo.js');
-    const sizeKb = (stats.size / 1024).toFixed(1);
-    console.log(`\n  demo.js  ${sizeKb}kb\n⚡ Done`);
+    console.log('');
+    for (const entry of entryPoints) {
+      const path = `dist/${entry.out}.js`;
+      const stats = fs.statSync(path);
+      const sizeKb = (stats.size / 1024).toFixed(1);
+      console.log(`  ${entry.out}.js  ${sizeKb}kb`);
+    }
+    console.log('\n\u26a1 Done');
   }).catch(() => process.exit(1));
 }
