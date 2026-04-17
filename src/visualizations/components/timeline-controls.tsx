@@ -5,7 +5,9 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { useEngine } from '../engine';
 
-export function TimelineControls(): React.ReactElement {
+export function TimelineControls(
+  { onTogglePlay }: { onTogglePlay?: () => void } = {}
+): React.ReactElement {
   const engine = useEngine();
   const { clock } = engine.frame;
 
@@ -26,6 +28,10 @@ export function TimelineControls(): React.ReactElement {
   }, [engine, playing]);
 
   const toggle = (): void => {
+    if (onTogglePlay !== undefined) {
+      onTogglePlay();
+      return;
+    }
     engine.togglePlay();
     setPlaying(engine.frame.clock.playing);
   };

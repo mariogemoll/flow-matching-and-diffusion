@@ -10,6 +10,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@stylistic/stylelint-plugin": "^4.0.0",
+    "@tensorflow/tfjs": "^4.22.0",
     "@types/file-saver": "^2.0.7",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
@@ -30,6 +31,7 @@
     "./visualizations/conditional/path-ode-sde": "./src/visualizations/conditional/path-ode-sde.tsx",
     "./visualizations/euler-method": "./src/visualizations/euler-method.tsx",
     "./visualizations/euler-maruyama-method": "./src/visualizations/euler-maruyama-method.tsx",
+    "./visualizations/ensembles/flow-matching": "./src/visualizations/ensembles/flow-matching.ts",
     "./visualizations/marginal/path": "./src/visualizations/marginal/path.tsx",
     "./visualizations/marginal/path-ode": "./src/visualizations/marginal/path-ode.tsx",
     "./visualizations/marginal/path-ode-sde": "./src/visualizations/marginal/path-ode-sde.tsx",

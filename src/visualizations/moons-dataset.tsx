@@ -3,6 +3,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { X_DOMAIN, Y_DOMAIN } from '../constants';
 import { makeMoons } from '../math/moons';
 import type { Points2D } from '../types';
 import { clearWebGl, createWebGl, type WebGl } from '../webgl';
@@ -16,15 +17,10 @@ import { mountVisualization } from './react-root';
 const DEFAULT_NUM_SAMPLES = 1000;
 const MIN_SAMPLES = 100;
 const MAX_SAMPLES = 5000;
-const NOISE = 0.1;
+const NOISE = 0.05;
 
 const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 300;
-
-// Moons dataset domain - centered around the data (center ~0.5, 0.25)
-// Canvas is 400x300 (4:3 aspect), so x range 4, y range 3
-const MOONS_X_DOMAIN: [number, number] = [-1.5, 2.5];
-const MOONS_Y_DOMAIN: [number, number] = [-1.25, 1.75];
 
 const POINT_COLOR = COLORS.point;
 const POINT_SIZE = 4;
@@ -47,8 +43,8 @@ function MoonsDatasetVisualization(): React.JSX.Element {
         canvas,
         CANVAS_WIDTH,
         CANVAS_HEIGHT,
-        MOONS_X_DOMAIN,
-        MOONS_Y_DOMAIN
+        X_DOMAIN,
+        Y_DOMAIN
       );
       rendererRef.current = createPointRenderer(webGlRef.current.gl);
     } catch (e) {

@@ -8,6 +8,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Flow Matching</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.min.js"></script>
   <script type="importmap">
       {
         "imports": {
@@ -29,6 +31,12 @@
 
   <h2>Moons dataset</h2>
   <div class="visualization-container" data-visualization="moons-dataset"></div>
+
+  <h2>Training</h2>
+  <div class="visualization-container" data-visualization="flow-matching-training"></div>
+
+  <h2>Generation</h2>
+  <div class="visualization-container" data-visualization="flow-matching-generation"></div>
 
   <script type="module" src="dist/flow-matching.js"></script>
 </body>

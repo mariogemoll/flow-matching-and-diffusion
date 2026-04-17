@@ -25,6 +25,7 @@ const config = {
     'process.env.NODE_ENV': isWatch ? '"development"' : '"production"'
   },
   external: [
+    '@tensorflow/tfjs',
     'file-saver',
     'jszip',
     'react',

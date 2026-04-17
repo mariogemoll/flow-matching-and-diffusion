@@ -4,9 +4,21 @@
 import React from 'react';
 
 export function ViewContainer(
-  { children }: { children: React.ReactNode }
+  {
+    children,
+    className,
+    style
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    style?: React.CSSProperties;
+  }
 ): React.JSX.Element {
-  return <div className="view-container">{children}</div>;
+  const classes =
+    className !== undefined && className !== ''
+      ? `view-container ${className}`
+      : 'view-container';
+  return <div className={classes} style={style}>{children}</div>;
 }
 
 export function ViewControls(
