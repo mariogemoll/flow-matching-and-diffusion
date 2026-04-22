@@ -1,0 +1,47 @@
+<!-- SPDX-FileCopyrightText: 2026 Mario Gemoll -->
+<!-- SPDX-License-Identifier: 0BSD -->
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diffusion</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.min.js"></script>
+  <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@19.2.3",
+          "react-dom": "https://esm.sh/react-dom@19.2.3",
+          "react-dom/client": "https://esm.sh/react-dom@19.2.3/client",
+          "react/jsx-runtime": "https://esm.sh/react@19.2.3/jsx-runtime",
+          "react/jsx-dev-runtime": "https://esm.sh/react@19.2.3/jsx-dev-runtime",
+          "file-saver": "https://esm.sh/file-saver@2.0.5",
+          "jszip": "https://esm.sh/jszip@3.10.1"
+        }
+      }
+    </script>
+  <link rel="stylesheet" href="css/visualization.css">
+</head>
+
+<body>
+  <h1>Diffusion</h1>
+
+  <h2>Moons dataset</h2>
+  <div class="visualization-container" data-visualization="moons-dataset"></div>
+
+  <h2>Flow matching training</h2>
+  <div class="visualization-container" data-visualization="flow-matching-training"></div>
+
+  <h2>Score matching training</h2>
+  <div class="visualization-container" data-visualization="score-matching-training"></div>
+
+  <h2>Generation via diffusion (SDE)</h2>
+  <div class="visualization-container" data-visualization="diffusion-generation"></div>
+
+  <script type="module" src="dist/diffusion.js"></script>
+</body>
+
+</html>

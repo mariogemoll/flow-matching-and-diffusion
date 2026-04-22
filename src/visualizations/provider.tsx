@@ -3,7 +3,7 @@
 
 import React, { type ReactNode, useContext, useEffect, useMemo, useRef } from 'react';
 
-import { createVisualizationEngine, type Engine,EngineContext, type Model } from './engine';
+import { createVisualizationEngine, EngineContext, type Model } from './engine';
 import { VisualizationRootContext } from './react-root';
 
 interface VisualizationProviderProps<S = unknown, A = unknown> {
@@ -78,7 +78,7 @@ export function VisualizationProvider<S, A>(
   }, [engine, rootEl]);
 
   return (
-    <EngineContext.Provider value={engine as unknown as Engine}>
+    <EngineContext.Provider value={engine}>
       {children}
     </EngineContext.Provider>
   );

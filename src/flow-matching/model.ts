@@ -39,8 +39,8 @@ export class FlowMatchingModel implements FlowModel, Generative {
     for (let step = 0; step < numSteps; step++) {
       const t = step * dt;
 
-      x = tf.tidy(() => {
-        const tTensor = tf.fill([x.shape[0], 1], t) as Tensor2D;
+      x = tf.tidy<Tensor2D>(() => {
+        const tTensor: Tensor2D = tf.fill([x.shape[0], 1], t);
         const velocity = this.network.predict(x, tTensor);
         // Euler step: x_{t+dt} = x_t + dt * u_t(x_t)
         return tf.add(x, tf.mul(velocity, dt));
@@ -63,13 +63,13 @@ export class FlowMatchingModel implements FlowModel, Generative {
       const batchSize = z.shape[0];
 
       // Sample t uniformly from [0, 1]
-      const t = tf.randomUniform([batchSize, 1], 0, 1) as Tensor2D;
+      const t: Tensor2D = tf.randomUniform([batchSize, 1], 0, 1);
 
       // Sample epsilon ~ N(0, I)
-      const epsilon = tf.randomNormal([batchSize, 2]) as Tensor2D;
+      const epsilon: Tensor2D = tf.randomNormal([batchSize, 2]);
 
       // Form noisy input: x = tz + (1-t)epsilon
-      const x = tf.add(
+      const x: Tensor2D = tf.add(
         tf.mul(t, z),
         tf.mul(tf.sub(1, t), epsilon)
       );
@@ -78,7 +78,7 @@ export class FlowMatchingModel implements FlowModel, Generative {
       const targetVelocity = tf.sub(z, epsilon);
 
       // Predict velocity
-      const predictedVelocity = this.network.predict(x as Tensor2D, t);
+      const predictedVelocity = this.network.predict(x, t);
 
       // MSE loss
       const diff = tf.sub(predictedVelocity, targetVelocity);

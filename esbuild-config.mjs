@@ -8,7 +8,8 @@ const isWatch = process.argv.includes('--watch');
 
 const entryPoints = [
   { in: 'src/demo.tsx', out: 'demo' },
-  { in: 'src/flow-matching.tsx', out: 'flow-matching' }
+  { in: 'src/flow-matching.tsx', out: 'flow-matching' },
+  { in: 'src/diffusion.tsx', out: 'diffusion' }
 ];
 
 const config = {

@@ -31,6 +31,7 @@
     "./visualizations/conditional/path-ode-sde": "./src/visualizations/conditional/path-ode-sde.tsx",
     "./visualizations/euler-method": "./src/visualizations/euler-method.tsx",
     "./visualizations/euler-maruyama-method": "./src/visualizations/euler-maruyama-method.tsx",
+    "./visualizations/ensembles/diffusion": "./src/visualizations/ensembles/diffusion.ts",
     "./visualizations/ensembles/flow-matching": "./src/visualizations/ensembles/flow-matching.ts",
     "./visualizations/marginal/path": "./src/visualizations/marginal/path.tsx",
     "./visualizations/marginal/path-ode": "./src/visualizations/marginal/path-ode.tsx",

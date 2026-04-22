@@ -3,3 +3,9 @@
 node_modules
 package-lock.json
 pnpm-lock.yaml
+flow-matching-loss-history.bin
+flow-matching-model.weights.bin
+flow-matching-model.json
+score-matching-loss-history.bin
+score-matching-model.json
+score-matching-model.weights.bin

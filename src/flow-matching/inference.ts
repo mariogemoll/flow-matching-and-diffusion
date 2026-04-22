@@ -3,24 +3,33 @@
 
 import type { Points2D, Trajectories } from '../types';
 import { makeTrajectories } from '../util/trajectories';
-import type { FlowMatchingModel } from './model';
 import type { Tensor2D } from './types';
 
 /**
- * Run the full generation pipeline: sample noise, integrate the ODE,
+ * Minimal duck-typed interface for a generative model that can be
+ * visualized by the generation widget. Flow matching (ODE) and
+ * diffusion (SDE) models both satisfy it.
+ */
+export interface GenerativeModel {
+  generate(z: Tensor2D, numSteps?: number): Tensor2D[];
+  predictVelocity?(x: Tensor2D, t: Tensor2D): Tensor2D;
+}
+
+/**
+ * Run the full generation pipeline: sample noise, integrate the ODE/SDE,
  * and return every frame plus per-sample trajectories.
  */
 export async function generateData(
-  model: FlowMatchingModel,
+  model: GenerativeModel,
   numSamples: number,
   numSteps = 100
 ): Promise<{ frames: Points2D[]; trajectories: Trajectories }> {
-  const noise = tf.randomNormal([numSamples, 2]) as Tensor2D;
+  const noise: Tensor2D = tf.randomNormal([numSamples, 2]);
   return generateDataFromTensor(model, noise, numSteps);
 }
 
 export async function generateDataFromPoints(
-  model: FlowMatchingModel,
+  model: GenerativeModel,
   points: Points2D,
   numSteps = 100
 ): Promise<{ frames: Points2D[]; trajectories: Trajectories }> {
@@ -35,7 +44,7 @@ export async function generateDataFromPoints(
 }
 
 async function generateDataFromTensor(
-  model: FlowMatchingModel,
+  model: GenerativeModel,
   initialPoints: Tensor2D,
   numSteps: number
 ): Promise<{ frames: Points2D[]; trajectories: Trajectories }> {
@@ -95,10 +104,13 @@ export function interpolateFrames(
  * Predict velocity vectors for a batch of 2D points at a given time.
  */
 export async function predictVelocityBatch(
-  model: FlowMatchingModel,
+  model: GenerativeModel,
   points: Points2D,
   t: number
 ): Promise<Points2D> {
+  if (model.predictVelocity === undefined) {
+    throw new Error('Model does not implement predictVelocity');
+  }
   const n = points.xs.length;
   const xArr = new Float32Array(n * 2);
   for (let i = 0; i < n; i++) {
@@ -107,7 +119,7 @@ export async function predictVelocityBatch(
   }
 
   const x = tf.tensor2d(xArr, [n, 2]);
-  const tTensor = tf.fill([n, 1], t) as Tensor2D;
+  const tTensor: Tensor2D = tf.fill([n, 1], t);
   const velocity = model.predictVelocity(x, tTensor);
   const data = await velocity.data() as Float32Array;
   velocity.dispose();
